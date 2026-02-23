@@ -148,7 +148,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                     <td style={{ padding: "14px 18px" }}>
                       <div style={{ display: "flex", gap: 8 }}>
                         <Btn variant="secondary" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => startEdit(c)}>✏️ Edit</Btn>
-                        <Btn variant="danger" style={{ padding: "6px 12px", fontSize: 12 }} loading={deleting === c.id} onClick={() => del(c.id)}>🗑</Btn>
+                        <Btn variant="danger" style={{ padding: "6px 12px", fontSize: 12, opacity: transactions.some(t => t.company_id === c.id) ? 0.35 : 1, cursor: transactions.some(t => t.company_id === c.id) ? "not-allowed" : "pointer" }} loading={deleting === c.id} onClick={() => del(c.id)}>🗑</Btn>
                       </div>
                     </td>
                   </tr>
