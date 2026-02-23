@@ -152,6 +152,37 @@ export function FTextarea({ label, required, ...props }) {
   );
 }
 
+// ─── Modal ────────────────────────────────────────────────────────
+export function Modal({ type = "confirm", title, message, onConfirm, onClose }) {
+  if (!title) return null;
+  const isWarn = type === "warning";
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: C.white, borderRadius: 16, padding: 32, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", animation: "fadeIn 0.15s ease" }}>
+        {/* Icon */}
+        <div style={{ width: 52, height: 52, borderRadius: 14, background: isWarn ? C.redBg : "#FFF7ED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 16 }}>
+          {isWarn ? "🚫" : "🗑️"}
+        </div>
+        {/* Title */}
+        <div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginBottom: 8 }}>{title}</div>
+        {/* Message */}
+        <div style={{ fontSize: 14, color: C.gray600, lineHeight: 1.6, marginBottom: 24 }}>{message}</div>
+        {/* Buttons */}
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          {isWarn ? (
+            <Btn variant="secondary" onClick={onClose}>Close</Btn>
+          ) : (
+            <>
+              <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+              <Btn variant="danger" onClick={onConfirm} style={{ background: C.red, color: C.white, border: "none" }}>Yes, Delete</Btn>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Button ───────────────────────────────────────────────────────
 export function Btn({ children, variant = "primary", loading, icon, ...props }) {
   const variants = {
