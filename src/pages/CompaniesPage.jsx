@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { sbInsert, sbUpdate, sbDelete } from "../lib/supabase";
-import { C, fmt, Btn, FInput, FTextarea, StatCard, SectionCard } from "../components/ui";
+import { C, fmt, Btn, FInput, FTextarea, StatCard, SectionCard, Modal } from "../components/ui";
 
 export default function CompaniesPage({ companies, setCompanies, transactions, showToast }) {
   const empty = { name: "", price: "", remarks: "" };
@@ -11,6 +11,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
   const [deleting, setDeleting] = useState(null);
   const [updating, setUpdating] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [modal, setModal] = useState({ open: false, type: "confirm", title: "", message: "", targetId: null });
 
   const totalAvg = companies.length
     ? companies.reduce((s, c) => s + Number(c.price || 0), 0) / companies.length
@@ -34,18 +35,24 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
     setSaving(false);
   };
 
-  const del = async (id) => {
+  const del = (id) => {
     const hasTransactions = transactions.some(t => t.company_id === id);
+    const company = companies.find(c => c.id === id);
     if (hasTransactions) {
-      showToast("Cannot delete — this company has existing transactions.", "error");
-      return;
+      setModal({ open: true, type: "warning", title: "Cannot Delete Company", message: `"${company.name}" has existing transactions. You must delete all its transactions before removing this company.`, targetId: null });
+    } else {
+      setModal({ open: true, type: "confirm", title: "Delete Company", message: `Are you sure you want to delete "${company.name}"? This action cannot be undone.`, targetId: id });
     }
-    if (!confirm("Delete this company?")) return;
+  };
+
+  const confirmDelete = async () => {
+    const id = modal.targetId;
+    setModal({ ...modal, open: false });
     setDeleting(id);
     try {
       await sbDelete("companies", id);
       setCompanies(p => p.filter(c => c.id !== id));
-      showToast("Company removed.", "success");
+      showToast("Company deleted.", "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
     setDeleting(null);
   };
