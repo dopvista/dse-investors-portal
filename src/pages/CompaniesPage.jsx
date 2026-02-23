@@ -2,7 +2,7 @@ import { useState } from "react";
 import { sbInsert, sbUpdate, sbDelete } from "../lib/supabase";
 import { C, fmt, Btn, FInput, FTextarea, StatCard, SectionCard } from "../components/ui";
 
-export default function CompaniesPage({ companies, setCompanies, showToast }) {
+export default function CompaniesPage({ companies, setCompanies, transactions, showToast }) {
   const empty = { name: "", price: "", remarks: "" };
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
@@ -35,7 +35,12 @@ export default function CompaniesPage({ companies, setCompanies, showToast }) {
   };
 
   const del = async (id) => {
-    if (!confirm("Delete this company? Related transactions may also be affected.")) return;
+    const hasTransactions = transactions.some(t => t.company_id === id);
+    if (hasTransactions) {
+      showToast("Cannot delete — this company has existing transactions.", "error");
+      return;
+    }
+    if (!confirm("Delete this company?")) return;
     setDeleting(id);
     try {
       await sbDelete("companies", id);
