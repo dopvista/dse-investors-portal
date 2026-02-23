@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { sbInsert, sbDelete } from "../lib/supabase";
-import { C, fmt, fmtInt, Btn, FInput, FSelect, FTextarea, StatCard, SectionCard } from "../components/ui";
+import { C, fmt, fmtInt, Btn, FInput, FSelect, FTextarea, StatCard, SectionCard, Modal } from "../components/ui";
 
 export default function TransactionsPage({ companies, transactions, setTransactions, showToast }) {
   const today = new Date().toISOString().split("T")[0];
@@ -9,6 +9,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [modal, setModal] = useState({ open: false, title: "", message: "", targetId: null });
 
   const total = (Number(form.qty) || 0) * (Number(form.price) || 0);
   const grandTotal = total + (Number(form.fees) || 0);
@@ -42,8 +43,14 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     setSaving(false);
   };
 
-  const del = async (id) => {
-    if (!confirm("Delete this transaction?")) return;
+  const del = (id) => {
+    const tx = transactions.find(t => t.id === id);
+    setModal({ open: true, title: "Delete Transaction", message: `Are you sure you want to delete this ${tx?.type} transaction for "${tx?.company_name}" on ${tx?.date}? This action cannot be undone.`, targetId: id });
+  };
+
+  const confirmDelete = async () => {
+    const id = modal.targetId;
+    setModal({ ...modal, open: false });
     setDeleting(id);
     try {
       await sbDelete("transactions", id);
