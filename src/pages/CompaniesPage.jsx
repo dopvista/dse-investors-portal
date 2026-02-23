@@ -79,6 +79,13 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
 
   return (
     <div>
+      <Modal
+        type={modal.type}
+        title={modal.open ? modal.title : ""}
+        message={modal.message}
+        onConfirm={confirmDelete}
+        onClose={() => setModal({ ...modal, open: false })}
+      />
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         <StatCard label="Total Holdings" value={companies.length} sub="Registered companies" icon="🏢" color={C.navy} />
