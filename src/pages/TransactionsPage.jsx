@@ -128,7 +128,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               <thead>
                 <tr style={{ background: C.gray50 }}>
                   {["#", "Date", "Company", "Type", "Qty", "Price/Share", "Total Amount", "Fees", "Grand Total", "Remarks", ""].map(h => (
-                    <th key={h} style={{ padding: "12px 16px", textAlign: "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
+                    <th key={h} style={{ padding: "12px 16px", textAlign: ["Qty", "Price/Share", "Total Amount", "Fees", "Grand Total"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -151,11 +151,11 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                           border: `1px solid ${isBuy ? "#BBF7D0" : "#FECACA"}`,
                         }}>{isBuy ? "▲ Buy" : "▼ Sell"}</span>
                       </td>
-                      <td style={{ padding: "13px 16px", fontWeight: 600 }}>{fmtInt(t.qty)}</td>
-                      <td style={{ padding: "13px 16px" }}>{fmt(t.price)}</td>
-                      <td style={{ padding: "13px 16px", fontWeight: 600 }}>{fmt(t.total)}</td>
-                      <td style={{ padding: "13px 16px", color: C.gray600 }}>{t.fees ? fmt(t.fees) : <span style={{ color: C.gray400 }}>—</span>}</td>
-                      <td style={{ padding: "13px 16px", fontWeight: 700, color: isBuy ? C.green : C.red }}>{fmt(gt)}</td>
+                      <td style={{ padding: "13px 16px", fontWeight: 600, textAlign: "right" }}>{fmtInt(t.qty)}</td>
+                      <td style={{ padding: "13px 16px", textAlign: "right" }}>{fmt(t.price)}</td>
+                      <td style={{ padding: "13px 16px", fontWeight: 600, textAlign: "right" }}>{fmt(t.total)}</td>
+                      <td style={{ padding: "13px 16px", color: C.gray600, textAlign: "right" }}>{t.fees ? fmt(t.fees) : <span style={{ color: C.gray400 }}>—</span>}</td>
+                      <td style={{ padding: "13px 16px", fontWeight: 700, color: isBuy ? C.green : C.red, textAlign: "right" }}>{fmt(gt)}</td>
                       <td style={{ padding: "13px 16px", color: C.gray600, maxWidth: 140, fontSize: 12 }}>{t.remarks || <span style={{ color: C.gray400 }}>—</span>}</td>
                       <td style={{ padding: "13px 16px" }}>
                         <Btn variant="danger" style={{ padding: "5px 10px", fontSize: 11 }} loading={deleting === t.id} onClick={() => del(t.id)}>🗑</Btn>
@@ -167,9 +167,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               <tfoot>
                 <tr style={{ background: C.navy + "06", borderTop: `2px solid ${C.gray200}` }}>
                   <td colSpan={6} style={{ padding: "14px 16px", fontWeight: 700, color: C.gray600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Totals</td>
-                  <td style={{ padding: "14px 16px", fontWeight: 700, color: C.text }}>{fmt(transactions.reduce((s, t) => s + Number(t.total || 0), 0))}</td>
-                  <td style={{ padding: "14px 16px", fontWeight: 700, color: C.text }}>{fmt(transactions.reduce((s, t) => s + Number(t.fees || 0), 0))}</td>
-                  <td style={{ padding: "14px 16px", fontWeight: 800, color: C.navy }}>{fmt(transactions.reduce((s, t) => s + Number(t.total || 0) + Number(t.fees || 0), 0))}</td>
+                  <td style={{ padding: "14px 16px", fontWeight: 700, color: C.text, textAlign: "right" }}>{fmt(transactions.reduce((s, t) => s + Number(t.total || 0), 0))}</td>
+                  <td style={{ padding: "14px 16px", fontWeight: 700, color: C.text, textAlign: "right" }}>{fmt(transactions.reduce((s, t) => s + Number(t.fees || 0), 0))}</td>
+                  <td style={{ padding: "14px 16px", fontWeight: 800, color: C.navy, textAlign: "right" }}>{fmt(transactions.reduce((s, t) => s + Number(t.total || 0) + Number(t.fees || 0), 0))}</td>
                   <td colSpan={2} />
                 </tr>
               </tfoot>
