@@ -62,6 +62,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
   return (
     <div>
+      <Modal
+        type="confirm"
+        title={modal.open ? modal.title : ""}
+        message={modal.message}
+        onConfirm={confirmDelete}
+        onClose={() => setModal({ ...modal, open: false })}
+      />
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
         <StatCard label="Total Transactions" value={transactions.length} sub={`${buys.length} buys · ${sells.length} sells`} icon="📋" color={C.navy} />
