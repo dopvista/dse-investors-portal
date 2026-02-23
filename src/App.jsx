@@ -165,7 +165,7 @@ export default function App() {
 
         {/* Page renderer — add new pages here */}
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-          {tab === "companies" && <CompaniesPage companies={companies} setCompanies={setCompanies} showToast={showToast} />}
+          {tab === "companies" && <CompaniesPage companies={companies} setCompanies={setCompanies} transactions={transactions} showToast={showToast} />}
           {tab === "transactions" && <TransactionsPage companies={companies} transactions={transactions} setTransactions={setTransactions} showToast={showToast} />}
           {/* {tab === "portfolio" && <PortfolioPage ... />} */}
         </div>
