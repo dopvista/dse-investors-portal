@@ -114,7 +114,7 @@ export default function CompaniesPage({ companies, setCompanies, showToast }) {
               <thead>
                 <tr style={{ background: C.gray50 }}>
                   {["#", "Company Name", "Current Price (TZS)", "Quick Price Update", "Remarks", "Actions"].map(h => (
-                    <th key={h} style={{ padding: "12px 18px", textAlign: "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
+                    <th key={h} style={{ padding: "12px 18px", textAlign: ["Current Price (TZS)"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -125,7 +125,7 @@ export default function CompaniesPage({ companies, setCompanies, showToast }) {
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                     <td style={{ padding: "14px 18px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
                     <td style={{ padding: "14px 18px", fontWeight: 700, color: C.text }}>{c.name}</td>
-                    <td style={{ padding: "14px 18px" }}>
+                    <td style={{ padding: "14px 18px", textAlign: "right" }}>
                       <span style={{ background: C.greenBg, color: C.green, padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
                         {fmt(c.price)}
                       </span>
