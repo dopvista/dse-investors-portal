@@ -344,7 +344,7 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
   return (
     <ModalShell
       title="💰 Update Share Price"
-      subtitle={company.name}
+      subtitle={<span style={{ fontSize: 17, fontWeight: 800, color: C.text }}>{company.name}</span>}
       onClose={onClose}
       maxWidth={440}
       footer={
