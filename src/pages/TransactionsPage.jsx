@@ -1,14 +1,15 @@
 import { useState, useMemo } from "react";
 import { sbInsert, sbUpdate, sbDelete } from "../lib/supabase";
-import { C, fmt, fmtInt, Btn, StatCard, SectionCard, Modal, ActionMenu, TransactionFormModal } from "../components/ui";
+import { C, fmt, fmtInt, Btn, StatCard, SectionCard, Modal, ActionMenu, TransactionFormModal, ImportTransactionsModal } from "../components/ui";
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function TransactionsPage({ companies, transactions, setTransactions, showToast }) {
-  const [search, setSearch]     = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [deleting, setDeleting] = useState(null);
-  const [modal, setModal]       = useState({ open: false, type: "confirm", title: "", message: "", targetId: null });
-  const [formModal, setFormModal] = useState({ open: false, transaction: null });
+  const [search, setSearch]         = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [deleting, setDeleting]     = useState(null);
+  const [modal, setModal]           = useState({ open: false, type: "confirm", title: "", message: "", targetId: null });
+  const [formModal, setFormModal]   = useState({ open: false, transaction: null });
+  const [importModal, setImportModal] = useState(false);
 
   // ── Stats ──────────────────────────────────────────────────────
   const buys         = transactions.filter(t => t.type === "Buy");
@@ -73,6 +74,17 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     setDeleting(null);
   };
 
+  // ── Bulk Import ────────────────────────────────────────────────
+  const handleImport = async (rows) => {
+    const inserted = [];
+    for (const row of rows) {
+      const result = await sbInsert("transactions", row);
+      inserted.push(result[0]);
+    }
+    setTransactions(p => [...inserted.reverse(), ...p]);
+    showToast(`✅ Successfully imported ${inserted.length} transactions!`, "success");
+  };
+
   return (
     <div>
       {/* Modals */}
@@ -84,6 +96,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           companies={companies}
           onConfirm={handleFormConfirm}
           onClose={() => setFormModal({ open: false, transaction: null })}
+        />
+      )}
+      {importModal && (
+        <ImportTransactionsModal
+          companies={companies}
+          onImport={handleImport}
+          onClose={() => setImportModal(false)}
         />
       )}
 
@@ -110,6 +129,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         </div>
         {search && <Btn variant="secondary" onClick={() => setSearch("")}>Clear</Btn>}
         <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, transaction: null })}>Record Transaction</Btn>
+        <Btn variant="primary" icon="⬆️" onClick={() => setImportModal(true)}>Import Transactions</Btn>
       </div>
 
       {/* Table */}
