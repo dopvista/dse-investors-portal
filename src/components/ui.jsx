@@ -600,7 +600,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
 
     try {
       const data = await file.arrayBuffer();
-      const wb   = XLSX.read(data, { type: "array", cellDates: true, raw: false });
+      const wb   = XLSX.read(data, { type: "array", cellDates: true });
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
@@ -795,26 +795,32 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ background: C.navy }}>
-                  {[["#","4%"],["Date","14%"],["Company","16%"],["Type","10%"],["Qty","10%"],["Price","13%"],["Fees","14%"],["Total","19%"]].map(([h, w]) => (
+                  {[["#","4%"],["Date","13%"],["Company","17%"],["Type","10%"],["Qty","10%"],["Price","14%"],["Fees","14%"],["Total","18%"]].map(([h, w]) => (
                     <th key={h} style={{ padding: "8px 10px", color: C.white, fontWeight: 700, fontSize: 11, textAlign: h === "#" ? "center" : "left", whiteSpace: "nowrap", width: w }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
-                    <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{i + 1}</td>
-                    <td style={{ padding: "7px 10px", color: C.text, whiteSpace: "nowrap" }}>{r.date ? r.date.split("-").reverse().join("/") : ""}</td>
-                    <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.company_name}</td>
-                    <td style={{ padding: "7px 10px" }}>
-                      <span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span>
-                    </td>
-                    <td style={{ padding: "7px 10px", color: C.text }}>{fmtInt(r.qty)}</td>
-                    <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600 }}>{fmtInt(r.price)}</td>
-                    <td style={{ padding: "7px 10px", color: C.gray600 }}>{r.fees ? fmtInt(r.fees) : "—"}</td>
-                    <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red }}>{fmtInt(r.total)}</td>
-                  </tr>
-                ))}
+                {rows.map((r, i) => {
+                  // Convert YYYY-MM-DD → DD/MM/YYYY for display
+                  const displayDate = r.date && r.date.includes("-") 
+                    ? r.date.split("-").reverse().join("/") 
+                    : r.date;
+                  return (
+                    <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
+                      <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{i + 1}</td>
+                      <td style={{ padding: "7px 10px", color: C.text, whiteSpace: "nowrap" }}>{displayDate}</td>
+                      <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.company_name}</td>
+                      <td style={{ padding: "7px 10px" }}>
+                        <span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span>
+                      </td>
+                      <td style={{ padding: "7px 10px", color: C.text }}>{fmtInt(r.qty)}</td>
+                      <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600 }}>{fmtInt(r.price)}</td>
+                      <td style={{ padding: "7px 10px", color: C.gray600 }}>{r.fees ? fmtInt(r.fees) : "—"}</td>
+                      <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red }}>{fmtInt(r.total)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
