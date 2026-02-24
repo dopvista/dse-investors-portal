@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // ─── DSE Brand Colors ─────────────────────────────────────────────
 export const C = {
@@ -145,9 +145,9 @@ export function Btn({ children, variant = "primary", loading, icon, ...props }) 
 // ─── Action Menu (⋯ dropdown) ─────────────────────────────────────
 export function ActionMenu({ actions }) {
   const [open, setOpen] = useState(false);
-  const ref = React.useRef(null);
+  const ref = useRef(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!open) return;
     const handle = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
