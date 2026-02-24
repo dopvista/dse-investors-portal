@@ -152,6 +152,118 @@ export function FTextarea({ label, required, ...props }) {
   );
 }
 
+// ─── Update Price Modal ───────────────────────────────────────────
+export function UpdatePriceModal({ company, onConfirm, onClose }) {
+  const nowDate = new Date();
+  const localDatetime = new Date(nowDate.getTime() - nowDate.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 16);
+
+  const [newPrice, setNewPrice] = useState("");
+  const [datetime, setDatetime] = useState(localDatetime);
+  const [reason, setReason] = useState("Normal Price Change");
+  const [error, setError] = useState("");
+
+  if (!company) return null;
+
+  const handleConfirm = () => {
+    if (!newPrice || isNaN(Number(newPrice)) || Number(newPrice) <= 0) {
+      setError("Please enter a valid price greater than 0.");
+      return;
+    }
+    setError("");
+    onConfirm({ newPrice: Number(newPrice), datetime, reason });
+  };
+
+  const changeAmt = newPrice ? Number(newPrice) - Number(company.price) : null;
+  const changePct = changeAmt !== null && Number(company.price) !== 0
+    ? (changeAmt / Number(company.price)) * 100 : null;
+  const up = changeAmt !== null ? changeAmt >= 0 : null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+        {/* Header */}
+        <div style={{ padding: "22px 28px 16px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>💰 Update Share Price</div>
+            <div style={{ fontSize: 13, color: C.gray400, marginTop: 2 }}>{company.name}</div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.gray200}`, background: C.gray50, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Current price info */}
+          <div style={{ background: C.gray50, borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 12, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.navy }}>TZS {fmt(company.price)}</div>
+          </div>
+
+          {/* New Price */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              New Price (TZS) <span style={{ color: C.red }}>*</span>
+            </label>
+            <input
+              type="number"
+              value={newPrice}
+              onChange={e => { setNewPrice(e.target.value); setError(""); }}
+              placeholder="Enter new price..."
+              autoFocus
+              style={{ border: `1.5px solid ${error ? C.red : C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 15, fontWeight: 700, outline: "none", fontFamily: "inherit", color: C.text }}
+            />
+            {error && <div style={{ fontSize: 12, color: C.red, marginTop: 2 }}>{error}</div>}
+          </div>
+
+          {/* Live preview */}
+          {changeAmt !== null && newPrice && (
+            <div style={{ background: up ? C.greenBg : C.redBg, border: `1px solid ${up ? "#BBF7D0" : "#FECACA"}`, borderRadius: 10, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 12, color: C.gray600, fontWeight: 600 }}>Price Movement</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: up ? C.green : C.red }}>
+                  {up ? "▲" : "▼"} TZS {fmt(Math.abs(changeAmt))}
+                </span>
+                <span style={{ background: up ? C.green : C.red, color: C.white, padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                  {up ? "+" : ""}{changePct?.toFixed(2)}%
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Date & Time */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date & Time</label>
+            <input
+              type="datetime-local"
+              value={datetime}
+              onChange={e => setDatetime(e.target.value)}
+              style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text }}
+            />
+          </div>
+
+          {/* Reason */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Reason</label>
+            <input
+              type="text"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="Reason for price change..."
+              style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text }}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "16px 28px", borderTop: `1px solid ${C.gray200}`, display: "flex", gap: 10, justifyContent: "flex-end", background: C.gray50, borderRadius: "0 0 16px 16px" }}>
+          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+          <Btn variant="primary" onClick={handleConfirm} icon="💾">Update Price</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Price History Modal ──────────────────────────────────────────
 export function PriceHistoryModal({ company, history, onClose }) {
   if (!company) return null;
