@@ -3,6 +3,7 @@ import { sbGet } from "./lib/supabase";
 import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
 import TransactionsPage from "./pages/TransactionsPage";
+import UserMenu from "./components/UserMenu";
 import logo from "./assets/logo.jpg";
 
 const NAV = [
@@ -137,14 +138,16 @@ export default function App() {
           })}
         </nav>
 
-        {/* Sidebar footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+        {/* Supabase status */}
+        <div style={{ padding: "10px 24px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 7, height: 7, background: C.green, borderRadius: "50%" }} />
             <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Supabase connected</span>
           </div>
-          <div style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, marginTop: 6 }}>DSE Investors Portal v1.0</div>
         </div>
+
+        {/* ── User Profile Strip ───────────────────────────── */}
+        <UserMenu />
       </div>
 
       {/* ── Main content ─────────────────────────────────────── */}
