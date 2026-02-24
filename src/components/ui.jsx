@@ -600,7 +600,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
 
     try {
       const data = await file.arrayBuffer();
-      const wb   = XLSX.read(data, { type: "array", cellDates: false, raw: false });
+      const wb   = XLSX.read(data, { type: "array", cellDates: true, raw: false });
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
@@ -632,14 +632,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         const remarks  = get(6);
 
         const rowErrs = [];
-        const isDateObj   = dateRaw instanceof Date && !isNaN(dateRaw);
-        const isSerialNum = typeof dateRaw === "number" && dateRaw > 0;
-        const dateStr     = String(dateRaw ?? "").trim();
-        const isStringDate = dateStr.length >= 6 && dateStr !== "" && 
-                             !dateStr.toLowerCase().startsWith("dd") &&
-                             !dateStr.toLowerCase().startsWith("date");
-        const dateValid   = isDateObj || isSerialNum || isStringDate;
-        if (!dateRaw || !dateValid)                rowErrs.push("Invalid date — use DD/MM/YYYY");
+        if (!dateRaw || String(dateRaw).trim() === "")  rowErrs.push("Missing date");
         if (!company)                              rowErrs.push("Missing company");
         if (!["Buy","Sell"].includes(type))        rowErrs.push("Type must be Buy or Sell");
         if (!qty || isNaN(qty) || qty <= 0)        rowErrs.push("Invalid quantity");
@@ -648,18 +641,21 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         const matchedCompany = companies.find(c => c.name.toLowerCase() === company.toLowerCase());
         if (company && !matchedCompany)            rowErrs.push(`Company "${company}" not found in Holdings`);
 
-        // Format date → always store as YYYY-MM-DD for Supabase
+        // Convert any date format → YYYY-MM-DD for Supabase
+        const dateStr = String(dateRaw ?? "").trim();
         let date = "";
-        if (isDateObj) {
+        if (dateRaw instanceof Date && !isNaN(dateRaw)) {
+          // Excel Date object
           const d = dateRaw;
           date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-        } else if (isSerialNum) {
+        } else if (typeof dateRaw === "number") {
+          // Excel serial number
           const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
           date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
         } else if (dateStr.includes("/")) {
-          // DD/MM/YYYY → YYYY-MM-DD
-          const parts = dateStr.split("/");
-          if (parts.length === 3) date = `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+          // DD/MM/YYYY string
+          const [dd, mm, yyyy] = dateStr.split("/");
+          date = `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
         } else if (dateStr.includes("-")) {
           // Already YYYY-MM-DD
           date = dateStr;
