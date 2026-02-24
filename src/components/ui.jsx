@@ -600,7 +600,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
 
     try {
       const data = await file.arrayBuffer();
-      const wb   = XLSX.read(data, { type: "array", cellDates: true });
+      const wb   = XLSX.read(data, { type: "array", cellDates: false, raw: false });
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
@@ -632,10 +632,13 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         const remarks  = get(6);
 
         const rowErrs = [];
-        const isDateObj    = dateRaw instanceof Date && !isNaN(dateRaw);
-        const isSerialNum  = typeof dateRaw === "number";
-        const isStringDate = /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(String(dateRaw).trim());
-        const dateValid    = isDateObj || isSerialNum || isStringDate;
+        const isDateObj   = dateRaw instanceof Date && !isNaN(dateRaw);
+        const isSerialNum = typeof dateRaw === "number" && dateRaw > 0;
+        const dateStr     = String(dateRaw ?? "").trim();
+        const isStringDate = dateStr.length >= 6 && dateStr !== "" && 
+                             !dateStr.toLowerCase().startsWith("dd") &&
+                             !dateStr.toLowerCase().startsWith("date");
+        const dateValid   = isDateObj || isSerialNum || isStringDate;
         if (!dateRaw || !dateValid)                rowErrs.push("Invalid date — use DD/MM/YYYY");
         if (!company)                              rowErrs.push("Missing company");
         if (!["Buy","Sell"].includes(type))        rowErrs.push("Type must be Buy or Sell");
@@ -645,17 +648,23 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         const matchedCompany = companies.find(c => c.name.toLowerCase() === company.toLowerCase());
         if (company && !matchedCompany)            rowErrs.push(`Company "${company}" not found in Holdings`);
 
-        // Format date
-        let date = dateRaw;
-        if (dateRaw instanceof Date) {
+        // Format date → always store as YYYY-MM-DD for Supabase
+        let date = "";
+        if (isDateObj) {
           const d = dateRaw;
-          date = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-        } else if (typeof dateRaw === "number") {
+          date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        } else if (isSerialNum) {
           const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
-          date = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+          date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+        } else if (dateStr.includes("/")) {
+          // DD/MM/YYYY → YYYY-MM-DD
+          const parts = dateStr.split("/");
+          if (parts.length === 3) date = `${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`;
+        } else if (dateStr.includes("-")) {
+          // Already YYYY-MM-DD
+          date = dateStr;
         } else {
-          // Already DD/MM/YYYY string — keep as is
-          date = String(dateRaw).trim();
+          date = dateStr;
         }
 
         if (rowErrs.length) {
@@ -799,7 +808,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
                 {rows.map((r, i) => (
                   <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
                     <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{i + 1}</td>
-                    <td style={{ padding: "7px 10px", color: C.text, whiteSpace: "nowrap" }}>{r.date}</td>
+                    <td style={{ padding: "7px 10px", color: C.text, whiteSpace: "nowrap" }}>{r.date ? r.date.split("-").reverse().join("/") : ""}</td>
                     <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.company_name}</td>
                     <td style={{ padding: "7px 10px" }}>
                       <span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span>
