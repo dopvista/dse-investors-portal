@@ -81,7 +81,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
         notes: reason || null, updated_by: "Admin",
         created_at: new Date(datetime).toISOString(),
       });
-      const rows = await sbUpdate("companies", company.id, { price: newPrice, previous_price: oldPrice });
+      const rows = await sbUpdate("companies", company.id, { price: newPrice, previous_price: oldPrice, updated_at: new Date(datetime).toISOString() });
       setCompanies(prev => prev.map(c => c.id === company.id ? rows[0] : c));
       showToast("Price updated!", "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
