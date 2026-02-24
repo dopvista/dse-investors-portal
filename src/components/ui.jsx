@@ -23,10 +23,25 @@ export const C = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────
-export const fmt = (n) =>
-  Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Standard format — no trailing .00, shows decimals only if meaningful
+export const fmt = (n) => {
+  const v = Number(n || 0);
+  return v % 1 === 0
+    ? v.toLocaleString("en-US")
+    : v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
+// Integer format — no decimals ever
 export const fmtInt = (n) => Number(n || 0).toLocaleString("en-US");
+
+// Smart format — abbreviates large numbers for stat cards
+export const fmtSmart = (n) => {
+  const v = Number(n || 0);
+  if (v >= 1_000_000_000) return (v / 1_000_000_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "B";
+  if (v >= 1_000_000)     return (v / 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "M";
+  if (v >= 1_000)         return (v / 1_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "K";
+  return v.toLocaleString("en-US");
+};
 
 // ─── Spinner ──────────────────────────────────────────────────────
 export function Spinner({ size = 18, color = "#fff" }) {
