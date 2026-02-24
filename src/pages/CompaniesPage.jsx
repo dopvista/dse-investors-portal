@@ -152,8 +152,8 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: C.gray50 }}>
-                  {["#", "Company Name", "Previous Price (TZS)", "Current Price (TZS)", "Last Price Update", ""].map(h => (
-                    <th key={h} style={{ padding: "12px 18px", textAlign: ["Previous Price (TZS)", "Current Price (TZS)"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
+                  {["#", "Company Name", "Previous Price (TZS)", "Current Price (TZS)", "Change", "Last Price Update", ""].map(h => (
+                    <th key={h} style={{ padding: "10px 18px", textAlign: ["Previous Price (TZS)", "Current Price (TZS)", "Change"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
