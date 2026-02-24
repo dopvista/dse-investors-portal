@@ -10,16 +10,23 @@ if (!BASE || !KEY) {
 }
 
 // ── Safe response parser ───────────────────────────────────────────
+// FIX: parse JSON first, THEN throw — so the throw isn't caught by
+//      its own catch block and turned into a raw-JSON error string.
 async function parseResponse(res, fallbackMsg) {
   const text = await res.text();
+  let data;
   try {
-    const data = JSON.parse(text);
-    if (!res.ok) throw new Error(data.error_description || data.message || data.msg || fallbackMsg);
-    return data;
-  } catch (e) {
+    data = JSON.parse(text);
+  } catch {
+    // Response wasn't JSON at all
     if (!res.ok) throw new Error(fallbackMsg + (text.length < 200 ? ": " + text : ""));
-    throw e;
+    throw new Error(fallbackMsg);
   }
+  // Now throw cleanly — outside the try/catch so it won't be re-caught
+  if (!res.ok) {
+    throw new Error(data.error_description || data.message || data.msg || fallbackMsg);
+  }
+  return data;
 }
 
 // ── Headers ────────────────────────────────────────────────────────
