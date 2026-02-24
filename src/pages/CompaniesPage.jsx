@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { sbInsert, sbUpdate, sbDelete } from "../lib/supabase";
-import { C, fmt, Btn, FInput, FTextarea, StatCard, SectionCard, Modal } from "../components/ui";
+import { sbInsert, sbUpdate, sbDelete, sbGet } from "../lib/supabase";
+import { C, fmt, Btn, FInput, FTextarea, StatCard, SectionCard, Modal, PriceHistoryModal } from "../components/ui";
 
 export default function CompaniesPage({ companies, setCompanies, transactions, showToast }) {
   const empty = { name: "", price: "", remarks: "" };
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState(null);
   const [editPrice, setEditPrice] = useState({});
+  const [editNotes, setEditNotes] = useState({});
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [updating, setUpdating] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [modal, setModal] = useState({ open: false, type: "confirm", title: "", message: "", targetId: null });
+  const [historyModal, setHistoryModal] = useState({ open: false, company: null, history: [] });
+  const [loadingHistory, setLoadingHistory] = useState(null);
 
   const totalAvg = companies.length
     ? companies.reduce((s, c) => s + Number(c.price || 0), 0) / companies.length
@@ -69,15 +72,50 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
   const cancel = () => { setForm(empty); setEditId(null); setShowForm(false); };
 
   const updatePrice = async (id) => {
-    const p = editPrice[id]; if (!p) return;
+    const newPrice = editPrice[id];
+    if (!newPrice) return;
+    const company = companies.find(c => c.id === id);
+    const oldPrice = Number(company.price);
+    const np = Number(newPrice);
+    const changeAmount = np - oldPrice;
+    const changePct = oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : 0;
+    const notes = editNotes[id] || null;
+
     setUpdating(id);
     try {
-      const rows = await sbUpdate("companies", id, { price: Number(p) });
+      // Save price history record
+      await sbInsert("price_history", {
+        company_id: id,
+        company_name: company.name,
+        old_price: oldPrice,
+        new_price: np,
+        change_amount: changeAmount,
+        change_percent: changePct,
+        notes,
+        updated_by: "Admin",
+      });
+
+      // Update company: new price becomes current, old price becomes previous
+      const rows = await sbUpdate("companies", id, {
+        price: np,
+        previous_price: oldPrice,
+      });
+
       setCompanies(prev => prev.map(c => c.id === id ? rows[0] : c));
       setEditPrice(prev => { const x = { ...prev }; delete x[id]; return x; });
+      setEditNotes(prev => { const x = { ...prev }; delete x[id]; return x; });
       showToast("Price updated!", "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
     setUpdating(null);
+  };
+
+  const viewHistory = async (company) => {
+    setLoadingHistory(company.id);
+    try {
+      const history = await sbGet(`price_history?company_id=eq.${company.id}&order=created_at.desc`);
+      setHistoryModal({ open: true, company, history });
+    } catch (e) { showToast("Error loading history: " + e.message, "error"); }
+    setLoadingHistory(null);
   };
 
   return (
@@ -89,6 +127,12 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
         onConfirm={confirmDelete}
         onClose={() => setModal({ ...modal, open: false })}
       />
+      <PriceHistoryModal
+        company={historyModal.open ? historyModal.company : null}
+        history={historyModal.history}
+        onClose={() => setHistoryModal({ open: false, company: null, history: [] })}
+      />
+
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         <StatCard label="Total Holdings" value={companies.length} sub="Registered companies" icon="🏢" color={C.navy} />
@@ -135,41 +179,77 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: C.gray50 }}>
-                  {["#", "Company Name", "Current Price (TZS)", "Quick Price Update", "Remarks", "Actions"].map(h => (
-                    <th key={h} style={{ padding: "12px 18px", textAlign: ["Current Price (TZS)"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
+                  {["#", "Company Name", "Previous Price", "Current Price (TZS)", "Quick Price Update", "Remarks", "Actions"].map(h => (
+                    <th key={h} style={{ padding: "12px 18px", textAlign: ["Previous Price", "Current Price (TZS)"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {companies.map((c, i) => (
-                  <tr key={c.id} style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = C.gray50}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <td style={{ padding: "14px 18px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
-                    <td style={{ padding: "14px 18px", fontWeight: 700, color: C.text }}>{c.name}</td>
-                    <td style={{ padding: "14px 18px", textAlign: "right" }}>
-                      <span style={{ background: C.greenBg, color: C.green, padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
-                        {fmt(c.price)}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 18px" }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <input type="number" value={editPrice[c.id] || ""}
-                          onChange={e => setEditPrice(p => ({ ...p, [c.id]: e.target.value }))}
-                          placeholder="New price"
-                          style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 7, padding: "7px 10px", fontSize: 13, width: 110, outline: "none", fontFamily: "inherit" }} />
-                        <Btn variant="secondary" style={{ padding: "7px 12px", fontSize: 12 }} loading={updating === c.id} onClick={() => updatePrice(c.id)}>Update</Btn>
-                      </div>
-                    </td>
-                    <td style={{ padding: "14px 18px", color: C.gray600, maxWidth: 180, fontSize: 13 }}>{c.remarks || <span style={{ color: C.gray400 }}>—</span>}</td>
-                    <td style={{ padding: "14px 18px" }}>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <Btn variant="secondary" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => startEdit(c)}>✏️ Edit</Btn>
-                        <Btn variant="danger" style={{ padding: "6px 12px", fontSize: 12 }} loading={deleting === c.id} onClick={() => del(c.id)}>🗑</Btn>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {companies.map((c, i) => {
+                  const priceUp = c.previous_price ? Number(c.price) >= Number(c.previous_price) : null;
+                  return (
+                    <tr key={c.id} style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.background = C.gray50}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <td style={{ padding: "14px 18px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
+                      <td style={{ padding: "14px 18px", fontWeight: 700, color: C.text }}>{c.name}</td>
+
+                      {/* Previous Price */}
+                      <td style={{ padding: "14px 18px", textAlign: "right" }}>
+                        {c.previous_price ? (
+                          <span style={{ color: C.gray400, fontSize: 13 }}>{fmt(c.previous_price)}</span>
+                        ) : (
+                          <span style={{ color: C.gray400 }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Current Price */}
+                      <td style={{ padding: "14px 18px", textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
+                          <span style={{ background: C.greenBg, color: C.green, padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
+                            {fmt(c.price)}
+                          </span>
+                          {priceUp !== null && (
+                            <span style={{ fontSize: 12, fontWeight: 700, color: priceUp ? C.green : C.red }}>
+                              {priceUp ? "▲" : "▼"}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Quick Price Update */}
+                      <td style={{ padding: "14px 18px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input type="number" value={editPrice[c.id] || ""}
+                              onChange={e => setEditPrice(p => ({ ...p, [c.id]: e.target.value }))}
+                              placeholder="New price"
+                              style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 7, padding: "7px 10px", fontSize: 13, width: 110, outline: "none", fontFamily: "inherit" }} />
+                            <Btn variant="secondary" style={{ padding: "7px 12px", fontSize: 12 }} loading={updating === c.id} onClick={() => updatePrice(c.id)}>Update</Btn>
+                          </div>
+                          <input
+                            type="text"
+                            value={editNotes[c.id] || ""}
+                            onChange={e => setEditNotes(p => ({ ...p, [c.id]: e.target.value }))}
+                            placeholder="Reason (optional)"
+                            style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 7, padding: "6px 10px", fontSize: 12, width: 220, outline: "none", fontFamily: "inherit", color: C.gray600 }}
+                          />
+                        </div>
+                      </td>
+
+                      <td style={{ padding: "14px 18px", color: C.gray600, maxWidth: 180, fontSize: 13 }}>{c.remarks || <span style={{ color: C.gray400 }}>—</span>}</td>
+
+                      {/* Actions */}
+                      <td style={{ padding: "14px 18px" }}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <Btn variant="secondary" style={{ padding: "6px 12px", fontSize: 12 }} loading={loadingHistory === c.id} onClick={() => viewHistory(c)}>📈 History</Btn>
+                          <Btn variant="secondary" style={{ padding: "6px 12px", fontSize: 12 }} onClick={() => startEdit(c)}>✏️ Edit</Btn>
+                          <Btn variant="danger" style={{ padding: "6px 12px", fontSize: 12 }} loading={deleting === c.id} onClick={() => del(c.id)}>🗑</Btn>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
