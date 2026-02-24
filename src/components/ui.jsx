@@ -606,8 +606,15 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
 
       // Find header row (skip title/hint rows)
       const dataRows = json.filter(row => {
-        const vals = Object.values(row).map(v => String(v).trim());
-        return vals[0] && !vals[0].startsWith("DSE") && !vals[0].startsWith("Fill") && !vals[0].startsWith("Date");
+        const first = String(Object.values(row)[0] ?? "").trim();
+        if (!first) return false;
+        if (first.startsWith("DSE"))   return false;
+        if (first.startsWith("Fill"))  return false;
+        if (first.startsWith("Date"))  return false;
+        if (first.startsWith("DD/"))   return false;  // skip hint row
+        if (first.startsWith("YYYY"))  return false;  // skip old hint row
+        if (first.startsWith("d/"))    return false;
+        return true;
       });
 
       const parsed = []; const errs = [];
@@ -625,7 +632,10 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         const remarks  = get(6);
 
         const rowErrs = [];
-        const dateValid = /^\d{2}\/\d{2}\/\d{4}$/.test(String(dateRaw).trim()) || dateRaw instanceof Date || typeof dateRaw === "number";
+        const isDateObj    = dateRaw instanceof Date && !isNaN(dateRaw);
+        const isSerialNum  = typeof dateRaw === "number";
+        const isStringDate = /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/.test(String(dateRaw).trim());
+        const dateValid    = isDateObj || isSerialNum || isStringDate;
         if (!dateRaw || !dateValid)                rowErrs.push("Invalid date — use DD/MM/YYYY");
         if (!company)                              rowErrs.push("Missing company");
         if (!["Buy","Sell"].includes(type))        rowErrs.push("Type must be Buy or Sell");
@@ -734,7 +744,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
           • Company names must match exactly with your Holdings<br/>
           • Type must be exactly <strong>Buy</strong> or <strong>Sell</strong><br/>
           • Date format: <strong>DD/MM/YYYY</strong> (e.g. 24/02/2026)<br/>
-          • Delete the sample rows before importing
+          • Delete the 5 sample rows before importing
         </div>
       </div>
     </div>
