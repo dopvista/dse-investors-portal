@@ -776,11 +776,11 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>✅ Preview — {rows.length} rows ready to import:</div>
           <div style={{ maxHeight: 260, overflowY: "auto", border: `1px solid ${C.gray200}`, borderRadius: 10, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ background: C.navy }}>
-                  {["#","Date","Company","Type","Qty","Price","Fees","Total"].map(h => (
-                    <th key={h} style={{ padding: "8px 10px", color: C.white, fontWeight: 700, fontSize: 11, textAlign: h === "#" ? "center" : "left", whiteSpace: "nowrap" }}>{h}</th>
+                  {[["#","5%"],["Date","13%"],["Company","18%"],["Type","9%"],["Qty","10%"],["Price","15%"],["Fees","15%"],["Total","15%"]].map(([h, w]) => (
+                    <th key={h} style={{ padding: "8px 10px", color: C.white, fontWeight: 700, fontSize: 11, textAlign: h === "#" ? "center" : "left", whiteSpace: "nowrap", width: w }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -788,15 +788,15 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
                 {rows.map((r, i) => (
                   <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
                     <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{i + 1}</td>
-                    <td style={{ padding: "7px 10px", color: C.text }}>{r.date}</td>
-                    <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text }}>{r.company_name}</td>
+                    <td style={{ padding: "7px 10px", color: C.text, whiteSpace: "nowrap" }}>{r.date}</td>
+                    <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.company_name}</td>
                     <td style={{ padding: "7px 10px" }}>
                       <span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span>
                     </td>
                     <td style={{ padding: "7px 10px", color: C.text }}>{fmtInt(r.qty)}</td>
-                    <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600 }}>{fmt(r.price)}</td>
-                    <td style={{ padding: "7px 10px", color: C.gray600 }}>{r.fees ? fmt(r.fees) : "—"}</td>
-                    <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red }}>{fmt(r.total)}</td>
+                    <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600 }}>{fmtInt(r.price)}</td>
+                    <td style={{ padding: "7px 10px", color: C.gray600 }}>{r.fees ? fmtInt(r.fees) : "—"}</td>
+                    <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red }}>{fmtInt(r.total)}</td>
                   </tr>
                 ))}
               </tbody>
