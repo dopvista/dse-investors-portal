@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import * as XLSX from "xlsx";
 
 // ─── DSE Brand Colors ─────────────────────────────────────────────
 export const C = {
@@ -598,7 +599,6 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     setFileName(file.name);
 
     try {
-      const XLSX = await import("xlsx");
       const data = await file.arrayBuffer();
       const wb   = XLSX.read(data, { type: "array", cellDates: true });
       const ws   = wb.Sheets[wb.SheetNames[0]];
