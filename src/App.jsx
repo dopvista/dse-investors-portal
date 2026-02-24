@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { sbGet } from "./lib/supabase";
-import { C, Toast, Spinner } from "./components/ui";
+import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
 import TransactionsPage from "./pages/TransactionsPage";
+import logo from "./assets/logo.jpg";
 
 const NAV = [
   { id: "companies",    label: "Holdings",     icon: "🏢" },
@@ -43,7 +44,7 @@ export default function App() {
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy, fontFamily: "system-ui" }}>
       <div style={{ textAlign: "center", color: C.white }}>
-        <img src="/logo.jpg" alt="DSE Investors Portal" style={{ width: 72, height: 72, borderRadius: 16, marginBottom: 20, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }} />
+        <img src={logo} alt="DSE Investors Portal" style={{ width: 72, height: 72, borderRadius: 16, marginBottom: 20, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }} />
         <div style={{ fontWeight: 600, fontSize: 16 }}>DSE Investors Portal</div>
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -79,7 +80,7 @@ export default function App() {
         <div style={{ padding: "24px 20px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <img
-              src="/logo.jpg"
+              src={logo}
               alt="DI"
               style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }}
             />
@@ -166,7 +167,7 @@ export default function App() {
             </div>
             {/* Logo avatar */}
             <img
-              src="/logo.jpg"
+              src={logo}
               alt="DI"
               style={{ width: 38, height: 38, borderRadius: 10, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", flexShrink: 0 }}
             />
