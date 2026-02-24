@@ -1,42 +1,160 @@
-17:53:20.921 Running build in Washington, D.C., USA (East) – iad1 (Turbo Build Machine)
-17:53:20.922 Build machine configuration: 30 cores, 60 GB
-17:53:21.023 Cloning github.com/dopvista/dse-investors-portal (Branch: main, Commit: cfffd8e)
-17:53:21.240 Cloning completed: 217.000ms
-17:53:21.447 Restored build cache from previous deployment (9GhNjtyhsqoPFHmuFYEtjcqbAmTs)
-17:53:22.650 Running "vercel build"
-17:53:23.156 Vercel CLI 50.22.0
-17:53:23.637 Installing dependencies...
-17:53:25.565 
-17:53:25.565 up to date in 2s
-17:53:25.565 
-17:53:25.566 7 packages are looking for funding
-17:53:25.566   run `npm fund` for details
-17:53:25.595 Running "npm run build"
-17:53:25.681 
-17:53:25.682 > dse-investors-portal@1.0.0 build
-17:53:25.682 > vite build
-17:53:25.682 
-17:53:25.948 [36mvite v4.5.14 [32mbuilding for production...[36m[39m
-17:53:25.978 transforming...
-17:53:26.807 [32m✓[39m 41 modules transformed.
-17:53:26.807 [32m✓ built in 858ms[39m
-17:53:26.808 [31m"default" is not exported by "src/components/UserMenu.jsx", imported by "src/App.jsx".[39m
-17:53:26.808 file: [36m/vercel/path0/src/App.jsx:9:7[39m
-17:53:26.808 [33m 7: import ProfileSetupPage from "./pages/ProfileSetupPage";
-17:53:26.808  8: import ProfilePage from "./pages/ProfilePage";
-17:53:26.808  9: import UserMenu from "./components/UserMenu";
-17:53:26.808            ^
-17:53:26.808 10: import logo from "./assets/logo.jpg";[39m
-17:53:26.809 [31merror during build:
-17:53:26.809 RollupError: "default" is not exported by "src/components/UserMenu.jsx", imported by "src/App.jsx".
-17:53:26.810     at error (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:2287:30)
-17:53:26.810     at Module.error (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:13751:16)
-17:53:26.810     at Module.traceVariable (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:14181:29)
-17:53:26.810     at ModuleScope.findVariable (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:12621:39)
-17:53:26.810     at FunctionScope.findVariable (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:7130:38)
-17:53:26.810     at ChildScope.findVariable (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:7130:38)
-17:53:26.810     at Identifier.bind (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:8325:40)
-17:53:26.810     at CallExpression.bind (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:5894:28)
-17:53:26.810     at CallExpression.bind (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:9896:15)
-17:53:26.810     at ArrayExpression.bind (file:///vercel/path0/node_modules/rollup/dist/es/shared/node-entry.js:5894:28)[39m
-17:53:26.831 Error: Command "npm run build" exited with 1
+import { useState, useRef, useEffect } from "react";
+import { C } from "./ui";
+
+const UserMenu = ({ profile, session, onSignOut, onOpenProfile }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [open]);
+
+  // ── Data Logic ──────────────────────────────────────
+  const email    = session?.user?.email || session?.email || "";
+  const fullName = profile?.full_name   || email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const cds      = profile?.cds_number  || "—";
+  const initials = fullName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  const MENU_ITEMS = [
+    { icon: "👤", label: "My Profile",      sub: "View & edit your details",  soon: false, action: () => { onOpenProfile(); setOpen(false); } },
+    { icon: "🔑", label: "Reset Password", sub: "Change your password",       soon: true  },
+    { icon: "🎨", label: "Change Theme",   sub: "Light / Dark / Custom",      soon: true  },
+    { icon: "⚙️", label: "Preferences",   sub: "Notifications & display",    soon: true  },
+    { divider: true },
+    { icon: "🚪", label: "Sign Out",       sub: "Exit your session",          soon: false, danger: true, action: onSignOut },
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative", marginTop: "auto" }}>
+
+      {/* ── Popup Menu ──────────────────────────────────────────── */}
+      {open && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: 12, right: 12,
+          background: "#1a2f4a", border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 14, boxShadow: "0 -16px 48px rgba(0,0,0,0.5)", zIndex: 9999,
+          overflow: "hidden",
+        }}>
+
+          {/* Header — profile info */}
+          <div style={{ padding: "16px 18px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: `linear-gradient(135deg, ${C.gold}, #f97316)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 800, fontSize: 16, color: C.navy, flexShrink: 0,
+              }}>
+                {initials}
+              </div>
+              
+              {/* Container adjusted to ensure text fits and truncates */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ 
+                  color: C.white, 
+                  fontWeight: 700, 
+                  fontSize: 14, 
+                  whiteSpace: "nowrap", 
+                  overflow: "hidden", 
+                  textOverflow: "ellipsis" 
+                }}>
+                  {fullName}
+                </div>
+                <div style={{ 
+                  color: "rgba(255,255,255,0.45)", 
+                  fontSize: 11, 
+                  marginTop: 1, 
+                  whiteSpace: "nowrap", 
+                  overflow: "hidden", 
+                  textOverflow: "ellipsis",
+                  width: "100%" 
+                }}>
+                  {email}
+                </div>
+              </div>
+            </div>
+
+            {/* Profile detail chip — Only CDS Remaining */}
+            <div style={{ display: "block" }}>
+                <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "6px 10px" }}>
+                  <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>CDS Number</div>
+                  <div style={{ color: C.white, fontSize: 12, fontWeight: 600, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cds}</div>
+                </div>
+            </div>
+          </div>
+
+          {/* Menu items */}
+          <div style={{ padding: "8px 0" }}>
+            {MENU_ITEMS.map((item, i) => {
+              if (item.divider) return <div key={i} style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "6px 0" }} />;
+              return (
+                <button key={i}
+                  onClick={() => { if (!item.soon && item.action) item.action(); }}
+                  style={{
+                    width: "100%", padding: "10px 18px", border: "none", background: "none",
+                    cursor: item.soon ? "default" : "pointer", display: "flex",
+                    alignItems: "center", gap: 12, textAlign: "left",
+                    fontFamily: "inherit", opacity: item.soon ? 0.5 : 1,
+                  }}
+                  onMouseEnter={e => { if (!item.soon) e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+                >
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: item.danger ? "#f87171" : C.white }}>{item.label}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{item.sub}</div>
+                  </div>
+                  {item.soon && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.gold, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 6, padding: "2px 7px", flexShrink: 0 }}>SOON</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ padding: "10px 18px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>DSE Investors Portal v1.0</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Profile Strip ───────────────────────────────────────── */}
+      <button onClick={() => setOpen(o => !o)} style={{
+        width: "100%", padding: "14px 16px", border: "none",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+        background: open ? "rgba(255,255,255,0.06)" : "transparent",
+        cursor: "pointer", display: "flex", alignItems: "center", gap: 12,
+        transition: "background 0.2s", fontFamily: "inherit",
+      }}
+        onMouseEnter={e => { if (!open) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+        onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: `linear-gradient(135deg, ${C.gold}, #f97316)`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontWeight: 800, fontSize: 13, color: C.navy, flexShrink: 0,
+          boxShadow: "0 2px 8px rgba(245,158,11,0.35)",
+        }}>
+          {initials}
+        </div>
+        <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+          <div style={{ color: C.white, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {fullName}
+          </div>
+          <div style={{ color: C.gold, fontSize: 11, fontWeight: 600, marginTop: 1 }}>
+            {cds}
+          </div>
+        </div>
+        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▲</span>
+      </button>
+    </div>
+  );
+};
+
+export default UserMenu;
