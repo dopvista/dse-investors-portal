@@ -20,7 +20,6 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
 
   const MENU_ITEMS = [
     { icon: "👤", label: "My Profile",     sub: "View & edit your details",  soon: false, action: () => { onOpenProfile(); setOpen(false); } },
-    { icon: "🔑", label: "Reset Password", sub: "Change your password",       soon: true  },
     { icon: "🎨", label: "Change Theme",   sub: "Light / Dark / Custom",      soon: true  },
     { icon: "⚙️", label: "Preferences",   sub: "Notifications & display",    soon: true  },
     { divider: true },
