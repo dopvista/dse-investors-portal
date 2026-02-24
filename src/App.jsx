@@ -1,22 +1,24 @@
 import { useState, useEffect } from "react";
-import { sbGet, getSession, sbSignOut } from "./lib/supabase";
+import { sbGet, getSession, sbSignOut, sbGetProfile } from "./lib/supabase";
 import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import LoginPage from "./pages/LoginPage";
+import ProfileSetupPage from "./pages/ProfileSetupPage";
+import ProfilePage from "./pages/ProfilePage";
 import UserMenu from "./components/UserMenu";
 import logo from "./assets/logo.jpg";
 
 const NAV = [
   { id: "companies",    label: "Holdings",     icon: "🏢" },
   { id: "transactions", label: "Transactions", icon: "📋" },
-  // ── Add future pages here ──────────────────────────────────────
   // { id: "portfolio",   label: "Portfolio",    icon: "📊" },
   // { id: "reports",     label: "Reports",      icon: "📄" },
 ];
 
 export default function App() {
-  const [session, setSession]           = useState(undefined); // undefined = checking
+  const [session, setSession]           = useState(undefined);
+  const [profile, setProfile]           = useState(undefined);
   const [tab, setTab]                   = useState("companies");
   const [companies, setCompanies]       = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -35,12 +37,17 @@ export default function App() {
     setSession(s || null);
   }, []);
 
-  // ── Load data once session is confirmed ─────────────────────────
+  // ── Load profile + data once session confirmed ──────────────────
   useEffect(() => {
     if (!session) return;
     (async () => {
       try {
-        const [c, t] = await Promise.all([sbGet("companies"), sbGet("transactions")]);
+        const [p, c, t] = await Promise.all([
+          sbGetProfile(),
+          sbGet("companies"),
+          sbGet("transactions"),
+        ]);
+        setProfile(p);
         setCompanies(c);
         setTransactions(t);
       } catch (e) {
@@ -50,44 +57,46 @@ export default function App() {
     })();
   }, [session]);
 
-  const handleLogin = (sessionData) => setSession(sessionData);
+  const handleLogin        = (s)  => setSession(s);
+  const handleProfileDone  = (p)  => setProfile(p);
 
   const handleSignOut = async () => {
     await sbSignOut();
     setSession(null);
+    setProfile(undefined);
     setCompanies([]);
     setTransactions([]);
     setLoading(true);
     setDbError(null);
   };
 
-  // ── Checking session (brief flash) ─────────────────────────────
+  // ── Checking session ───────────────────────────────────────────
   if (session === undefined) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy }}>
-      <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
     </div>
   );
 
-  // ── Not logged in → show Login ──────────────────────────────────
+  // ── Not logged in ──────────────────────────────────────────────
   if (!session) return <LoginPage onLogin={handleLogin} />;
 
-  // ── Loading data ────────────────────────────────────────────────
+  // ── Loading data ───────────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy, fontFamily: "system-ui" }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ textAlign: "center", color: C.white }}>
-        <img src={logo} alt="DSE Investors Portal" style={{ width: 72, height: 72, borderRadius: 16, marginBottom: 20, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }} />
+        <img src={logo} alt="DSE" style={{ width: 72, height: 72, borderRadius: 16, marginBottom: 20, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }} />
         <div style={{ fontWeight: 600, fontSize: 16 }}>DSE Investors Portal</div>
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
           Loading your portfolio...
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
-  // ── DB Error ────────────────────────────────────────────────────
+  // ── DB Error ───────────────────────────────────────────────────
   if (dbError) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.gray50, fontFamily: "system-ui" }}>
       <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 16, padding: 40, maxWidth: 440, textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
@@ -98,15 +107,18 @@ export default function App() {
     </div>
   );
 
-  const counts = { companies: companies.length, transactions: transactions.length };
-  const now = new Date();
+  // ── No profile yet → show setup screen ────────────────────────
+  if (!profile) return <ProfileSetupPage session={session} onComplete={handleProfileDone} />;
 
-  // ── App shell ───────────────────────────────────────────────────
+  const counts = { companies: companies.length, transactions: transactions.length };
+  const now    = new Date();
+
+  // ── App shell ──────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", height: "100vh", width: "100%", fontFamily: "'Inter', system-ui, sans-serif", background: C.gray50, overflow: "hidden" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* ── Sidebar ─────────────────────────────────────────────── */}
+      {/* ── Sidebar ───────────────────────────────────────────── */}
       <div style={{ width: 240, background: C.navy, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", overflowY: "auto" }}>
 
         {/* Logo */}
@@ -130,7 +142,7 @@ export default function App() {
 
         <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "0 16px" }} />
 
-        {/* Nav links */}
+        {/* Nav */}
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", padding: "0 12px", marginBottom: 8 }}>Navigation</div>
           {NAV.map(item => {
@@ -166,20 +178,27 @@ export default function App() {
         </div>
 
         {/* User Menu */}
-        <UserMenu session={session} onSignOut={handleSignOut} />
+        <UserMenu
+          profile={profile}
+          session={session}
+          onSignOut={handleSignOut}
+          onOpenProfile={() => setTab("profile")}
+        />
       </div>
 
-      {/* ── Main content ─────────────────────────────────────────── */}
+      {/* ── Main content ─────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh", overflow: "hidden" }}>
 
         {/* Top bar */}
-        <div style={{ background: C.white, borderBottom: `1px solid ${C.gray200}`, padding: "0 32px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ background: C.white, borderBottom: `1px solid ${C.gray200}`, padding: "0 32px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 18, color: C.text }}>
-              {NAV.find(n => n.id === tab)?.label}
+              {tab === "profile" ? "My Profile" : NAV.find(n => n.id === tab)?.label}
             </div>
             <div style={{ fontSize: 12, color: C.gray400, marginTop: 1 }}>
-              {tab === "companies" ? "Manage your DSE registered companies" : "Record and view all buy/sell activity"}
+              {tab === "companies"    && "Manage your DSE registered companies"}
+              {tab === "transactions" && "Record and view all buy/sell activity"}
+              {tab === "profile"      && "Manage your personal information"}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -195,6 +214,7 @@ export default function App() {
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
           {tab === "companies"    && <CompaniesPage companies={companies} setCompanies={setCompanies} transactions={transactions} showToast={showToast} />}
           {tab === "transactions" && <TransactionsPage companies={companies} transactions={transactions} setTransactions={setTransactions} showToast={showToast} />}
+          {tab === "profile"      && <ProfilePage profile={profile} setProfile={setProfile} showToast={showToast} />}
         </div>
       </div>
 
