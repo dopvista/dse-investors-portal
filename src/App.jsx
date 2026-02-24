@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { sbGet } from "./lib/supabase";
+import { sbGet, getSession, sbSignOut } from "./lib/supabase";
 import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
 import TransactionsPage from "./pages/TransactionsPage";
+import LoginPage from "./pages/LoginPage";
 import UserMenu from "./components/UserMenu";
 import logo from "./assets/logo.jpg";
 
@@ -12,23 +13,31 @@ const NAV = [
   // ── Add future pages here ──────────────────────────────────────
   // { id: "portfolio",   label: "Portfolio",    icon: "📊" },
   // { id: "reports",     label: "Reports",      icon: "📄" },
-  // { id: "settings",    label: "Settings",     icon: "⚙️" },
 ];
 
 export default function App() {
-  const [tab, setTab]               = useState("companies");
-  const [companies, setCompanies]   = useState([]);
+  const [session, setSession]           = useState(undefined); // undefined = checking
+  const [tab, setTab]                   = useState("companies");
+  const [companies, setCompanies]       = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [dbError, setDbError]       = useState(null);
-  const [toast, setToast]           = useState({ msg: "", type: "" });
+  const [loading, setLoading]           = useState(true);
+  const [dbError, setDbError]           = useState(null);
+  const [toast, setToast]               = useState({ msg: "", type: "" });
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: "", type: "" }), 3500);
   };
 
+  // ── Check session on mount ──────────────────────────────────────
   useEffect(() => {
+    const s = getSession();
+    setSession(s || null);
+  }, []);
+
+  // ── Load data once session is confirmed ─────────────────────────
+  useEffect(() => {
+    if (!session) return;
     (async () => {
       try {
         const [c, t] = await Promise.all([sbGet("companies"), sbGet("transactions")]);
@@ -39,9 +48,31 @@ export default function App() {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [session]);
 
-  // ── Loading screen ────────────────────────────────────────────
+  const handleLogin = (sessionData) => setSession(sessionData);
+
+  const handleSignOut = async () => {
+    await sbSignOut();
+    setSession(null);
+    setCompanies([]);
+    setTransactions([]);
+    setLoading(true);
+    setDbError(null);
+  };
+
+  // ── Checking session (brief flash) ─────────────────────────────
+  if (session === undefined) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy }}>
+      <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  // ── Not logged in → show Login ──────────────────────────────────
+  if (!session) return <LoginPage onLogin={handleLogin} />;
+
+  // ── Loading data ────────────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy, fontFamily: "system-ui" }}>
       <div style={{ textAlign: "center", color: C.white }}>
@@ -49,13 +80,14 @@ export default function App() {
         <div style={{ fontWeight: 600, fontSize: 16 }}>DSE Investors Portal</div>
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
           <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-          Connecting to database...
+          Loading your portfolio...
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
-  // ── Error screen ──────────────────────────────────────────────
+  // ── DB Error ────────────────────────────────────────────────────
   if (dbError) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.gray50, fontFamily: "system-ui" }}>
       <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 16, padding: 40, maxWidth: 440, textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
@@ -69,22 +101,18 @@ export default function App() {
   const counts = { companies: companies.length, transactions: transactions.length };
   const now = new Date();
 
-  // ── App shell ─────────────────────────────────────────────────
+  // ── App shell ───────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", height: "100vh", width: "100%", fontFamily: "'Inter', system-ui, sans-serif", background: C.gray50, overflow: "hidden" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* ── Sidebar ─────────────────────────────────────────── */}
+      {/* ── Sidebar ─────────────────────────────────────────────── */}
       <div style={{ width: 240, background: C.navy, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", overflowY: "auto" }}>
 
         {/* Logo */}
         <div style={{ padding: "24px 20px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img
-              src={logo}
-              alt="DI"
-              style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }}
-            />
+            <img src={logo} alt="DI" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }} />
             <div>
               <div style={{ color: C.white, fontWeight: 800, fontSize: 14, lineHeight: 1.2 }}>DSE Investors</div>
               <div style={{ color: C.gold, fontWeight: 700, fontSize: 13, marginTop: 1 }}>Portal</div>
@@ -137,11 +165,11 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── User Profile Strip ───────────────────────────── */}
-        <UserMenu />
+        {/* User Menu */}
+        <UserMenu session={session} onSignOut={handleSignOut} />
       </div>
 
-      {/* ── Main content ─────────────────────────────────────── */}
+      {/* ── Main content ─────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh", overflow: "hidden" }}>
 
         {/* Top bar */}
@@ -159,18 +187,13 @@ export default function App() {
               <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{companies.length} Holdings</div>
               <div style={{ fontSize: 12, color: C.gray400 }}>{transactions.length} Transactions</div>
             </div>
-            {/* Logo avatar */}
-            <img
-              src={logo}
-              alt="DI"
-              style={{ width: 38, height: 38, borderRadius: 10, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", flexShrink: 0 }}
-            />
+            <img src={logo} alt="DI" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", flexShrink: 0 }} />
           </div>
         </div>
 
         {/* Page renderer */}
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-          {tab === "companies" && <CompaniesPage companies={companies} setCompanies={setCompanies} transactions={transactions} showToast={showToast} />}
+          {tab === "companies"    && <CompaniesPage companies={companies} setCompanies={setCompanies} transactions={transactions} showToast={showToast} />}
           {tab === "transactions" && <TransactionsPage companies={companies} transactions={transactions} setTransactions={setTransactions} showToast={showToast} />}
         </div>
       </div>
