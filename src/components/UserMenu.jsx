@@ -1,27 +1,8 @@
+// ── src/components/UserMenu.jsx ────────────────────────────────────
 import { useState, useRef, useEffect } from "react";
 import { C } from "./ui";
 
-// ── User Data (placeholder — will come from Supabase Auth later) ──
-const USER = {
-  name: "Michael Luzigah",
-  cds: "CDS-647305",
-  role: "Investor",
-  initials: "ML",
-};
-
-// ── Menu Items (easily extendable as features are built) ──────────
-const MENU_ITEMS = [
-  { icon: "👤", label: "My Profile",    sub: "View & edit profile",      soon: false },
-  { icon: "🔑", label: "Reset Password", sub: "Change your password",     soon: true  },
-  { icon: "🔄", label: "Switch Account", sub: "Manage multiple accounts", soon: true  },
-  { icon: "🎨", label: "Change Theme",   sub: "Light / Dark / Custom",    soon: true  },
-  { icon: "🌐", label: "Language",       sub: "English (default)",        soon: true  },
-  { icon: "⚙️", label: "Preferences",   sub: "Notifications & display",  soon: true  },
-  { divider: true },
-  { icon: "🚪", label: "Sign Out",       sub: "Exit your session",        soon: false, danger: true },
-];
-
-export default function UserMenu() {
+export default function UserMenu({ session, onSignOut }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -32,10 +13,26 @@ export default function UserMenu() {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
+  // ── Derive display info from session ───────────────────────────
+  const email    = session?.user?.email || session?.email || "User";
+  const initials = email.slice(0, 2).toUpperCase();
+  const name     = email.split("@")[0]
+    .replace(/[._-]/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+  const MENU_ITEMS = [
+    { icon: "👤", label: "My Profile",     sub: email,                    soon: false },
+    { icon: "🔑", label: "Reset Password", sub: "Change your password",   soon: true  },
+    { icon: "🎨", label: "Change Theme",   sub: "Light / Dark / Custom",  soon: true  },
+    { icon: "⚙️", label: "Preferences",   sub: "Notifications & display", soon: true  },
+    { divider: true },
+    { icon: "🚪", label: "Sign Out",       sub: "Exit your session",       soon: false, danger: true, action: onSignOut },
+  ];
+
   return (
     <div ref={ref} style={{ position: "relative", marginTop: "auto" }}>
 
-      {/* ── Popup Menu (slides up) ───────────────────────────── */}
+      {/* ── Popup Menu ──────────────────────────────────────────── */}
       {open && (
         <div style={{
           position: "absolute", bottom: "calc(100% + 8px)", left: 12, right: 12,
@@ -44,7 +41,7 @@ export default function UserMenu() {
           overflow: "hidden",
         }}>
 
-          {/* Menu header — full profile */}
+          {/* Menu header */}
           <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
@@ -53,14 +50,15 @@ export default function UserMenu() {
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: 800, fontSize: 16, color: C.navy, flexShrink: 0,
               }}>
-                {USER.initials}
+                {initials}
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ color: C.white, fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {USER.name}
+                  {name}
                 </div>
-                <div style={{ color: C.gold, fontSize: 11, fontWeight: 600, marginTop: 1 }}>{USER.cds}</div>
-                <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 1 }}>{USER.role}</div>
+                <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {email}
+                </div>
               </div>
             </div>
           </div>
@@ -74,7 +72,7 @@ export default function UserMenu() {
               return (
                 <button
                   key={i}
-                  onClick={() => !item.soon && setOpen(false)}
+                  onClick={() => { if (!item.soon && item.action) { item.action(); setOpen(false); } else if (!item.soon) setOpen(false); }}
                   style={{
                     width: "100%", padding: "10px 18px", border: "none", background: "none",
                     cursor: item.soon ? "default" : "pointer", display: "flex",
@@ -89,7 +87,7 @@ export default function UserMenu() {
                     <div style={{ fontSize: 13, fontWeight: 600, color: item.danger ? "#f87171" : C.white }}>
                       {item.label}
                     </div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {item.sub}
                     </div>
                   </div>
@@ -117,7 +115,7 @@ export default function UserMenu() {
         </div>
       )}
 
-      {/* ── Profile Strip (always visible at sidebar bottom) ── */}
+      {/* ── Profile Strip ───────────────────────────────────────── */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -130,7 +128,6 @@ export default function UserMenu() {
         onMouseEnter={e => { if (!open) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
         onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
       >
-        {/* Avatar */}
         <div style={{
           width: 36, height: 36, borderRadius: 10,
           background: `linear-gradient(135deg, ${C.gold}, #f97316)`,
@@ -138,20 +135,16 @@ export default function UserMenu() {
           fontWeight: 800, fontSize: 13, color: C.navy, flexShrink: 0,
           boxShadow: "0 2px 8px rgba(245,158,11,0.35)",
         }}>
-          {USER.initials}
+          {initials}
         </div>
-
-        {/* Name + CDS */}
         <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
           <div style={{ color: C.white, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {USER.name}
+            {name}
           </div>
           <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {USER.cds}
+            {email}
           </div>
         </div>
-
-        {/* Chevron */}
         <span style={{
           color: "rgba(255,255,255,0.3)", fontSize: 12, flexShrink: 0,
           transform: open ? "rotate(180deg)" : "rotate(0deg)",
