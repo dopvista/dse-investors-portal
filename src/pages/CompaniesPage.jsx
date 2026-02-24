@@ -158,7 +158,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                     { label: "Change",               align: "right" },
                     { label: "Previous Price (TZS)", align: "right" },
                     { label: "Last Price Update",    align: "left"  },
-                    { label: "",                     align: "right" },
+                    { label: "Actions",                align: "right" },
                   ].map(h => (
                     <th key={h.label} style={{ padding: "10px 18px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
                   ))}
