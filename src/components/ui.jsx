@@ -145,6 +145,7 @@ export function Btn({ children, variant = "primary", loading, icon, ...props }) 
 // ─── Action Menu (⋯ dropdown) ─────────────────────────────────────
 export function ActionMenu({ actions }) {
   const [open, setOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -156,11 +157,20 @@ export function ActionMenu({ actions }) {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setDropUp(spaceBelow < 160);
+    }
+    setOpen(o => !o);
+  };
+
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <button onClick={() => setOpen(o => !o)} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: open ? C.gray100 : C.white, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", color: C.gray600 }}>⋯</button>
+      <button onClick={handleOpen} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: open ? C.gray100 : C.white, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", color: C.gray600 }}>⋯</button>
       {open && (
-        <div style={{ position: "absolute", right: 0, top: 36, background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 99, minWidth: 160, overflow: "hidden" }}>
+        <div style={{ position: "absolute", right: 0, ...(dropUp ? { bottom: 36, top: "auto" } : { top: 36 }), background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 99, minWidth: 160, overflow: "hidden" }}>
           {actions.map((a, i) => (
             <button key={i} onClick={() => { setOpen(false); a.onClick(); }} style={{ width: "100%", padding: "10px 16px", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontWeight: 500, color: a.danger ? C.red : C.text, textAlign: "left", borderBottom: i < actions.length - 1 ? `1px solid ${C.gray100}` : "none", fontFamily: "inherit" }}
               onMouseEnter={e => e.currentTarget.style.background = a.danger ? C.redBg : C.gray50}
