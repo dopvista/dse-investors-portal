@@ -70,11 +70,11 @@ export default function App() {
 
   // ── App shell ─────────────────────────────────────────────────
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "'Inter', system-ui, sans-serif", background: C.gray50 }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } * { box-sizing: border-box; }`}</style>
+    <div style={{ display: "flex", height: "100vh", width: "100%", fontFamily: "'Inter', system-ui, sans-serif", background: C.gray50, overflow: "hidden" }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <div style={{ width: 240, background: C.navy, display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh", overflowY: "auto" }}>
+      <div style={{ width: 240, background: C.navy, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", overflowY: "auto" }}>
 
         {/* Logo */}
         <div style={{ padding: "24px 20px 20px" }}>
@@ -148,7 +148,7 @@ export default function App() {
       </div>
 
       {/* ── Main content ─────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh", overflow: "hidden" }}>
 
         {/* Top bar */}
         <div style={{ background: C.white, borderBottom: `1px solid ${C.gray200}`, padding: "0 32px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, position: "sticky", top: 0, zIndex: 100 }}>
