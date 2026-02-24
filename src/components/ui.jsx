@@ -577,14 +577,17 @@ export function TransactionFormModal({ transaction, companies, onConfirm, onClos
 
 // ─── Import Transactions Modal ────────────────────────────────────────────────
 export function ImportTransactionsModal({ companies, onImport, onClose }) {
-  const [step, setStep]         = useState("upload");   // upload | preview
+  const [step, setStep]         = useState("upload");
   const [rows, setRows]         = useState([]);
   const [errors, setErrors]     = useState([]);
   const [fileName, setFileName] = useState("");
   const [importing, setImporting] = useState(false);
+  const [parsing, setParsing]   = useState(false);
   const fileRef = useRef(null);
 
-  // ── Download sample template ──────────────────────────────────
+  const MAX_ROWS = 500;
+
+  // ── Download template ─────────────────────────────────────────
   const downloadTemplate = () => {
     const link = document.createElement("a");
     link.href = "/Transactions_Import_Template.xlsx";
@@ -592,11 +595,29 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     link.click();
   };
 
+  // ── Reset to upload step ──────────────────────────────────────
+  const resetToUpload = () => {
+    setStep("upload");
+    setRows([]);
+    setErrors([]);
+    setFileName("");
+    // Reset file input so same file can be re-selected
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   // ── Parse uploaded Excel file ─────────────────────────────────
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Validate file type
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      alert("Please select an Excel file (.xlsx or .xls)");
+      return;
+    }
+
     setFileName(file.name);
+    setParsing(true);
 
     try {
       const data = await file.arrayBuffer();
@@ -604,73 +625,90 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
-      // Find header row (skip title/hint rows)
+      // Skip header/hint/title rows
+      const SKIP_PREFIXES = ["dse", "fill", "date", "dd/", "yyyy", "column", "step", "important", "•", "note"];
       const dataRows = json.filter(row => {
-        const first = String(Object.values(row)[0] ?? "").trim();
+        const first = String(Object.values(row)[0] ?? "").trim().toLowerCase();
         if (!first) return false;
-        if (first.startsWith("DSE"))   return false;
-        if (first.startsWith("Fill"))  return false;
-        if (first.startsWith("Date"))  return false;
-        if (first.startsWith("DD/"))   return false;  // skip hint row
-        if (first.startsWith("YYYY"))  return false;  // skip old hint row
-        if (first.startsWith("d/"))    return false;
-        return true;
+        return !SKIP_PREFIXES.some(p => first.startsWith(p));
       });
 
-      const parsed = []; const errs = [];
-      dataRows.forEach((row, i) => {
-        const rowNum  = i + 1;
-        const keys    = Object.keys(row);
-        const get     = (idx) => String(row[keys[idx]] ?? "").trim();
-        const getRaw  = (idx) => row[keys[idx]];
+      // Enforce 500 row limit
+      if (dataRows.length > MAX_ROWS) {
+        alert(`This file has ${dataRows.length} rows. Maximum allowed is ${MAX_ROWS} rows per import. Please split into smaller files.`);
+        setParsing(false);
+        if (fileRef.current) fileRef.current.value = "";
+        return;
+      }
 
-        const dateRaw  = getRaw(0);  // keep as raw — could be Date object
-        const company  = get(1);
-        const type     = get(2);
-        const qty      = Number(get(3));
-        const price    = Number(get(4));
-        const fees     = Number(get(5)) || 0;
-        const remarks  = get(6);
+      if (dataRows.length === 0) {
+        setRows([]);
+        setErrors([]);
+        setStep("preview");
+        setParsing(false);
+        return;
+      }
+
+      const parsed = [];
+      const errs   = [];
+
+      dataRows.forEach((row, i) => {
+        const rowNum = i + 1;
+        const keys   = Object.keys(row);
+        const getRaw = (idx) => row[keys[idx]];
+        const get    = (idx) => String(row[keys[idx]] ?? "").trim();
+
+        const dateRaw = getRaw(0);
+        const company = get(1).trim();
+        const type    = get(2).trim();
+        const qty     = Number(get(3));
+        const price   = Number(get(4));
+        const fees    = Number(get(5)) || 0;
+        const remarks = get(6);
 
         const rowErrs = [];
         if (!dateRaw) rowErrs.push("Missing date");
-        if (!company)                              rowErrs.push("Missing company");
-        if (!["Buy","Sell"].includes(type))        rowErrs.push("Type must be Buy or Sell");
-        if (!qty || isNaN(qty) || qty <= 0)        rowErrs.push("Invalid quantity");
-        if (!price || isNaN(price) || price <= 0)  rowErrs.push("Invalid price");
+        if (!company) rowErrs.push("Missing company name");
+        if (!["Buy", "Sell"].includes(type)) rowErrs.push("Type must be exactly 'Buy' or 'Sell'");
+        if (!qty || isNaN(qty) || qty <= 0)   rowErrs.push("Invalid quantity");
+        if (!price || isNaN(price) || price <= 0) rowErrs.push("Invalid price");
 
-        const matchedCompany = companies.find(c => c.name.toLowerCase() === company.toLowerCase());
-        if (company && !matchedCompany)            rowErrs.push(`Company "${company}" not found in Holdings`);
+        // Case-insensitive + trimmed company match
+        const matchedCompany = companies.find(c =>
+          c.name.toLowerCase().trim() === company.toLowerCase()
+        );
+        if (company && !matchedCompany) rowErrs.push(`Company "${company}" not found in Holdings`);
 
-        // Convert any date format → YYYY-MM-DD for Supabase
-        const dateStr = String(dateRaw ?? "").trim();
+        // Convert date → YYYY-MM-DD for Supabase
         let date = "";
         if (dateRaw instanceof Date && !isNaN(dateRaw)) {
-          // Excel Date object
-          const d = dateRaw;
-          date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+          date = `${dateRaw.getFullYear()}-${String(dateRaw.getMonth()+1).padStart(2,"0")}-${String(dateRaw.getDate()).padStart(2,"0")}`;
         } else if (typeof dateRaw === "number") {
-          // Excel serial number
           const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
           date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-        } else if (dateStr.includes("/")) {
-          // DD/MM/YYYY string
-          const [dd, mm, yyyy] = dateStr.split("/");
-          date = `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
-        } else if (dateStr.includes("-")) {
-          // Already YYYY-MM-DD
-          date = dateStr;
         } else {
-          date = dateStr;
+          const dateStr = String(dateRaw).trim();
+          if (dateStr.includes("/")) {
+            const [dd, mm, yyyy] = dateStr.split("/");
+            date = `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+          } else {
+            date = dateStr; // Already YYYY-MM-DD
+          }
         }
 
         if (rowErrs.length) {
-          errs.push({ row: rowNum, errors: rowErrs, data: { date, company, type, qty, price, fees, remarks } });
+          errs.push({ row: rowNum, errors: rowErrs });
         } else {
           parsed.push({
-            date, company_id: matchedCompany?.id, company_name: matchedCompany?.name,
-            type, qty, price, fees: fees || null, remarks: remarks || null,
-            total: qty * price,
+            date,
+            company_id:   matchedCompany.id,
+            company_name: matchedCompany.name,
+            type,
+            qty,
+            price,
+            fees:    fees || null,
+            remarks: remarks || null,
+            total:   qty * price,  // total = shares only, fees stored separately
           });
         }
       });
@@ -680,6 +718,9 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
       setStep("preview");
     } catch (err) {
       alert("Failed to read file: " + err.message);
+      if (fileRef.current) fileRef.current.value = "";
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -692,15 +733,16 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
       onClose();
     } catch (e) {
       alert("Import failed: " + e.message);
+    } finally {
+      setImporting(false);
     }
-    setImporting(false);
   };
 
   // ── Upload Step ───────────────────────────────────────────────
   const UploadStep = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-      {/* Step 1 - Download template */}
+      {/* Step 1 */}
       <div style={{ background: C.gray50, border: `1.5px solid ${C.gray200}`, borderRadius: 12, padding: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{ width: 42, height: 42, background: `${C.green}15`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📥</div>
@@ -721,23 +763,24 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         </div>
       </div>
 
-      {/* Step 2 - Select file */}
+      {/* Step 2 */}
       <div style={{ background: C.gray50, border: `1.5px dashed ${C.gray300}`, borderRadius: 12, padding: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
-          <div style={{ width: 42, height: 42, background: `${C.navy}15`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📂</div>
+          <div style={{ width: 42, height: 42, background: `${C.navy}15`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+            {parsing ? <div style={{ width: 20, height: 20, border: `2px solid rgba(11,31,58,0.2)`, borderTop: `2px solid ${C.navy}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : "📂"}
+          </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>Step 2 — Select File to Import</div>
             <div style={{ fontSize: 12, color: C.gray400, marginTop: 3, lineHeight: 1.5 }}>
-              Select your filled Excel file (.xlsx). Maximum 500 rows per import.
+              Select your filled Excel file (.xlsx). Maximum {MAX_ROWS} rows per import.
             </div>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
             <button
-              onClick={() => fileRef.current?.click()}
-              style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.navy, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              onClick={() => !parsing && fileRef.current?.click()}
+              disabled={parsing}
+              style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.navy, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: parsing ? "wait" : "pointer", opacity: parsing ? 0.7 : 1, fontFamily: "inherit" }}
             >
-              <span>📁</span> {fileName || "Choose Excel File..."}
+              <span>📁</span> {parsing ? "Reading file..." : fileName || "Choose Excel File..."}
             </button>
           </div>
         </div>
@@ -747,10 +790,11 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
       <div style={{ background: "#FEF9EC", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "12px 16px" }}>
         <div style={{ fontSize: 12, color: "#92400E", fontWeight: 600, marginBottom: 6 }}>💡 Tips</div>
         <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.7 }}>
-          • Company names must match exactly with your Holdings<br/>
+          • Company names must match <strong>exactly</strong> with your Holdings<br/>
           • Type must be exactly <strong>Buy</strong> or <strong>Sell</strong><br/>
           • Date format: <strong>DD/MM/YYYY</strong> (e.g. 24/02/2026)<br/>
-          • Delete the 5 sample rows before importing
+          • Delete the sample rows before importing<br/>
+          • Maximum <strong>{MAX_ROWS} rows</strong> per import
         </div>
       </div>
     </div>
@@ -760,7 +804,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
   const PreviewStep = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* Summary bar */}
+      {/* Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         <div style={{ background: C.greenBg, border: `1px solid ${C.green}33`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>{rows.length}</div>
@@ -776,10 +820,10 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         </div>
       </div>
 
-      {/* Error rows */}
+      {/* Errors */}
       {errors.length > 0 && (
-        <div style={{ background: C.redBg, border: `1px solid ${C.red}33`, borderRadius: 10, padding: "12px 16px" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.red, marginBottom: 8 }}>⚠️ {errors.length} row(s) will be skipped due to errors:</div>
+        <div style={{ background: C.redBg, border: `1px solid ${C.red}33`, borderRadius: 10, padding: "12px 16px", maxHeight: 160, overflowY: "auto" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.red, marginBottom: 8 }}>⚠️ {errors.length} row(s) will be skipped:</div>
           {errors.map((e, i) => (
             <div key={i} style={{ fontSize: 12, color: C.red, marginBottom: 4 }}>
               <strong>Row {e.row}:</strong> {e.errors.join(" · ")}
@@ -788,7 +832,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         </div>
       )}
 
-      {/* Valid rows preview */}
+      {/* Preview table */}
       {rows.length > 0 && (
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>✅ Preview — {rows.length} rows ready to import:</div>
@@ -803,9 +847,8 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
               </thead>
               <tbody>
                 {rows.map((r, i) => {
-                  // Convert YYYY-MM-DD → DD/MM/YYYY for display
-                  const displayDate = r.date && r.date.includes("-") 
-                    ? r.date.split("-").reverse().join("/") 
+                  const displayDate = r.date && r.date.includes("-")
+                    ? r.date.split("-").reverse().join("/")
                     : r.date;
                   return (
                     <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
@@ -832,7 +875,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         <div style={{ textAlign: "center", padding: "30px", color: C.gray400 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>😟</div>
           <div style={{ fontWeight: 600 }}>No valid rows found</div>
-          <div style={{ fontSize: 12, marginTop: 4 }}>Check the errors above and fix your file</div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>{errors.length > 0 ? "Fix the errors above and try again" : "The file appears to be empty"}</div>
         </div>
       )}
     </div>
@@ -848,16 +891,14 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div>
             {step === "preview" && (
-              <Btn variant="secondary" onClick={() => { setStep("upload"); setRows([]); setErrors([]); setFileName(""); }}>
-                ← Back
-              </Btn>
+              <Btn variant="secondary" onClick={resetToUpload}>← Back</Btn>
             )}
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
             {step === "preview" && rows.length > 0 && (
               <Btn variant="primary" onClick={handleImport} icon="⬆️" disabled={importing}>
-                {importing ? "Importing..." : `Import ${rows.length} Transactions`}
+                {importing ? "Importing..." : `Import ${rows.length} Transaction${rows.length !== 1 ? "s" : ""}`}
               </Btn>
             )}
           </div>
