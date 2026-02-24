@@ -13,16 +13,14 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  // ── Display values from real profile ──────────────────────────
+  // ── Updated Display values ──────────────────────────
   const email    = session?.user?.email || session?.email || "";
   const fullName = profile?.full_name   || email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   const cds      = profile?.cds_number  || "—";
-  const phone    = profile?.phone       || "—";
-  const accType  = profile?.account_type || "—";
   const initials = fullName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   const MENU_ITEMS = [
-    { icon: "👤", label: "My Profile",     sub: "View & edit your details",  soon: false, action: () => { onOpenProfile(); setOpen(false); } },
+    { icon: "👤", label: "My Profile",      sub: "View & edit your details",  soon: false, action: () => { onOpenProfile(); setOpen(false); } },
     { icon: "🔑", label: "Reset Password", sub: "Change your password",       soon: true  },
     { icon: "🎨", label: "Change Theme",   sub: "Light / Dark / Custom",      soon: true  },
     { icon: "⚙️", label: "Preferences",   sub: "Notifications & display",    soon: true  },
@@ -42,7 +40,7 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
           overflow: "hidden",
         }}>
 
-          {/* Header — full profile info */}
+          {/* Header — profile info */}
           <div style={{ padding: "16px 18px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <div style={{
@@ -63,18 +61,12 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
               </div>
             </div>
 
-            {/* Profile detail chips */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-              {[
-                { label: "CDS",     value: cds      },
-                { label: "Phone",   value: phone    },
-                { label: "Type",    value: accType  },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "6px 10px" }}>
-                  <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
-                  <div style={{ color: C.white, fontSize: 12, fontWeight: 600, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
+            {/* Profile detail chip — Only CDS Remaining */}
+            <div style={{ display: "block" }}>
+                <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "6px 10px" }}>
+                  <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>CDS Number</div>
+                  <div style={{ color: C.white, fontSize: 12, fontWeight: 600, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cds}</div>
                 </div>
-              ))}
             </div>
           </div>
 
