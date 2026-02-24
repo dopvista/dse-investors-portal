@@ -178,6 +178,7 @@ export function CompanyFormModal({ company, onConfirm, onClose }) {
     if (!name.trim()) { setError("Company name is required."); return; }
     if (!isEdit && (!price || Number(price) <= 0)) { setError("A valid opening price is required."); return; }
     setError("");
+    onClose();
     onConfirm({ name: name.trim(), price: isEdit ? undefined : Number(price), remarks });
   };
 
