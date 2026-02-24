@@ -297,7 +297,7 @@ export function CompanyFormModal({ company, onConfirm, onClose }) {
       footer={
         <>
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn variant={isEdit ? "navy" : "primary"} onClick={handle} icon="💾">
+          <Btn variant="primary" onClick={handle} icon="💾">
             {isEdit ? "Save Changes" : "Register Company"}
           </Btn>
         </>
