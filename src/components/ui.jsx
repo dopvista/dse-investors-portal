@@ -796,8 +796,8 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ background: C.navy }}>
-                  {[["#","4%"],["Date","13%"],["Company","17%"],["Type","10%"],["Qty","10%"],["Price","14%"],["Fees","14%"],["Total","18%"]].map(([h, w]) => (
-                    <th key={h} style={{ padding: "8px 10px", color: C.white, fontWeight: 700, fontSize: 11, textAlign: h === "#" ? "center" : "left", whiteSpace: "nowrap", width: w }}>{h}</th>
+                  {[["#","4%","center"],["Date","13%","left"],["Company","17%","left"],["Type","10%","left"],["Qty","10%","right"],["Price","14%","right"],["Fees","14%","right"],["Total","18%","right"]].map(([h, w, align]) => (
+                    <th key={h} style={{ padding: "8px 10px", color: C.white, fontWeight: 700, fontSize: 11, textAlign: align, whiteSpace: "nowrap", width: w }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -815,10 +815,10 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
                       <td style={{ padding: "7px 10px" }}>
                         <span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span>
                       </td>
-                      <td style={{ padding: "7px 10px", color: C.text }}>{fmtInt(r.qty)}</td>
-                      <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600 }}>{fmtInt(r.price)}</td>
-                      <td style={{ padding: "7px 10px", color: C.gray600 }}>{r.fees ? fmtInt(r.fees) : "—"}</td>
-                      <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red }}>{fmtInt(r.total)}</td>
+                      <td style={{ padding: "7px 10px", color: C.text, textAlign: "right" }}>{fmtInt(r.qty)}</td>
+                      <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600, textAlign: "right" }}>{fmtInt(r.price)}</td>
+                      <td style={{ padding: "7px 10px", color: C.gray600, textAlign: "right" }}>{r.fees ? fmtInt(r.fees) : "—"}</td>
+                      <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red, textAlign: "right" }}>{fmtInt(r.total)}</td>
                     </tr>
                   );
                 })}
