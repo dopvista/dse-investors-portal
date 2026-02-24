@@ -20,8 +20,10 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const totalSellVal = sells.reduce((s, t) => s + Number(t.total || 0), 0);
 
   const submit = async () => {
-    if (!form.date || !form.companyId || !form.qty || !form.price)
-      return alert("Date, Company, Quantity and Price are required.");
+    if (!form.date || !form.companyId || !form.qty || !form.price) {
+      setModal({ open: true, title: "Missing Required Fields", message: "Please fill in Date, Company, Quantity and Price per Share before recording the transaction.", targetId: null });
+      return;
+    }
     const company = companies.find(c => c.id === form.companyId);
     setSaving(true);
     try {
