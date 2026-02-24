@@ -150,16 +150,11 @@ export function ActionMenu({ actions }) {
 
   useEffect(() => {
     if (!open) return;
-    const handle = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
+    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     const handleScroll = () => setOpen(false);
     document.addEventListener("mousedown", handle);
     document.addEventListener("scroll", handleScroll, true);
-    return () => {
-      document.removeEventListener("mousedown", handle);
-      document.removeEventListener("scroll", handleScroll, true);
-    };
+    return () => { document.removeEventListener("mousedown", handle); document.removeEventListener("scroll", handleScroll, true); };
   }, [open]);
 
   const handleOpen = () => {
@@ -168,10 +163,7 @@ export function ActionMenu({ actions }) {
       const dropdownHeight = actions.length * 41;
       const spaceBelow = window.innerHeight - rect.bottom;
       const goUp = spaceBelow < dropdownHeight;
-      setPos({
-        top: goUp ? rect.top - dropdownHeight : rect.bottom + 4,
-        left: rect.right - 160,
-      });
+      setPos({ top: goUp ? rect.top - dropdownHeight : rect.bottom + 4, left: rect.right - 160 });
     }
     setOpen(o => !o);
   };
@@ -194,6 +186,92 @@ export function ActionMenu({ actions }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// ─── MODAL SHELL (shared structure for ALL modals) ────────────────
+// ═══════════════════════════════════════════════════════════════════
+//
+//  Every modal in this system uses this shell. The anatomy is:
+//
+//  ┌─────────────────────────────────┐  ← white card, rounded-16, shadow
+//  │  HEADER  title / subtitle / ✕  │  ← white bg, border-bottom
+//  ├─────────────────────────────────┤
+//  │  BODY    (children)             │  ← scrollable if maxHeight set
+//  ├─────────────────────────────────┤
+//  │  FOOTER  action buttons         │  ← gray50 bg, border-top
+//  └─────────────────────────────────┘
+//
+function ModalShell({ title, subtitle, headerRight, onClose, footer, children, maxWidth = 460, maxHeight }) {
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth, display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", ...(maxHeight ? { maxHeight } : {}) }}>
+
+        {/* ── Header ── */}
+        <div style={{ padding: "22px 28px 16px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{title}</div>
+            {subtitle && <div style={{ fontSize: 13, color: C.gray400, marginTop: 3 }}>{subtitle}</div>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginLeft: 16, flexShrink: 0 }}>
+            {headerRight}
+            <button
+              onClick={onClose}
+              style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.gray200}`, background: C.gray50, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", color: C.gray600, flexShrink: 0 }}>
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* ── Body ── */}
+        <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", flex: 1 }}>
+          {children}
+        </div>
+
+        {/* ── Footer ── */}
+        {footer && (
+          <div style={{ padding: "16px 28px", borderTop: `1px solid ${C.gray200}`, display: "flex", gap: 10, justifyContent: "flex-end", alignItems: "center", background: C.gray50, borderRadius: "0 0 16px 16px", flexShrink: 0 }}>
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal (confirm / warning) ────────────────────────────────────
+export function Modal({ type = "confirm", title, message, onConfirm, onClose }) {
+  if (!title) return null;
+  const isWarn = type === "warning";
+  return (
+    <ModalShell
+      title={
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: isWarn ? C.redBg : "#FFF7ED", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+            {isWarn ? "🚫" : "🗑️"}
+          </span>
+          {title}
+        </span>
+      }
+      onClose={onClose}
+      maxWidth={420}
+      footer={
+        isWarn ? (
+          <Btn variant="secondary" onClick={onClose}>Close</Btn>
+        ) : (
+          <>
+            <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+            <Btn variant="danger" onClick={onConfirm} style={{ background: C.red, color: C.white, border: "none" }}>Yes, Delete</Btn>
+          </>
+        )
+      }
+    >
+      <div style={{ fontSize: 14, color: C.gray600, lineHeight: 1.7 }}>{message}</div>
+    </ModalShell>
+  );
+}
+
 // ─── Company Form Modal ───────────────────────────────────────────
 export function CompanyFormModal({ company, onConfirm, onClose }) {
   const isEdit = !!company;
@@ -211,27 +289,31 @@ export function CompanyFormModal({ company, onConfirm, onClose }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 460, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
-        <div style={{ padding: "22px 28px 16px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{isEdit ? "✏️ Edit Company" : "➕ Register New Company"}</div>
-            {isEdit && <div style={{ fontSize: 12, color: C.gray400, marginTop: 2 }}>To change the price use the 💰 Price button</div>}
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.gray200}`, background: C.gray50, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-        <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
-          {error && <div style={{ background: C.redBg, border: `1px solid #FECACA`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.red, fontWeight: 500 }}>⚠️ {error}</div>}
-          <FInput label="Company Name" required value={name} onChange={e => { setName(e.target.value); setError(""); }} placeholder="e.g. Tanzania Breweries" autoFocus />
-          {!isEdit && <FInput label="Opening Price (TZS)" required type="number" value={price} onChange={e => { setPrice(e.target.value); setError(""); }} placeholder="0.00" />}
-          <FTextarea label="Remarks" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional notes..." style={{ minHeight: 72 }} />
-        </div>
-        <div style={{ padding: "16px 28px", borderTop: `1px solid ${C.gray200}`, display: "flex", gap: 10, justifyContent: "flex-end", background: C.gray50, borderRadius: "0 0 16px 16px" }}>
+    <ModalShell
+      title={isEdit ? "✏️ Edit Company" : "➕ Register New Company"}
+      subtitle={isEdit ? "To change the price use the 💰 Price button" : undefined}
+      onClose={onClose}
+      maxWidth={460}
+      footer={
+        <>
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn variant={isEdit ? "navy" : "primary"} onClick={handle} icon="💾">{isEdit ? "Save Changes" : "Register Company"}</Btn>
+          <Btn variant={isEdit ? "navy" : "primary"} onClick={handle} icon="💾">
+            {isEdit ? "Save Changes" : "Register Company"}
+          </Btn>
+        </>
+      }
+    >
+      {error && (
+        <div style={{ background: C.redBg, border: `1px solid #FECACA`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.red, fontWeight: 500 }}>
+          ⚠️ {error}
         </div>
-      </div>
-    </div>
+      )}
+      <FInput label="Company Name" required value={name} onChange={e => { setName(e.target.value); setError(""); }} placeholder="e.g. Tanzania Breweries" autoFocus />
+      {!isEdit && (
+        <FInput label="Opening Price (TZS)" required type="number" value={price} onChange={e => { setPrice(e.target.value); setError(""); }} placeholder="0.00" />
+      )}
+      <FTextarea label="Remarks" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional notes..." style={{ minHeight: 72 }} />
+    </ModalShell>
   );
 }
 
@@ -260,52 +342,72 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
   const up = changeAmt !== null ? changeAmt >= 0 : null;
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
-        <div style={{ padding: "22px 28px 16px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>💰 Update Share Price</div>
-            <div style={{ fontSize: 13, color: C.gray400, marginTop: 2 }}>{company.name}</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.gray200}`, background: C.gray50, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-        <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ background: C.gray50, borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 12, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.navy }}>TZS {fmt(company.price)}</div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>New Price (TZS) <span style={{ color: C.red }}>*</span></label>
-            <input type="number" value={newPrice} onChange={e => { setNewPrice(e.target.value); setError(""); }} placeholder="Enter new price..." autoFocus
-              style={{ border: `1.5px solid ${error ? C.red : C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 15, fontWeight: 700, outline: "none", fontFamily: "inherit", color: C.text }} />
-            {error && <div style={{ fontSize: 12, color: C.red }}>{error}</div>}
-          </div>
-          {changeAmt !== null && newPrice && (
-            <div style={{ background: up ? C.greenBg : C.redBg, border: `1px solid ${up ? "#BBF7D0" : "#FECACA"}`, borderRadius: 10, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 12, color: C.gray600, fontWeight: 600 }}>Price Movement</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} TZS {fmt(Math.abs(changeAmt))}</span>
-                <span style={{ background: up ? C.green : C.red, color: C.white, padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{up ? "+" : ""}{changePct?.toFixed(2)}%</span>
-              </div>
-            </div>
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date & Time</label>
-            <input type="datetime-local" value={datetime} onChange={e => setDatetime(e.target.value)}
-              style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text }} />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Reason</label>
-            <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="Reason for price change..."
-              style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text }} />
-          </div>
-        </div>
-        <div style={{ padding: "16px 28px", borderTop: `1px solid ${C.gray200}`, display: "flex", gap: 10, justifyContent: "flex-end", background: C.gray50, borderRadius: "0 0 16px 16px" }}>
+    <ModalShell
+      title="💰 Update Share Price"
+      subtitle={company.name}
+      onClose={onClose}
+      maxWidth={440}
+      footer={
+        <>
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
           <Btn variant="primary" onClick={handleConfirm} icon="💾">Update Price</Btn>
-        </div>
+        </>
+      }
+    >
+      {/* Current Price display */}
+      <div style={{ background: C.gray50, borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 12, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.navy }}>TZS {fmt(company.price)}</div>
       </div>
-    </div>
+
+      {/* New Price input */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          New Price (TZS) <span style={{ color: C.red }}>*</span>
+        </label>
+        <input
+          type="number" value={newPrice} onChange={e => { setNewPrice(e.target.value); setError(""); }}
+          placeholder="Enter new price..." autoFocus
+          style={{ border: `1.5px solid ${error ? C.red : C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 15, fontWeight: 700, outline: "none", fontFamily: "inherit", color: C.text, width: "100%", boxSizing: "border-box" }}
+          onFocus={e => !error && (e.target.style.borderColor = C.green)}
+          onBlur={e => !error && (e.target.style.borderColor = C.gray200)}
+        />
+        {error && <div style={{ fontSize: 12, color: C.red }}>{error}</div>}
+      </div>
+
+      {/* Price movement preview */}
+      {changeAmt !== null && newPrice && (
+        <div style={{ background: up ? C.greenBg : C.redBg, border: `1px solid ${up ? "#BBF7D0" : "#FECACA"}`, borderRadius: 10, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 12, color: C.gray600, fontWeight: 600 }}>Price Movement</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} TZS {fmt(Math.abs(changeAmt))}</span>
+            <span style={{ background: up ? C.green : C.red, color: C.white, padding: "2px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{up ? "+" : ""}{changePct?.toFixed(2)}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Date & Time */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date & Time</label>
+        <input
+          type="datetime-local" value={datetime} onChange={e => setDatetime(e.target.value)}
+          style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, width: "100%", boxSizing: "border-box" }}
+          onFocus={e => (e.target.style.borderColor = C.green)}
+          onBlur={e => (e.target.style.borderColor = C.gray200)}
+        />
+      </div>
+
+      {/* Reason */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Reason</label>
+        <input
+          type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="Reason for price change..."
+          style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, width: "100%", boxSizing: "border-box" }}
+          onFocus={e => (e.target.style.borderColor = C.green)}
+          onBlur={e => (e.target.style.borderColor = C.gray200)}
+        />
+      </div>
+    </ModalShell>
   );
 }
 
@@ -313,100 +415,154 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
 export function PriceHistoryModal({ company, history, onClose }) {
   if (!company) return null;
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 680, maxHeight: "80vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
-        <div style={{ padding: "22px 28px 16px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.text }}>📈 Price History</div>
-            <div style={{ fontSize: 13, color: C.gray400, marginTop: 2 }}>{company.name}</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>TZS {fmt(company.price)}</div>
-            </div>
-            <button onClick={onClose} style={{ width: 34, height: 34, borderRadius: 8, border: `1px solid ${C.gray200}`, background: C.gray50, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-          </div>
+    <ModalShell
+      title="📈 Price History"
+      subtitle={company.name}
+      headerRight={
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>TZS {fmt(company.price)}</div>
         </div>
-        <div style={{ overflowY: "auto", flex: 1 }}>
-          {history.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "50px 20px", color: C.gray400 }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
-              <div style={{ fontWeight: 600 }}>No price history yet</div>
-              <div style={{ fontSize: 13, marginTop: 4 }}>Price changes will appear here after the first update</div>
-            </div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: C.gray50, position: "sticky", top: 0 }}>
-                  {["#", "Date & Time", "Old Price", "New Price", "Change", "Change %", "Notes", "Updated By"].map(h => (
-                    <th key={h} style={{ padding: "11px 16px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((h, i) => {
-                  const up = h.change_amount >= 0;
-                  return (
-                    <tr key={h.id} style={{ borderBottom: `1px solid ${C.gray100}` }}
-                      onMouseEnter={e => e.currentTarget.style.background = C.gray50}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                      <td style={{ padding: "12px 16px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
-                      <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
-                        <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                        <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
-                      </td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", color: C.gray600 }}>{fmt(h.old_price)}</td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
-                      <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</td>
-                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                        <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                          {up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 16px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-        <div style={{ padding: "14px 28px", borderTop: `1px solid ${C.gray200}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, background: C.gray50 }}>
+      }
+      onClose={onClose}
+      maxWidth={680}
+      maxHeight="80vh"
+      footer={
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div style={{ fontSize: 12, color: C.gray400 }}>{history.length} price update{history.length !== 1 ? "s" : ""} recorded</div>
           <Btn variant="secondary" onClick={onClose}>Close</Btn>
         </div>
-      </div>
-    </div>
+      }
+    >
+      {history.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "30px 20px", color: C.gray400 }}>
+          <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
+          <div style={{ fontWeight: 600 }}>No price history yet</div>
+          <div style={{ fontSize: 13, marginTop: 4 }}>Price changes will appear here after the first update</div>
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto", margin: "0 -28px", padding: "0 0 4px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.gray50 }}>
+                {["#", "Date & Time", "Old Price", "New Price", "Change", "Change %", "Notes", "Updated By"].map(h => (
+                  <th key={h} style={{ padding: "11px 16px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, borderTop: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h, i) => {
+                const up = h.change_amount >= 0;
+                return (
+                  <tr key={h.id} style={{ borderBottom: `1px solid ${C.gray100}` }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.gray50}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <td style={{ padding: "12px 16px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
+                    <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                      <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                      <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
+                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right", color: C.gray600 }}>{fmt(h.old_price)}</td>
+                    <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
+                    <td style={{ padding: "12px 16px", textAlign: "right", fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                        {up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px 16px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </ModalShell>
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────────────
-export function Modal({ type = "confirm", title, message, onConfirm, onClose }) {
-  if (!title) return null;
-  const isWarn = type === "warning";
+// ─── Transaction Form Modal ───────────────────────────────────────
+export function TransactionFormModal({ transaction, companies, onConfirm, onClose }) {
+  const today = new Date().toISOString().split("T")[0];
+  const isEdit = !!transaction;
+  const [form, setForm] = useState(
+    transaction
+      ? { date: transaction.date, companyId: transaction.company_id, type: transaction.type, qty: transaction.qty, price: transaction.price, fees: transaction.fees || "", remarks: transaction.remarks || "" }
+      : { date: today, companyId: "", type: "Buy", qty: "", price: "", fees: "", remarks: "" }
+  );
+  const [error, setError] = useState("");
+
+  const total = (Number(form.qty) || 0) * (Number(form.price) || 0);
+  const grandTotal = total + (Number(form.fees) || 0);
+
+  const handle = () => {
+    if (!form.date || !form.companyId || !form.qty || !form.price) {
+      setError("Please fill in Date, Company, Quantity and Price per Share.");
+      return;
+    }
+    setError("");
+    onConfirm({ ...form, total, grandTotal });
+  };
+
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: C.white, borderRadius: 16, padding: 32, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
-        <div style={{ width: 52, height: 52, borderRadius: 14, background: isWarn ? C.redBg : "#FFF7ED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 16 }}>
-          {isWarn ? "🚫" : "🗑️"}
+    <ModalShell
+      title={isEdit ? "✏️ Edit Transaction" : "📝 Record New Transaction"}
+      subtitle={isEdit ? "Update the details of this transaction" : "Record a new buy or sell order"}
+      onClose={onClose}
+      maxWidth={620}
+      footer={
+        <>
+          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+          <Btn variant={isEdit ? "navy" : "primary"} onClick={handle} icon="💾">
+            {isEdit ? "Save Changes" : "Record Transaction"}
+          </Btn>
+        </>
+      }
+    >
+      {error && (
+        <div style={{ background: C.redBg, border: `1px solid #FECACA`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.red, fontWeight: 500 }}>
+          ⚠️ {error}
         </div>
-        <div style={{ fontSize: 17, fontWeight: 800, color: C.text, marginBottom: 8 }}>{title}</div>
-        <div style={{ fontSize: 14, color: C.gray600, lineHeight: 1.6, marginBottom: 24 }}>{message}</div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          {isWarn ? (
-            <Btn variant="secondary" onClick={onClose}>Close</Btn>
-          ) : (
-            <>
-              <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-              <Btn variant="danger" onClick={onConfirm} style={{ background: C.red, color: C.white, border: "none" }}>Yes, Delete</Btn>
-            </>
-          )}
-        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+        <FInput label="Date" required type="date" value={form.date} onChange={e => { setForm(f => ({ ...f, date: e.target.value })); setError(""); }} />
+        <FSelect label="Company" required value={form.companyId} onChange={e => { setForm(f => ({ ...f, companyId: e.target.value })); setError(""); }}>
+          <option value="">Select company...</option>
+          {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </FSelect>
+        <FSelect label="Transaction Type" required value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+          <option value="Buy">🟢 Buy</option>
+          <option value="Sell">🔴 Sell</option>
+        </FSelect>
+        <FInput label="Quantity" required type="number" value={form.qty} onChange={e => { setForm(f => ({ ...f, qty: e.target.value })); setError(""); }} placeholder="0" />
+        <FInput label="Price per Share (TZS)" required type="number" value={form.price} onChange={e => { setForm(f => ({ ...f, price: e.target.value })); setError(""); }} placeholder="0.00" />
+        <FInput label="Other Fees (TZS)" type="number" value={form.fees} onChange={e => setForm(f => ({ ...f, fees: e.target.value }))} placeholder="0.00" />
       </div>
-    </div>
+
+      {/* Auto-calc summary */}
+      {total > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 10, padding: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Shares Total</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginTop: 4 }}>TZS {fmt(total)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Fees</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginTop: 4 }}>TZS {fmt(form.fees || 0)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Grand Total</div>
+            <div style={{ fontSize: 19, fontWeight: 800, color: C.green, marginTop: 4 }}>TZS {fmt(grandTotal)}</div>
+          </div>
+        </div>
+      )}
+
+      <FTextarea label="Remarks" value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} placeholder="Optional notes..." style={{ minHeight: 56 }} />
+    </ModalShell>
   );
 }
