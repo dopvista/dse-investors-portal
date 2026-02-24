@@ -22,14 +22,26 @@ function token() { return getSession()?.access_token || KEY; }
 
 // ── AUTH ───────────────────────────────────────────────────────────
 
+// ── Safe JSON parser — handles HTML error pages gracefully ─────────
+async function parseResponse(res, fallbackMsg) {
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    if (!res.ok) throw new Error(data.error_description || data.message || data.msg || fallbackMsg);
+    return data;
+  } catch (e) {
+    if (!res.ok) throw new Error(fallbackMsg + (text.length < 200 ? ": " + text : ""));
+    throw e;
+  }
+}
+
 export async function sbSignUp(email, password) {
   const res = await fetch(`${BASE}/auth/v1/signup`, {
     method:  "POST",
     headers: { "Content-Type": "application/json", "apikey": KEY },
     body:    JSON.stringify({ email, password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error_description || data.msg || "Sign up failed");
+  const data = await parseResponse(res, "Sign up failed");
   if (data.access_token) saveSession(data);
   return data;
 }
@@ -40,8 +52,7 @@ export async function sbSignIn(email, password) {
     headers: { "Content-Type": "application/json", "apikey": KEY },
     body:    JSON.stringify({ email, password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error_description || data.msg || "Sign in failed");
+  const data = await parseResponse(res, "Invalid email or password");
   saveSession(data);
   return data;
 }
@@ -63,10 +74,7 @@ export async function sbResetPassword(email) {
     headers: { "Content-Type": "application/json", "apikey": KEY },
     body:    JSON.stringify({ email }),
   });
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.error_description || "Reset failed");
-  }
+  await parseResponse(res, "Password reset failed");
   return true;
 }
 
