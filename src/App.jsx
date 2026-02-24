@@ -1,24 +1,39 @@
 import { useState, useEffect } from "react";
-import { sbGet, getSession, sbSignOut, sbGetProfile } from "./lib/supabase";
+import { sbGet, getSession, sbSignOut, sbGetProfile, sbGetMyRole } from "./lib/supabase";
 import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import LoginPage from "./pages/LoginPage";
 import ProfileSetupPage from "./pages/ProfileSetupPage";
 import ProfilePage from "./pages/ProfilePage";
+import UserManagementPage from "./pages/UserManagementPage";
 import UserMenu from "./components/UserMenu";
 import logo from "./assets/logo.jpg";
 
+// ── Role-based nav visibility ──────────────────────────────────────
+// Each nav item declares which role codes can see it.
+// SA and AD can see everything. DE, VR, RO have limited access.
 const NAV = [
-  { id: "companies",    label: "Holdings",     icon: "🏢" },
-  { id: "transactions", label: "Transactions", icon: "📋" },
-  // { id: "portfolio",   label: "Portfolio",    icon: "📊" },
-  // { id: "reports",     label: "Reports",      icon: "📄" },
+  { id: "companies",       label: "Holdings",         icon: "🏢", roles: ["SA","AD","DE","VR","RO"] },
+  { id: "transactions",    label: "Transactions",     icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
+  { id: "user-management", label: "User Management",  icon: "👥", roles: ["SA"] },
+  // { id: "portfolio",    label: "Portfolio",        icon: "📊", roles: ["SA","AD","RO"] },
+  // { id: "reports",      label: "Reports",          icon: "📄", roles: ["SA","AD","VR","RO"] },
 ];
+
+// ── Role display config (badge color + label) ──────────────────────
+export const ROLE_META = {
+  SA: { label: "Super Admin",  color: "#0A2540" },
+  AD: { label: "Admin",        color: "#1E3A5F" },
+  DE: { label: "Data Entrant", color: "#1D4ED8" },
+  VR: { label: "Verifier",     color: "#065F46" },
+  RO: { label: "Read Only",    color: "#374151" },
+};
 
 export default function App() {
   const [session, setSession]           = useState(undefined);
   const [profile, setProfile]           = useState(undefined);
+  const [role, setRole]                 = useState(null);      // 'SA' | 'AD' | 'DE' | 'VR' | 'RO' | null
   const [tab, setTab]                   = useState("companies");
   const [companies, setCompanies]       = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -31,23 +46,25 @@ export default function App() {
     setTimeout(() => setToast({ msg: "", type: "" }), 3500);
   };
 
-  // ── Check session on mount ──────────────────────────────────────
+  // ── Check session on mount ───────────────────────────────────────
   useEffect(() => {
     const s = getSession();
     setSession(s || null);
   }, []);
 
-  // ── Load profile + data once session confirmed ──────────────────
+  // ── Load profile + role + data once session confirmed ────────────
   useEffect(() => {
     if (!session) return;
     (async () => {
       try {
-        const [p, c, t] = await Promise.all([
+        const [p, r, c, t] = await Promise.all([
           sbGetProfile(),
+          sbGetMyRole(),       // ← fetch role alongside everything else
           sbGet("companies"),
           sbGet("transactions"),
         ]);
         setProfile(p);
+        setRole(r);            // e.g. 'SA', 'AD', 'DE', 'VR', 'RO'
         setCompanies(c);
         setTransactions(t);
       } catch (e) {
@@ -57,20 +74,22 @@ export default function App() {
     })();
   }, [session]);
 
-  const handleLogin        = (s)  => setSession(s);
-  const handleProfileDone  = (p)  => setProfile(p);
+  const handleLogin = (s) => setSession(s);
+
+  const handleProfileDone = (p) => setProfile(p);
 
   const handleSignOut = async () => {
     await sbSignOut();
     setSession(null);
     setProfile(undefined);
+    setRole(null);
     setCompanies([]);
     setTransactions([]);
     setLoading(true);
     setDbError(null);
   };
 
-  // ── Checking session ───────────────────────────────────────────
+  // ── Checking session ─────────────────────────────────────────────
   if (session === undefined) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -78,10 +97,10 @@ export default function App() {
     </div>
   );
 
-  // ── Not logged in ──────────────────────────────────────────────
+  // ── Not logged in ────────────────────────────────────────────────
   if (!session) return <LoginPage onLogin={handleLogin} />;
 
-  // ── Loading data ───────────────────────────────────────────────
+  // ── Loading data ─────────────────────────────────────────────────
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy, fontFamily: "system-ui" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -96,7 +115,7 @@ export default function App() {
     </div>
   );
 
-  // ── DB Error ───────────────────────────────────────────────────
+  // ── DB Error ─────────────────────────────────────────────────────
   if (dbError) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.gray50, fontFamily: "system-ui" }}>
       <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 16, padding: 40, maxWidth: 440, textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
@@ -107,18 +126,20 @@ export default function App() {
     </div>
   );
 
-  // ── No profile yet → show setup screen ────────────────────────
+  // ── No profile yet → show setup screen ───────────────────────────
   if (!profile) return <ProfileSetupPage session={session} onComplete={handleProfileDone} />;
 
+  // ── Filter nav items by current user's role ───────────────────────
+  const visibleNav = NAV.filter(item => !role || item.roles.includes(role));
   const counts = { companies: companies.length, transactions: transactions.length };
-  const now    = new Date();
+  const now = new Date();
 
-  // ── App shell ──────────────────────────────────────────────────
+  // ── App shell ─────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", height: "100vh", width: "100%", fontFamily: "'Inter', system-ui, sans-serif", background: C.gray50, overflow: "hidden" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* ── Sidebar ───────────────────────────────────────────── */}
+      {/* ── Sidebar ─────────────────────────────────────────────── */}
       <div style={{ width: 240, background: C.navy, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", overflowY: "auto" }}>
 
         {/* Logo */}
@@ -140,12 +161,20 @@ export default function App() {
           </div>
         </div>
 
+        {/* Role badge — shows current user's role under logo */}
+        {role && (
+          <div style={{ margin: "0 16px 12px", padding: "6px 12px", borderRadius: 8, background: `${ROLE_META[role]?.color}33`, border: `1px solid ${ROLE_META[role]?.color}66`, display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: ROLE_META[role]?.color, flexShrink: 0 }} />
+            <span style={{ color: C.white, fontSize: 11, fontWeight: 600 }}>{ROLE_META[role]?.label}</span>
+          </div>
+        )}
+
         <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "0 16px" }} />
 
-        {/* Nav */}
+        {/* Nav — filtered by role */}
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", padding: "0 12px", marginBottom: 8 }}>Navigation</div>
-          {NAV.map(item => {
+          {visibleNav.map(item => {
             const active = tab === item.id;
             return (
               <button key={item.id} onClick={() => setTab(item.id)} style={{
@@ -181,24 +210,28 @@ export default function App() {
         <UserMenu
           profile={profile}
           session={session}
+          role={role}
           onSignOut={handleSignOut}
           onOpenProfile={() => setTab("profile")}
         />
       </div>
 
-      {/* ── Main content ─────────────────────────────────────── */}
+      {/* ── Main content ─────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh", overflow: "hidden" }}>
 
         {/* Top bar */}
         <div style={{ background: C.white, borderBottom: `1px solid ${C.gray200}`, padding: "0 32px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 18, color: C.text }}>
-              {tab === "profile" ? "My Profile" : NAV.find(n => n.id === tab)?.label}
+              {tab === "profile"          && "My Profile"}
+              {tab === "user-management"  && "User Management"}
+              {tab !== "profile" && tab !== "user-management" && NAV.find(n => n.id === tab)?.label}
             </div>
             <div style={{ fontSize: 12, color: C.gray400, marginTop: 1 }}>
-              {tab === "companies"    && "Manage your DSE registered companies"}
-              {tab === "transactions" && "Record and view all buy/sell activity"}
-              {tab === "profile"      && "Manage your personal information"}
+              {tab === "companies"       && "Manage your DSE registered companies"}
+              {tab === "transactions"    && "Record and view all buy/sell activity"}
+              {tab === "profile"         && "Manage your personal information"}
+              {tab === "user-management" && "Manage system users and assign roles"}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -212,9 +245,10 @@ export default function App() {
 
         {/* Page renderer */}
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-          {tab === "companies"    && <CompaniesPage companies={companies} setCompanies={setCompanies} transactions={transactions} showToast={showToast} />}
-          {tab === "transactions" && <TransactionsPage companies={companies} transactions={transactions} setTransactions={setTransactions} showToast={showToast} />}
-          {tab === "profile"      && <ProfilePage profile={profile} setProfile={setProfile} showToast={showToast} />}
+          {tab === "companies"       && <CompaniesPage     companies={companies}    setCompanies={setCompanies}       transactions={transactions} showToast={showToast} role={role} />}
+          {tab === "transactions"    && <TransactionsPage  companies={companies}    transactions={transactions}        setTransactions={setTransactions}                showToast={showToast} role={role} />}
+          {tab === "profile"         && <ProfilePage       profile={profile}        setProfile={setProfile}                                                            showToast={showToast} />}
+          {tab === "user-management" && <UserManagementPage role={role}             showToast={showToast} />}
         </div>
       </div>
 
