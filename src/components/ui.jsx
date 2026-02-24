@@ -145,7 +145,7 @@ export function Btn({ children, variant = "primary", loading, icon, ...props }) 
 // ─── Action Menu (⋯ dropdown) ─────────────────────────────────────
 export function ActionMenu({ actions }) {
   const [open, setOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
   const ref = useRef(null);
 
   useEffect(() => {
@@ -153,15 +153,25 @@ export function ActionMenu({ actions }) {
     const handle = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
+    const handleScroll = () => setOpen(false);
     document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
+    document.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", handle);
+      document.removeEventListener("scroll", handleScroll, true);
+    };
   }, [open]);
 
   const handleOpen = () => {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
+      const dropdownHeight = actions.length * 41;
       const spaceBelow = window.innerHeight - rect.bottom;
-      setDropUp(spaceBelow < 160);
+      const goUp = spaceBelow < dropdownHeight;
+      setPos({
+        top: goUp ? rect.top - dropdownHeight : rect.bottom + 4,
+        left: rect.right - 160,
+      });
     }
     setOpen(o => !o);
   };
@@ -170,7 +180,7 @@ export function ActionMenu({ actions }) {
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <button onClick={handleOpen} style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: open ? C.gray100 : C.white, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", color: C.gray600 }}>⋯</button>
       {open && (
-        <div style={{ position: "absolute", right: 0, ...(dropUp ? { bottom: 36, top: "auto" } : { top: 36 }), background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 99, minWidth: 160, overflow: "hidden" }}>
+        <div style={{ position: "fixed", top: pos.top, left: pos.left, background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, minWidth: 160, overflow: "hidden" }}>
           {actions.map((a, i) => (
             <button key={i} onClick={() => { setOpen(false); a.onClick(); }} style={{ width: "100%", padding: "10px 16px", border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontSize: 13, fontWeight: 500, color: a.danger ? C.red : C.text, textAlign: "left", borderBottom: i < actions.length - 1 ? `1px solid ${C.gray100}` : "none", fontFamily: "inherit" }}
               onMouseEnter={e => e.currentTarget.style.background = a.danger ? C.redBg : C.gray50}
