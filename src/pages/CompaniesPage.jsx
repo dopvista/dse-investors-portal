@@ -148,7 +148,16 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: 40 }} />   {/* # */}
+                <col style={{ width: "22%" }} /> {/* Company Name */}
+                <col style={{ width: "14%" }} /> {/* Current Price */}
+                <col style={{ width: "10%" }} /> {/* Change */}
+                <col style={{ width: "14%" }} /> {/* Previous Price */}
+                <col style={{ width: "22%" }} /> {/* Last Price Update */}
+                <col style={{ width: 50 }} />   {/* Actions */}
+              </colgroup>
               <thead>
                 <tr style={{ background: C.gray50 }}>
                   {[
@@ -179,9 +188,9 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                       <td style={{ padding: "10px 18px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
 
                       {/* Company Name */}
-                      <td style={{ padding: "10px 18px", minWidth: 160 }}>
-                        <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
-                        {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{c.remarks}</div>}
+                      <td style={{ padding: "10px 18px", minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
+                        {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.remarks}</div>}
                       </td>
 
                       {/* Current Price */}
@@ -210,14 +219,11 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                       {/* Last Price Update */}
                       <td style={{ padding: "10px 18px", whiteSpace: "nowrap" }}>
                         {c.updated_at
-                          ? <div>
-                              <div style={{ fontSize: 13, color: C.gray600 }}>
-                                {new Date(c.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                              </div>
-                              <div style={{ fontSize: 11, color: C.gray400, marginTop: 1 }}>
-                                {new Date(c.updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                              </div>
-                            </div>
+                          ? <span style={{ fontSize: 13, color: C.gray600 }}>
+                              {new Date(c.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                              <span style={{ color: C.gray400, margin: "0 6px" }}>|</span>
+                              {new Date(c.updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
                           : <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
