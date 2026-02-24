@@ -454,7 +454,7 @@ export function PriceHistoryModal({ company, history, onClose }) {
             </table>
           </div>
           {/* ── Scrollable body — max 5 rows ── */}
-          <div style={{ maxHeight: 345, overflowY: "auto", overflowX: "auto" }}>
+          <div style={{ maxHeight: 285, overflowY: "auto", overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <tbody>
                 {history.map((h, i) => {
