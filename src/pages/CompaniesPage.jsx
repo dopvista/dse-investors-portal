@@ -102,8 +102,8 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
     <div>
       {/* ── Modals ─────────────────────────────────────────────── */}
       <Modal type={modal.type} title={modal.open ? modal.title : ""} message={modal.message} onConfirm={confirmDelete} onClose={() => setModal({ ...modal, open: false })} />
-      <PriceHistoryModal company={historyModal.open ? historyModal.company : null} history={historyModal.history} onClose={() => setHistoryModal({ open: false, company: null, history: [] })} />
-      <UpdatePriceModal key={updateModal.company?.id} company={updateModal.open ? updateModal.company : null} onConfirm={confirmUpdatePrice} onClose={() => setUpdateModal({ open: false, company: null })} />
+      {updateModal.open && <UpdatePriceModal key={updateModal.company?.id} company={updateModal.company} onConfirm={confirmUpdatePrice} onClose={() => setUpdateModal({ open: false, company: null })} />}
+      {historyModal.open && <PriceHistoryModal company={historyModal.company} history={historyModal.history} onClose={() => setHistoryModal({ open: false, company: null, history: [] })} />}
       {formModal.open && <CompanyFormModal key={formModal.company?.id || "new"} company={formModal.company} onConfirm={handleFormConfirm} onClose={() => setFormModal({ open: false, company: null })} />}
 
       {/* ── Stats ──────────────────────────────────────────────── */}
