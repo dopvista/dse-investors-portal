@@ -1,7 +1,26 @@
 // ── src/lib/supabase.js ────────────────────────────────────────────
 
-const BASE = import.meta.env.VITE_SUPABASE_URL;
+const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
 const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!BASE || !KEY) {
+  console.error("❌ Missing Supabase env vars. BASE:", BASE, "KEY:", KEY ? "set" : "missing");
+} else {
+  console.log("✅ Supabase connected to:", BASE);
+}
+
+// ── Safe response parser ───────────────────────────────────────────
+async function parseResponse(res, fallbackMsg) {
+  const text = await res.text();
+  try {
+    const data = JSON.parse(text);
+    if (!res.ok) throw new Error(data.error_description || data.message || data.msg || fallbackMsg);
+    return data;
+  } catch (e) {
+    if (!res.ok) throw new Error(fallbackMsg + (text.length < 200 ? ": " + text : ""));
+    throw e;
+  }
+}
 
 // ── Headers ────────────────────────────────────────────────────────
 const headers = (token) => ({
@@ -21,19 +40,6 @@ function clearSession() { localStorage.removeItem("sb_session"); }
 function token() { return getSession()?.access_token || KEY; }
 
 // ── AUTH ───────────────────────────────────────────────────────────
-
-// ── Safe JSON parser — handles HTML error pages gracefully ─────────
-async function parseResponse(res, fallbackMsg) {
-  const text = await res.text();
-  try {
-    const data = JSON.parse(text);
-    if (!res.ok) throw new Error(data.error_description || data.message || data.msg || fallbackMsg);
-    return data;
-  } catch (e) {
-    if (!res.ok) throw new Error(fallbackMsg + (text.length < 200 ? ": " + text : ""));
-    throw e;
-  }
-}
 
 export async function sbSignUp(email, password) {
   const res = await fetch(`${BASE}/auth/v1/signup`, {
@@ -116,4 +122,39 @@ export async function sbDelete(table, id) {
   });
   if (!res.ok) throw new Error(await res.text());
   return true;
+}
+
+// ── PROFILE ────────────────────────────────────────────────────────
+
+export async function sbGetProfile() {
+  const uid = getSession()?.user?.id;
+  if (!uid) return null;
+  const res = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
+    headers: headers(token()),
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows[0] || null;
+}
+
+export async function sbUpsertProfile(data) {
+  const uid = getSession()?.user?.id;
+  const res = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(data),
+  });
+  if (!res.ok) {
+    // If no row exists yet, insert
+    const res2 = await fetch(`${BASE}/rest/v1/profiles`, {
+      method:  "POST",
+      headers: headers(token()),
+      body:    JSON.stringify({ ...data, id: uid }),
+    });
+    if (!res2.ok) throw new Error(await res2.text());
+    const rows = await res2.json();
+    return rows[0];
+  }
+  const rows = await res.json();
+  return rows[0];
 }
