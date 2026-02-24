@@ -4,7 +4,7 @@ import { C } from "./ui";
 // ── User Data (placeholder — will come from Supabase Auth later) ──
 const USER = {
   name: "Michael Luzigah",
-  cds: "CDS-0023948-X",
+  cds: "CDS-647305",
   role: "Investor",
   initials: "ML",
 };
