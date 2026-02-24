@@ -133,6 +133,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
         onClose={() => setHistoryModal({ open: false, company: null, history: [] })}
       />
       <UpdatePriceModal
+        key={updateModal.company?.id}
         company={updateModal.open ? updateModal.company : null}
         onConfirm={confirmUpdatePrice}
         onClose={() => setUpdateModal({ open: false, company: null })}
