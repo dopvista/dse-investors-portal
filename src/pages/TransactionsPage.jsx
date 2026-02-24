@@ -214,19 +214,19 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               <thead>
                 <tr style={{ background: C.gray50 }}>
                   {[
-                    { label: "#",            align: "left"  },
-                    { label: "Date",         align: "left"  },
-                    { label: "Company",      align: "left"  },
-                    { label: "Type",         align: "left"  },
-                    { label: "Qty",          align: "right" },
-                    { label: "Price/Share",  align: "right" },
-                    { label: "Total Amount", align: "right" },
-                    { label: "Fees",         align: "right" },
-                    { label: "Grand Total",  align: "right" },
-                    { label: "Remarks",      align: "left"  },
-                    { label: "Actions",      align: "right" },
+                    { label: "#",            align: "left",  px: 8  },
+                    { label: "Date",         align: "left",  px: 12 },
+                    { label: "Company",      align: "left",  px: 12 },
+                    { label: "Type",         align: "left",  px: 12 },
+                    { label: "Qty",          align: "right", px: 12 },
+                    { label: "Price/Share",  align: "right", px: 12 },
+                    { label: "Total Amount", align: "right", px: 12 },
+                    { label: "Fees",         align: "right", px: 12 },
+                    { label: "Grand Total",  align: "right", px: 12 },
+                    { label: "Remarks",      align: "left",  px: 12 },
+                    { label: "Actions",      align: "right", px: 12 },
                   ].map(h => (
-                    <th key={h.label} style={{ padding: "10px 18px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
+                    <th key={h.label} style={{ padding: `10px ${h.px}px`, textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -240,57 +240,57 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 
                       {/* # */}
-                      <td style={{ padding: "10px 18px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
+                      <td style={{ padding: "10px 8px", color: C.gray400, fontWeight: 600, width: 28 }}>{i + 1}</td>
 
                       {/* Date */}
-                      <td style={{ padding: "10px 18px", color: C.gray600, whiteSpace: "nowrap", fontSize: 13 }}>
+                      <td style={{ padding: "10px 12px", color: C.gray600, whiteSpace: "nowrap", fontSize: 13 }}>
                         {new Date(t.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
 
                       {/* Company */}
-                      <td style={{ padding: "10px 18px", minWidth: 140 }}>
+                      <td style={{ padding: "10px 12px", minWidth: 120 }}>
                         <div style={{ fontWeight: 700, color: C.text }}>{t.company_name}</div>
                       </td>
 
                       {/* Type */}
-                      <td style={{ padding: "10px 18px" }}>
-                        <span style={{ background: isBuy ? C.greenBg : C.redBg, color: isBuy ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${isBuy ? "#BBF7D0" : "#FECACA"}` }}>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                        <span style={{ background: isBuy ? C.greenBg : C.redBg, color: isBuy ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${isBuy ? "#BBF7D0" : "#FECACA"}`, whiteSpace: "nowrap" }}>
                           {isBuy ? "▲ Buy" : "▼ Sell"}
                         </span>
                       </td>
 
                       {/* Qty */}
-                      <td style={{ padding: "10px 18px", fontWeight: 600, textAlign: "right" }}>{fmtInt(t.qty)}</td>
+                      <td style={{ padding: "10px 12px", fontWeight: 600, textAlign: "right" }}>{fmtInt(t.qty)}</td>
 
                       {/* Price/Share */}
-                      <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <span style={{ background: C.greenBg, color: C.green, padding: "3px 10px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
                           {fmt(t.price)}
                         </span>
                       </td>
 
                       {/* Total Amount */}
-                      <td style={{ padding: "10px 18px", fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(t.total)}</td>
+                      <td style={{ padding: "10px 12px", fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(t.total)}</td>
 
                       {/* Fees */}
-                      <td style={{ padding: "10px 18px", color: C.gray600, textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "10px 12px", color: C.gray600, textAlign: "right", whiteSpace: "nowrap" }}>
                         {t.fees ? fmt(t.fees) : <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
                       {/* Grand Total */}
-                      <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <span style={{ background: isBuy ? C.greenBg : C.redBg, color: isBuy ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 13, fontWeight: 800, border: `1px solid ${isBuy ? "#BBF7D0" : "#FECACA"}` }}>
                           {fmt(gt)}
                         </span>
                       </td>
 
                       {/* Remarks */}
-                      <td style={{ padding: "10px 18px", color: C.gray600, maxWidth: 140, fontSize: 12 }}>
+                      <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 120, fontSize: 12 }}>
                         {t.remarks || <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: "10px 18px", textAlign: "right" }}>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
                         <ActionMenu actions={[
                           { icon: "✏️", label: "Edit Transaction", onClick: () => setFormModal({ open: true, transaction: t }) },
                           { icon: "🗑️", label: deleting === t.id ? "Deleting..." : "Delete", danger: true, onClick: () => del(t.id) },
@@ -304,10 +304,10 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               {/* Totals Footer */}
               <tfoot>
                 <tr style={{ background: C.navy + "06", borderTop: `2px solid ${C.gray200}` }}>
-                  <td colSpan={6} style={{ padding: "14px 18px", fontWeight: 700, color: C.gray600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Totals</td>
-                  <td style={{ padding: "14px 18px", fontWeight: 700, color: C.text, textAlign: "right" }}>{fmt(filtered.reduce((s, t) => s + Number(t.total || 0), 0))}</td>
-                  <td style={{ padding: "14px 18px", fontWeight: 700, color: C.text, textAlign: "right" }}>{fmt(filtered.reduce((s, t) => s + Number(t.fees || 0), 0))}</td>
-                  <td style={{ padding: "14px 18px", fontWeight: 800, color: C.navy, textAlign: "right" }}>
+                  <td colSpan={6} style={{ padding: "14px 12px", fontWeight: 700, color: C.gray600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Totals</td>
+                  <td style={{ padding: "14px 12px", fontWeight: 700, color: C.text, textAlign: "right" }}>{fmt(filtered.reduce((s, t) => s + Number(t.total || 0), 0))}</td>
+                  <td style={{ padding: "14px 12px", fontWeight: 700, color: C.text, textAlign: "right" }}>{fmt(filtered.reduce((s, t) => s + Number(t.fees || 0), 0))}</td>
+                  <td style={{ padding: "14px 12px", fontWeight: 800, color: C.navy, textAlign: "right" }}>
                     {fmt(filtered.reduce((s, t) => s + Number(t.total || 0) + Number(t.fees || 0), 0))}
                   </td>
                   <td colSpan={2} />
