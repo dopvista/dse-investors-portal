@@ -625,7 +625,8 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         const remarks  = get(6);
 
         const rowErrs = [];
-        if (!dateRaw)                              rowErrs.push("Missing date");
+        const dateValid = /^\d{2}\/\d{2}\/\d{4}$/.test(String(dateRaw).trim()) || dateRaw instanceof Date || typeof dateRaw === "number";
+        if (!dateRaw || !dateValid)                rowErrs.push("Invalid date — use DD/MM/YYYY");
         if (!company)                              rowErrs.push("Missing company");
         if (!["Buy","Sell"].includes(type))        rowErrs.push("Type must be Buy or Sell");
         if (!qty || isNaN(qty) || qty <= 0)        rowErrs.push("Invalid quantity");
@@ -637,14 +638,14 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         // Format date
         let date = dateRaw;
         if (dateRaw instanceof Date) {
-          date = dateRaw.toISOString().split("T")[0];
+          const d = dateRaw;
+          date = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
         } else if (typeof dateRaw === "number") {
           const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
-          date = d.toISOString().split("T")[0];
+          date = `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
         } else {
-          // Try to parse string dates
-          const parsed = new Date(dateRaw);
-          if (!isNaN(parsed)) date = parsed.toISOString().split("T")[0];
+          // Already DD/MM/YYYY string — keep as is
+          date = String(dateRaw).trim();
         }
 
         if (rowErrs.length) {
@@ -732,8 +733,8 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.7 }}>
           • Company names must match exactly with your Holdings<br/>
           • Type must be exactly <strong>Buy</strong> or <strong>Sell</strong><br/>
-          • Date format: <strong>YYYY-MM-DD</strong> (e.g. 2026-02-24)<br/>
-          • Delete the 5 sample rows before importing
+          • Date format: <strong>DD/MM/YYYY</strong> (e.g. 24/02/2026)<br/>
+          • Delete the sample rows before importing
         </div>
       </div>
     </div>
