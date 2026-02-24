@@ -148,16 +148,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, tableLayout: "fixed" }}>
-              <colgroup>
-                <col style={{ width: 40 }} />   {/* # */}
-                <col style={{ width: "22%" }} /> {/* Company Name */}
-                <col style={{ width: "14%" }} /> {/* Current Price */}
-                <col style={{ width: "10%" }} /> {/* Change */}
-                <col style={{ width: "14%" }} /> {/* Previous Price */}
-                <col style={{ width: "22%" }} /> {/* Last Price Update */}
-                <col style={{ width: 50 }} />   {/* Actions */}
-              </colgroup>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: C.gray50 }}>
                   {[
@@ -169,7 +160,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                     { label: "Last Price Update",    align: "left"  },
                     { label: "",                     align: "right" },
                   ].map(h => (
-                    <th key={h.label} style={{ padding: "12px 16px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
+                    <th key={h.label} style={{ padding: "10px 18px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -188,9 +179,9 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                       <td style={{ padding: "10px 18px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
 
                       {/* Company Name */}
-                      <td style={{ padding: "10px 18px", minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
-                        {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.remarks}</div>}
+                      <td style={{ padding: "10px 18px", minWidth: 160 }}>
+                        <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
+                        {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{c.remarks}</div>}
                       </td>
 
                       {/* Current Price */}
