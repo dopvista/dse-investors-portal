@@ -104,7 +104,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
       <Modal type={modal.type} title={modal.open ? modal.title : ""} message={modal.message} onConfirm={confirmDelete} onClose={() => setModal({ ...modal, open: false })} />
       <PriceHistoryModal company={historyModal.open ? historyModal.company : null} history={historyModal.history} onClose={() => setHistoryModal({ open: false, company: null, history: [] })} />
       <UpdatePriceModal key={updateModal.company?.id} company={updateModal.open ? updateModal.company : null} onConfirm={confirmUpdatePrice} onClose={() => setUpdateModal({ open: false, company: null })} />
-      <CompanyFormModal key={formModal.company?.id || "new"} company={formModal.open ? formModal.company : null} onConfirm={handleFormConfirm} onClose={() => setFormModal({ open: false, company: null })} />
+      {formModal.open && <CompanyFormModal key={formModal.company?.id || "new"} company={formModal.company} onConfirm={handleFormConfirm} onClose={() => setFormModal({ open: false, company: null })} />}
 
       {/* ── Stats ──────────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
