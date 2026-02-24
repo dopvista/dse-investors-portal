@@ -584,47 +584,12 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef(null);
 
-  // ── Generate and download sample template ────────────────────
+  // ── Download sample template ──────────────────────────────────
   const downloadTemplate = () => {
-    const wb = XLSX.utils.book_new();
-
-    // ── Instructions sheet ──
-    const instructions = [
-      ["DSE Investors Portal — Transaction Import Template"],
-      ["Fill in your transactions below. Do NOT change column headers. Date format: YYYY-MM-DD"],
-      [""],
-      ["COLUMN GUIDE:"],
-      ["Date", "Use YYYY-MM-DD format e.g. 2026-02-24"],
-      ["Company Name", "Must match exactly a company in your Holdings"],
-      ["Type", "Must be exactly: Buy  or  Sell"],
-      ["Quantity", "Whole numbers only e.g. 100, 500, 1000"],
-      ["Price per Share", "In TZS e.g. 3020"],
-      ["Other Fees", "Optional — leave blank if none"],
-      ["Remarks", "Optional notes"],
-      [""],
-      ["IMPORTANT:"],
-      ["• Delete the sample rows before importing"],
-      ["• Maximum 500 rows per import"],
-      ["• Save as .xlsx before uploading"],
-    ];
-    const wsInstr = XLSX.utils.aoa_to_sheet(instructions);
-    wsInstr["!cols"] = [{ wch: 30 }, { wch: 55 }];
-    XLSX.utils.book_append_sheet(wb, wsInstr, "Instructions");
-
-    // ── Transactions sheet ──
-    const headers = [["Date", "Company Name", "Type", "Quantity", "Price per Share", "Other Fees", "Remarks"]];
-    const samples = [
-      ["2026-02-24", "CRDB",     "Buy",  1000, 3020, 125000, "My first purchase"],
-      ["2026-02-24", "NMB",      "Buy",   500, 4150,  80000, "NMB investment"],
-      ["2026-02-25", "CRDB",     "Sell",  200, 3100,  30000, "Partial sell"],
-      ["2026-02-25", "TPCC",     "Buy",   300, 2800,  45000, ""],
-      ["2026-02-26", "SWISSPORT","Buy",   100, 6500,  20000, ""],
-    ];
-    const wsTx = XLSX.utils.aoa_to_sheet([...headers, ...samples]);
-    wsTx["!cols"] = [{ wch: 14 }, { wch: 20 }, { wch: 8 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 25 }];
-    XLSX.utils.book_append_sheet(wb, wsTx, "Transactions");
-
-    XLSX.writeFile(wb, "Transactions_Import_Template.xlsx");
+    const link = document.createElement("a");
+    link.href = "/Transactions_Import_Template.xlsx";
+    link.download = "Transactions_Import_Template.xlsx";
+    link.click();
   };
 
   // ── Parse uploaded Excel file ─────────────────────────────────
