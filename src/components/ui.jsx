@@ -698,7 +698,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
               onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
               onMouseLeave={e => e.currentTarget.style.opacity = "1"}
             >
-              <span>⬇️</span> Download DSE_Import_Template.xlsx
+              <span>⬇️</span> Download Import_Transactions_Template.xlsx
             </button>
           </div>
         </div>
@@ -779,7 +779,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ background: C.navy }}>
-                  {[["#","5%"],["Date","13%"],["Company","18%"],["Type","9%"],["Qty","10%"],["Price","15%"],["Fees","15%"],["Total","15%"]].map(([h, w]) => (
+                  {[["#","4%"],["Date","14%"],["Company","16%"],["Type","10%"],["Qty","10%"],["Price","13%"],["Fees","14%"],["Total","19%"]].map(([h, w]) => (
                     <th key={h} style={{ padding: "8px 10px", color: C.white, fontWeight: 700, fontSize: 11, textAlign: h === "#" ? "center" : "left", whiteSpace: "nowrap", width: w }}>{h}</th>
                   ))}
                 </tr>
@@ -820,7 +820,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
       title="⬆️ Import Transactions"
       subtitle={step === "upload" ? "Upload your filled Excel template" : `Reviewing ${rows.length + errors.length} rows from "${fileName}"`}
       onClose={onClose}
-      maxWidth={560}
+      maxWidth={640}
       footer={
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div>
