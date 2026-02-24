@@ -619,11 +619,12 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
 
       const parsed = []; const errs = [];
       dataRows.forEach((row, i) => {
-        const rowNum = i + 1;
-        const keys   = Object.keys(row);
-        const get    = (idx) => String(row[keys[idx]] ?? "").trim();
+        const rowNum  = i + 1;
+        const keys    = Object.keys(row);
+        const get     = (idx) => String(row[keys[idx]] ?? "").trim();
+        const getRaw  = (idx) => row[keys[idx]];
 
-        const dateRaw  = get(0);
+        const dateRaw  = getRaw(0);  // keep as raw — could be Date object
         const company  = get(1);
         const type     = get(2);
         const qty      = Number(get(3));
@@ -632,7 +633,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         const remarks  = get(6);
 
         const rowErrs = [];
-        if (!dateRaw || String(dateRaw).trim() === "")  rowErrs.push("Missing date");
+        if (!dateRaw) rowErrs.push("Missing date");
         if (!company)                              rowErrs.push("Missing company");
         if (!["Buy","Sell"].includes(type))        rowErrs.push("Type must be Buy or Sell");
         if (!qty || isNaN(qty) || qty <= 0)        rowErrs.push("Invalid quantity");
