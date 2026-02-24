@@ -1,5 +1,6 @@
 // ── src/pages/UserManagementPage.jsx ──────────────────────────────
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { sbGetAllUsers, sbGetRoles, sbAssignRole, sbDeactivateRole, sbAdminCreateUser } from "../lib/supabase";
 import { C } from "../components/ui";
 
@@ -47,7 +48,6 @@ const Avatar = ({ name, size = 38, isActive }) => {
       }}>
         {initials}
       </div>
-      {/* Online / inactive dot */}
       <div style={{
         position: "absolute", bottom: -1, right: -1,
         width: 11, height: 11, borderRadius: "50%",
@@ -95,7 +95,6 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
     if (!form.password.trim())    return setError("Temporary password is required");
     if (form.password.length < 6) return setError("Password must be at least 6 characters");
     if (!form.role_id)            return setError("Please select a role");
-
     setSaving(true);
     try {
       const result = await sbAdminCreateUser(form.email, form.password);
@@ -111,7 +110,7 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
     }
   };
 
-  return (
+  return createPortal(
     <div style={{
       position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999,
       display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
@@ -192,21 +191,46 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
-// ── Inline role change dropdown ────────────────────────────────────
+// ── Role dropdown — rendered via portal to escape overflow:hidden ──
 function RoleDropdown({ user, roles, onAssign }) {
   const [open, setOpen]     = useState(false);
   const [saving, setSaving] = useState(false);
-  const ref = useRef(null);
+  const [pos, setPos]       = useState({ top: 0, left: 0 });
+  const btnRef = useRef(null);
 
+  // Calculate dropdown position from the button's screen position
+  const handleOpen = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({
+        top:  rect.bottom + window.scrollY + 4,
+        left: rect.left   + window.scrollX,
+      });
+    }
+    setOpen(o => !o);
+  };
+
+  // Close on outside click
   useEffect(() => {
     if (!open) return;
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const h = (e) => {
+      if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  // Close on scroll so it doesn't float away
+  useEffect(() => {
+    if (!open) return;
+    const h = () => setOpen(false);
+    window.addEventListener("scroll", h, true);
+    return () => window.removeEventListener("scroll", h, true);
   }, [open]);
 
   const handleSelect = async (role) => {
@@ -217,51 +241,79 @@ function RoleDropdown({ user, roles, onAssign }) {
   };
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button onClick={() => setOpen(o => !o)} disabled={saving} style={{
-        display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
-        borderRadius: 6, border: `1px solid ${C.gray200}`, background: C.white,
-        cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
-        fontSize: 11, color: C.gray400, transition: "all 0.15s",
-      }}
+    <>
+      <button
+        ref={btnRef}
+        onClick={handleOpen}
+        disabled={saving}
+        style={{
+          display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
+          borderRadius: 6, border: `1px solid ${C.gray200}`, background: C.white,
+          cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
+          fontSize: 11, color: C.gray400, transition: "all 0.15s",
+        }}
         onMouseEnter={e => { if (!saving) e.currentTarget.style.borderColor = C.green; }}
         onMouseLeave={e => e.currentTarget.style.borderColor = C.gray200}
       >
         {saving ? "..." : "Change ▾"}
       </button>
 
-      {open && (
+      {/* Rendered into document.body — completely outside overflow:hidden */}
+      {open && createPortal(
         <div style={{
-          position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 999,
-          background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 10,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.12)", minWidth: 170, overflow: "hidden",
+          position: "absolute",
+          top:  pos.top,
+          left: pos.left,
+          zIndex: 99999,
+          background: C.white,
+          border: `1px solid ${C.gray200}`,
+          borderRadius: 10,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+          minWidth: 180,
+          overflow: "hidden",
         }}>
+          {/* Header */}
+          <div style={{ padding: "8px 14px 6px", borderBottom: `1px solid ${C.gray100}` }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Assign Role
+            </div>
+            <div style={{ fontSize: 11, color: C.gray600, marginTop: 1 }}>
+              {user.full_name || "User"}
+            </div>
+          </div>
+
+          {/* Role options */}
           {roles.map(r => (
             <button key={r.id} onClick={() => handleSelect(r)} style={{
-              width: "100%", padding: "9px 14px", border: "none", background: "none",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
-              fontFamily: "inherit", textAlign: "left",
+              width: "100%", padding: "10px 14px", border: "none", background: "none",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+              fontFamily: "inherit", textAlign: "left", transition: "background 0.1s",
             }}
               onMouseEnter={e => e.currentTarget.style.background = C.gray50}
               onMouseLeave={e => e.currentTarget.style.background = "none"}
             >
               <span style={{
-                fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 6,
-                background: ROLE_META[r.code]?.bg, border: `1px solid ${ROLE_META[r.code]?.border}`,
+                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
+                background: ROLE_META[r.code]?.bg,
+                border: `1px solid ${ROLE_META[r.code]?.border}`,
                 color: ROLE_META[r.code]?.text,
+                flexShrink: 0,
               }}>{r.code}</span>
               <span style={{ fontSize: 13, color: C.text, flex: 1 }}>{r.name}</span>
-              {user.role_code === r.code && <span style={{ color: C.green, fontSize: 12 }}>✓</span>}
+              {user.role_code === r.code && (
+                <span style={{ color: C.green, fontSize: 14, flexShrink: 0 }}>✓</span>
+              )}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 
-// ── Column layout (shared between header + rows) ───────────────────
-const GRID = "36px 1.8fr 1fr 1fr 1.3fr 140px 80px";
+// ── Shared grid column definition ─────────────────────────────────
+const GRID = "36px 1.8fr 1fr 1fr 1.3fr 110px 80px";
 
 // ── Table header ───────────────────────────────────────────────────
 const TableHeader = () => (
@@ -496,7 +548,7 @@ export default function UserManagementPage({ role, showToast }) {
             {/* # */}
             <div style={{ fontSize: 12, color: C.gray400, fontWeight: 600 }}>{idx + 1}</div>
 
-            {/* User — avatar with dot + name + status pill */}
+            {/* User — avatar + name + status pill */}
             <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
               <Avatar name={user.full_name} isActive={user.is_active} />
               <div style={{ minWidth: 0 }}>
@@ -504,13 +556,11 @@ export default function UserManagementPage({ role, showToast }) {
                   <span style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {user.full_name || "New User"}
                   </span>
-                  {/* Inline status pill */}
                   <span style={{
-                    fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 20,
+                    fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 20, flexShrink: 0,
                     background: user.is_active ? "#f0fdf4" : "#fef2f2",
                     border: `1px solid ${user.is_active ? "#bbf7d0" : "#fecaca"}`,
                     color: user.is_active ? "#16a34a" : "#dc2626",
-                    flexShrink: 0,
                   }}>
                     {user.is_active ? "Active" : "Inactive"}
                   </span>
@@ -536,7 +586,7 @@ export default function UserManagementPage({ role, showToast }) {
               {user.account_type || "—"}
             </div>
 
-            {/* Role + change dropdown */}
+            {/* Role + change dropdown (portal-based) */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               <RoleBadge code={user.role_code} />
               {user.is_active && (
@@ -544,14 +594,14 @@ export default function UserManagementPage({ role, showToast }) {
               )}
             </div>
 
-            {/* Date added — safe null check */}
+            {/* Date added — null-safe */}
             <div style={{ fontSize: 11, color: C.gray400 }}>
               {user.assigned_at
                 ? new Date(user.assigned_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
                 : "—"}
             </div>
 
-            {/* Actions — icon button, guarded by role_code */}
+            {/* Action — deactivate / reactivate icon, guarded */}
             <div style={{ display: "flex", justifyContent: "center" }}>
               {user.role_code ? (
                 <button
@@ -571,7 +621,6 @@ export default function UserManagementPage({ role, showToast }) {
                 <span style={{ fontSize: 12, color: C.gray400 }}>—</span>
               )}
             </div>
-
           </div>
         ))}
       </div>
