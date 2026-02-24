@@ -149,8 +149,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       {/* ── Stats ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
         <StatCard label="Total Transactions" value={transactions.length}         sub={`${buys.length} buys · ${sells.length} sells`}                  icon="📋" color={C.navy}  />
-        <StatCard label="Total Bought"       value={`TZS ${fmt(totalBuyVal)}`}  sub={`${buys.length} buy order${buys.length !== 1 ? "s" : ""}`}        icon="📥" color={C.green} />
-        <StatCard label="Total Sold"         value={`TZS ${fmt(totalSellVal)}`} sub={`${sells.length} sell order${sells.length !== 1 ? "s" : ""}`}     icon="📤" color={C.red}   />
+        <StatCard label="Total Bought"       value={`TZS ${fmtInt(totalBuyVal)}`}  sub={`${buys.length} buy order${buys.length !== 1 ? "s" : ""}`}        icon="📥" color={C.green} />
+        <StatCard label="Total Sold"         value={`TZS ${fmtInt(totalSellVal)}`} sub={`${sells.length} sell order${sells.length !== 1 ? "s" : ""}`}     icon="📤" color={C.red}   />
         <StatCard label="Search Results"     value={filtered.length}             sub={search ? `Matching "${search}"` : "Showing all"}                  icon="🔍" color={C.gold}  />
       </div>
 
