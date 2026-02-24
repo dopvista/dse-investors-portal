@@ -87,25 +87,16 @@ export default function App() {
             />
             <div>
               <div style={{ color: C.white, fontWeight: 800, fontSize: 14, lineHeight: 1.2 }}>DSE Investors</div>
-              <div style={{ color: C.gold, fontWeight: 600, fontSize: 11 }}>Portal</div>
+              <div style={{ color: C.gold, fontWeight: 700, fontSize: 13, marginTop: 1 }}>Portal</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
+                <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
+                <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: 500 }}>
+                  {now.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+                  {" | "}
+                  {now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "0 16px" }} />
-
-        {/* Date / Time */}
-        <div style={{ padding: "16px 24px" }}>
-          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Market Session</div>
-          <div style={{ color: C.white, fontSize: 15, fontWeight: 700, marginTop: 4 }}>
-            {now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-          </div>
-          <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 }}>
-            {now.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
-          </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8, border: `1px solid ${C.green}44`, borderRadius: 20, padding: "4px 10px" }}>
-            <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%" }} />
-            <span style={{ color: C.green, fontSize: 11, fontWeight: 600 }}>Live</span>
           </div>
         </div>
 
