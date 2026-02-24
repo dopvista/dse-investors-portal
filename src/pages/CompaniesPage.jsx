@@ -1,29 +1,34 @@
 import { useState, useMemo } from "react";
 import { sbInsert, sbUpdate, sbDelete, sbGet } from "../lib/supabase";
-import { C, fmt, Btn, StatCard, SectionCard, Modal, PriceHistoryModal, UpdatePriceModal, CompanyFormModal, ActionMenu } from "../components/ui";
+import { C, fmt, fmtSmart, Btn, StatCard, SectionCard, Modal, PriceHistoryModal, UpdatePriceModal, CompanyFormModal, ActionMenu } from "../components/ui";
 
 export default function CompaniesPage({ companies, setCompanies, transactions, showToast }) {
-  const [search, setSearch] = useState("");
-  const [deleting, setDeleting] = useState(null);
-  const [updating, setUpdating] = useState(null);
+  const [search, setSearch]                 = useState("");
+  const [deleting, setDeleting]             = useState(null);
+  const [updating, setUpdating]             = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(null);
-  const [modal, setModal]               = useState({ open: false, type: "confirm", title: "", message: "", targetId: null });
-  const [historyModal, setHistoryModal] = useState({ open: false, company: null, history: [] });
-  const [updateModal, setUpdateModal]   = useState({ open: false, company: null });
-  const [formModal, setFormModal]       = useState({ open: false, company: null });
+  const [modal, setModal]                   = useState({ open: false, type: "confirm", title: "", message: "", targetId: null });
+  const [historyModal, setHistoryModal]     = useState({ open: false, company: null, history: [] });
+  const [updateModal, setUpdateModal]       = useState({ open: false, company: null });
+  const [formModal, setFormModal]           = useState({ open: false, company: null });
 
-  // ── Stats ──────────────────────────────────────────────────────
-  const totalAvg = companies.length
-    ? companies.reduce((s, c) => s + Number(c.price || 0), 0) / companies.length : 0;
-  const highestPrice = companies.length
-    ? Math.max(...companies.map(c => Number(c.price || 0))) : 0;
+  // ── Stats (memoised) ──────────────────────────────────────────────
+  const { totalAvg, highestPrice } = useMemo(() => {
+    if (!companies.length) return { totalAvg: 0, highestPrice: 0 };
+    return {
+      totalAvg:     companies.reduce((s, c) => s + Number(c.price || 0), 0) / companies.length,
+      highestPrice: Math.max(...companies.map(c => Number(c.price || 0))),
+    };
+  }, [companies]);
 
-  // ── Search ─────────────────────────────────────────────────────
+  // ── Search (memoised) ─────────────────────────────────────────────
   const filtered = useMemo(() =>
-    companies.filter(c => c.name.toLowerCase().includes(search.toLowerCase())),
+    search.trim()
+      ? companies.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+      : companies,
     [companies, search]);
 
-  // ── Register / Edit ────────────────────────────────────────────
+  // ── Register / Edit ───────────────────────────────────────────────
   const handleFormConfirm = async ({ name, price, remarks }) => {
     const isEdit = !!formModal.company;
     try {
@@ -36,12 +41,14 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
         setCompanies(p => [rows[0], ...p]);
         showToast("Company registered!", "success");
       }
-    } catch (e) { showToast("Error: " + e.message, "error"); }
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    }
   };
 
-  // ── Delete ─────────────────────────────────────────────────────
+  // ── Delete ────────────────────────────────────────────────────────
   const del = (id) => {
-    const hasTx = transactions.some(t => t.company_id === id);
+    const hasTx   = transactions.some(t => t.company_id === id);
     const company = companies.find(c => c.id === id);
     if (hasTx) {
       setModal({ open: true, type: "warning", title: "Cannot Delete Company", message: `"${company.name}" has existing transactions. Delete all its transactions first before removing this company.`, targetId: null });
@@ -58,82 +65,124 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
       await sbDelete("companies", id);
       setCompanies(p => p.filter(c => c.id !== id));
       showToast("Company deleted.", "success");
-    } catch (e) { showToast("Error: " + e.message, "error"); }
-    setDeleting(null);
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    } finally {
+      setDeleting(null);
+    }
   };
 
-  // ── Update Price ───────────────────────────────────────────────
+  // ── Update Price ──────────────────────────────────────────────────
   const confirmUpdatePrice = async ({ newPrice, datetime, reason }) => {
-    const company = updateModal.company;
-    const oldPrice = Number(company.price);
+    const company     = updateModal.company;
+    const oldPrice    = Number(company.price);
     const changeAmount = newPrice - oldPrice;
-    const changePct = oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : 0;
+    const changePct   = oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : 0;
     setUpdateModal({ open: false, company: null });
     setUpdating(company.id);
     try {
       await sbInsert("price_history", {
-        company_id: company.id,
-        company_name: company.name,
-        old_price: oldPrice,
-        new_price: newPrice,
-        change_amount: changeAmount,
+        company_id:     company.id,
+        company_name:   company.name,
+        old_price:      oldPrice,
+        new_price:      newPrice,
+        change_amount:  changeAmount,
         change_percent: changePct,
-        notes: reason || null,
-        updated_by: "Admin",
-        created_at: new Date(datetime).toISOString(),
+        notes:          reason || null,
+        updated_by:     "Admin",
+        created_at:     new Date(datetime).toISOString(),
       });
       const rows = await sbUpdate("companies", company.id, {
-        price: newPrice,
+        price:          newPrice,
         previous_price: oldPrice,
-        updated_at: new Date(datetime).toISOString(),
+        updated_at:     new Date(datetime).toISOString(),
       });
       setCompanies(prev => prev.map(c => c.id === company.id ? rows[0] : c));
       showToast("Price updated!", "success");
-    } catch (e) { showToast("Error: " + e.message, "error"); }
-    setUpdating(null);
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    } finally {
+      setUpdating(null);
+    }
   };
 
-  // ── Price History ──────────────────────────────────────────────
+  // ── Price History ─────────────────────────────────────────────────
   const viewHistory = async (company) => {
     setLoadingHistory(company.id);
     try {
       const history = await sbGet("price_history", { "company_id": `eq.${company.id}`, "order": "created_at.desc" });
       setHistoryModal({ open: true, company, history });
-    } catch (e) { showToast("Error loading history: " + e.message, "error"); }
-    setLoadingHistory(null);
+    } catch (e) {
+      showToast("Error loading history: " + e.message, "error");
+    } finally {
+      setLoadingHistory(null);
+    }
   };
 
   return (
     <div>
-      {/* Modals */}
-      <Modal type={modal.type} title={modal.open ? modal.title : ""} message={modal.message} onConfirm={confirmDelete} onClose={() => setModal({ ...modal, open: false })} />
-      {historyModal.open && <PriceHistoryModal company={historyModal.company} history={historyModal.history} onClose={() => setHistoryModal({ open: false, company: null, history: [] })} />}
-      {updateModal.open && <UpdatePriceModal key={updateModal.company?.id} company={updateModal.company} onConfirm={confirmUpdatePrice} onClose={() => setUpdateModal({ open: false, company: null })} />}
-      {formModal.open && <CompanyFormModal key={formModal.company?.id || "new"} company={formModal.company} onConfirm={handleFormConfirm} onClose={() => setFormModal({ open: false, company: null })} />}
+      {/* ── Modals ── */}
+      <Modal
+        type={modal.type}
+        title={modal.open ? modal.title : ""}
+        message={modal.message}
+        onConfirm={confirmDelete}
+        onClose={() => setModal({ ...modal, open: false })}
+      />
+      {historyModal.open && (
+        <PriceHistoryModal
+          company={historyModal.company}
+          history={historyModal.history}
+          onClose={() => setHistoryModal({ open: false, company: null, history: [] })}
+        />
+      )}
+      {updateModal.open && (
+        <UpdatePriceModal
+          key={updateModal.company?.id}
+          company={updateModal.company}
+          onConfirm={confirmUpdatePrice}
+          onClose={() => setUpdateModal({ open: false, company: null })}
+        />
+      )}
+      {formModal.open && (
+        <CompanyFormModal
+          key={formModal.company?.id || "new"}
+          company={formModal.company}
+          onConfirm={handleFormConfirm}
+          onClose={() => setFormModal({ open: false, company: null })}
+        />
+      )}
 
-      {/* Stats */}
+      {/* ── Stats ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
-        <StatCard label="Total Holdings" value={companies.length} sub="Registered companies" icon="🏢" color={C.navy} />
-        <StatCard label="Avg. Price" value={`TZS ${fmt(totalAvg)}`} sub="Across all holdings" icon="📊" color={C.green} />
-        <StatCard label="Highest Price" value={`TZS ${fmt(highestPrice)}`} sub="Top priced holding" icon="🏆" color={C.gold} />
-        <StatCard label="Search Results" value={filtered.length} sub={search ? `Matching "${search}"` : "Showing all"} icon="🔍" color={C.navy} />
+        <StatCard label="Total Holdings"  value={companies.length}              sub="Registered companies"                                          icon="🏢" color={C.navy}  />
+        <StatCard label="Avg. Price"      value={`TZS ${fmtSmart(totalAvg)}`}   sub="Across all holdings"                                           icon="📊" color={C.green} />
+        <StatCard label="Highest Price"   value={`TZS ${fmtSmart(highestPrice)}`} sub="Top priced holding"                                          icon="🏆" color={C.gold}  />
+        <StatCard label="Search Results"  value={filtered.length}               sub={search ? `Matching "${search}"` : "Showing all"}               icon="🔍" color={C.navy}  />
       </div>
 
-      {/* Toolbar */}
+      {/* ── Toolbar ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <div style={{ flex: 1, position: "relative" }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: C.gray400 }}>🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search companies..."
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search companies..."
             style={{ width: "100%", border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "9px 12px 9px 36px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, boxSizing: "border-box" }}
             onFocus={e => e.target.style.borderColor = C.green}
-            onBlur={e => e.target.style.borderColor = C.gray200} />
+            onBlur={e  => e.target.style.borderColor = C.gray200}
+          />
         </div>
         {search && <Btn variant="secondary" onClick={() => setSearch("")}>Clear</Btn>}
         <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, company: null })}>Register Company</Btn>
       </div>
 
-      {/* Table */}
-      <SectionCard title={`Holdings (${filtered.length}${search ? ` of ${companies.length}` : ""})`} subtitle="Manage your DSE registered companies">
+      {/* ── Table ── */}
+      <SectionCard
+        title={`Holdings (${filtered.length}${search ? ` of ${companies.length}` : ""})`}
+        subtitle="Manage your DSE registered companies"
+      >
         {companies.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
@@ -158,7 +207,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                     { label: "Change",               align: "right" },
                     { label: "Previous Price (TZS)", align: "right" },
                     { label: "Last Price Update",    align: "left"  },
-                    { label: "Actions",                align: "right" },
+                    { label: "Actions",              align: "right" },
                   ].map(h => (
                     <th key={h.label} style={{ padding: "10px 18px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
                   ))}
@@ -168,30 +217,27 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                 {filtered.map((c, i) => {
                   const priceUp   = c.previous_price != null ? Number(c.price) >= Number(c.previous_price) : null;
                   const changePct = c.previous_price != null && Number(c.previous_price) !== 0
-                    ? ((Number(c.price) - Number(c.previous_price)) / Number(c.previous_price)) * 100 : null;
+                    ? ((Number(c.price) - Number(c.previous_price)) / Number(c.previous_price)) * 100
+                    : null;
 
                   return (
                     <tr key={c.id} style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s" }}
                       onMouseEnter={e => e.currentTarget.style.background = C.gray50}
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 
-                      {/* # */}
                       <td style={{ padding: "10px 18px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
 
-                      {/* Company Name */}
                       <td style={{ padding: "10px 18px", minWidth: 160 }}>
                         <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
                         {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{c.remarks}</div>}
                       </td>
 
-                      {/* Current Price */}
                       <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <span style={{ background: C.greenBg, color: C.green, padding: "3px 10px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
                           {fmt(c.price)}
                         </span>
                       </td>
 
-                      {/* Change */}
                       <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
                         {priceUp !== null && changePct !== null
                           ? <span style={{ background: priceUp ? C.greenBg : C.redBg, color: priceUp ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${priceUp ? "#BBF7D0" : "#FECACA"}` }}>
@@ -200,14 +246,12 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                           : <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
-                      {/* Previous Price */}
                       <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
                         {c.previous_price != null
                           ? <span style={{ color: C.gray500, fontSize: 13 }}>{fmt(c.previous_price)}</span>
                           : <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
-                      {/* Last Price Update */}
                       <td style={{ padding: "10px 18px", whiteSpace: "nowrap" }}>
                         {c.updated_at
                           ? <span style={{ fontSize: 13, color: C.gray600 }}>
@@ -218,13 +262,12 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
                           : <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
-                      {/* Actions */}
                       <td style={{ padding: "10px 18px", textAlign: "right" }}>
                         <ActionMenu actions={[
-                          { icon: "💰", label: updating === c.id ? "Updating..." : "Update Price", onClick: () => setUpdateModal({ open: true, company: c }) },
-                          { icon: "📈", label: loadingHistory === c.id ? "Loading..." : "Price History", onClick: () => viewHistory(c) },
-                          { icon: "✏️", label: "Edit Details", onClick: () => setFormModal({ open: true, company: c }) },
-                          { icon: "🗑️", label: "Delete", danger: true, onClick: () => del(c.id) },
+                          { icon: "💰", label: updating === c.id ? "Updating..." : "Update Price",         onClick: () => setUpdateModal({ open: true, company: c }) },
+                          { icon: "📈", label: loadingHistory === c.id ? "Loading..." : "Price History",   onClick: () => viewHistory(c) },
+                          { icon: "✏️", label: "Edit Details",                                             onClick: () => setFormModal({ open: true, company: c }) },
+                          { icon: "🗑️", label: "Delete", danger: true,                                    onClick: () => del(c.id) },
                         ]} />
                       </td>
                     </tr>
