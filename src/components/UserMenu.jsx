@@ -2,9 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { C } from "./ui";
 
-const CDS = "CDS-647305"; // ← will move to profiles table in future
-
-export default function UserMenu({ session, onSignOut }) {
+export default function UserMenu({ profile, session, onSignOut, onOpenProfile }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -15,25 +13,27 @@ export default function UserMenu({ session, onSignOut }) {
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  const email    = session?.user?.email || session?.email || "User";
-  const initials = email.slice(0, 2).toUpperCase();
-  const name     = email.split("@")[0]
-    .replace(/[._-]/g, " ")
-    .replace(/\b\w/g, c => c.toUpperCase());
+  // ── Display values from real profile ──────────────────────────
+  const email    = session?.user?.email || session?.email || "";
+  const fullName = profile?.full_name   || email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const cds      = profile?.cds_number  || "—";
+  const phone    = profile?.phone       || "—";
+  const accType  = profile?.account_type || "—";
+  const initials = fullName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
   const MENU_ITEMS = [
-    { icon: "👤", label: "My Profile",     sub: email,                    soon: false },
-    { icon: "🔑", label: "Reset Password", sub: "Change your password",   soon: true  },
-    { icon: "🎨", label: "Change Theme",   sub: "Light / Dark / Custom",  soon: true  },
-    { icon: "⚙️", label: "Preferences",   sub: "Notifications & display", soon: true  },
+    { icon: "👤", label: "My Profile",     sub: "View & edit your details",  soon: false, action: () => { onOpenProfile(); setOpen(false); } },
+    { icon: "🔑", label: "Reset Password", sub: "Change your password",       soon: true  },
+    { icon: "🎨", label: "Change Theme",   sub: "Light / Dark / Custom",      soon: true  },
+    { icon: "⚙️", label: "Preferences",   sub: "Notifications & display",    soon: true  },
     { divider: true },
-    { icon: "🚪", label: "Sign Out", sub: "Exit your session", soon: false, danger: true, action: onSignOut },
+    { icon: "🚪", label: "Sign Out",       sub: "Exit your session",          soon: false, danger: true, action: onSignOut },
   ];
 
   return (
     <div ref={ref} style={{ position: "relative", marginTop: "auto" }}>
 
-      {/* Popup Menu */}
+      {/* ── Popup Menu ──────────────────────────────────────────── */}
       {open && (
         <div style={{
           position: "absolute", bottom: "calc(100% + 8px)", left: 12, right: 12,
@@ -42,9 +42,9 @@ export default function UserMenu({ session, onSignOut }) {
           overflow: "hidden",
         }}>
 
-          {/* Header — name + email + CDS */}
-          <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Header — full profile info */}
+          <div style={{ padding: "16px 18px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <div style={{
                 width: 44, height: 44, borderRadius: 12,
                 background: `linear-gradient(135deg, ${C.gold}, #f97316)`,
@@ -55,15 +55,26 @@ export default function UserMenu({ session, onSignOut }) {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ color: C.white, fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {name}
+                  {fullName}
                 </div>
                 <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {email}
                 </div>
-                <div style={{ color: C.gold, fontSize: 11, fontWeight: 600, marginTop: 2 }}>
-                  {CDS}
-                </div>
               </div>
+            </div>
+
+            {/* Profile detail chips */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              {[
+                { label: "CDS",     value: cds      },
+                { label: "Phone",   value: phone    },
+                { label: "Type",    value: accType  },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ background: "rgba(255,255,255,0.06)", borderRadius: 8, padding: "6px 10px" }}>
+                  <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+                  <div style={{ color: C.white, fontSize: 12, fontWeight: 600, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -73,15 +84,20 @@ export default function UserMenu({ session, onSignOut }) {
               if (item.divider) return <div key={i} style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "6px 0" }} />;
               return (
                 <button key={i}
-                  onClick={() => { if (!item.soon && item.action) { item.action(); setOpen(false); } else if (!item.soon) setOpen(false); }}
-                  style={{ width: "100%", padding: "10px 18px", border: "none", background: "none", cursor: item.soon ? "default" : "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "inherit", opacity: item.soon ? 0.5 : 1 }}
+                  onClick={() => { if (!item.soon && item.action) item.action(); }}
+                  style={{
+                    width: "100%", padding: "10px 18px", border: "none", background: "none",
+                    cursor: item.soon ? "default" : "pointer", display: "flex",
+                    alignItems: "center", gap: 12, textAlign: "left",
+                    fontFamily: "inherit", opacity: item.soon ? 0.5 : 1,
+                  }}
                   onMouseEnter={e => { if (!item.soon) e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
                 >
                   <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: item.danger ? "#f87171" : C.white }}>{item.label}</div>
-                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.sub}</div>
+                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>{item.sub}</div>
                   </div>
                   {item.soon && (
                     <span style={{ fontSize: 10, fontWeight: 700, color: C.gold, background: "rgba(245,158,11,0.15)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 6, padding: "2px 7px", flexShrink: 0 }}>SOON</span>
@@ -97,7 +113,7 @@ export default function UserMenu({ session, onSignOut }) {
         </div>
       )}
 
-      {/* Profile Strip — name + CDS only (no email = no horizontal scroll) */}
+      {/* ── Profile Strip — name + CDS only ─────────────────────── */}
       <button onClick={() => setOpen(o => !o)} style={{
         width: "100%", padding: "14px 16px", border: "none",
         borderTop: "1px solid rgba(255,255,255,0.08)",
@@ -117,17 +133,14 @@ export default function UserMenu({ session, onSignOut }) {
         }}>
           {initials}
         </div>
-
-        {/* Name on top, CDS below — no email here */}
         <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
           <div style={{ color: C.white, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {name}
+            {fullName}
           </div>
           <div style={{ color: C.gold, fontSize: 11, fontWeight: 600, marginTop: 1 }}>
-            {CDS}
+            {cds}
           </div>
         </div>
-
         <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▲</span>
       </button>
     </div>
