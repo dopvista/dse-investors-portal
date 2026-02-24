@@ -8,11 +8,9 @@ const hdrs = {
   "Prefer": "return=representation",
 };
 
-export async function sbGet(table, query = "") {
-  const url = query
-    ? `${SUPABASE_URL}/rest/v1/${table}?${query}`
-    : `${SUPABASE_URL}/rest/v1/${table}?order=created_at.desc`;
-  const r = await fetch(url, { headers: hdrs });
+export async function sbGet(table, params = {}) {
+  const query = new URLSearchParams({ order: "created_at.desc", ...params });
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: hdrs });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
