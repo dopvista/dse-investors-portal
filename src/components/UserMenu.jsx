@@ -13,7 +13,6 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
     return () => document.removeEventListener("mousedown", handle);
   }, [open]);
 
-  // ── Display values from real profile ──────────────────────────
   const email    = session?.user?.email || session?.email || "";
   const fullName = profile?.full_name  || email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   const cds      = profile?.cds_number || "—";
@@ -31,7 +30,6 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
   return (
     <div ref={ref} style={{ position: "relative", marginTop: "auto" }}>
 
-      {/* ── Popup Menu ──────────────────────────────────────────── */}
       {open && (
         <div style={{
           position: "absolute", bottom: "calc(100% + 8px)", left: 12, right: 12,
@@ -40,40 +38,33 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
           overflow: "hidden",
         }}>
 
-          {/* Header — full profile info */}
-          <div style={{ padding: "16px 18px 14px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              {/* Avatar */}
+          {/* Header — tighter padding + smaller avatar to give text more room */}
+          <div style={{ padding: "12px 14px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <div style={{
-                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
                 background: `linear-gradient(135deg, ${C.gold}, #f97316)`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: 800, fontSize: 16, color: C.navy,
+                fontWeight: 800, fontSize: 14, color: C.navy,
               }}>
                 {initials}
               </div>
 
-              {/* Name + email + CDS — all truncated, no overflow */}
               <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
-                {/* Full name */}
                 <div style={{
-                  color: C.white, fontWeight: 700, fontSize: 14,
+                  color: C.white, fontWeight: 700, fontSize: 13,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}>
                   {fullName}
                 </div>
-
-                {/* Email — truncated */}
                 <div style={{
-                  color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 2,
+                  color: "rgba(255,255,255,0.45)", fontSize: 10.5, marginTop: 1,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}>
                   {email}
                 </div>
-
-                {/* CDS — slightly larger than email, same muted style */}
                 <div style={{
-                  color: "rgba(255,255,255,0.45)", fontSize: 12, fontWeight: 600, marginTop: 3,
+                  color: "rgba(255,255,255,0.45)", fontSize: 11.5, fontWeight: 600, marginTop: 2,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   letterSpacing: "0.02em",
                 }}>
@@ -118,7 +109,7 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
         </div>
       )}
 
-      {/* ── Profile Strip — name + CDS only ─────────────────────── */}
+      {/* ── Profile Strip ─────────────────────────────────────────── */}
       <button onClick={() => setOpen(o => !o)} style={{
         width: "100%", padding: "14px 16px", border: "none",
         borderTop: "1px solid rgba(255,255,255,0.08)",
