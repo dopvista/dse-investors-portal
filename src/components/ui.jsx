@@ -586,8 +586,8 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
   // ── Download sample template ──────────────────────────────────
   const downloadTemplate = () => {
     const link = document.createElement("a");
-    link.href = "/DSE_Import_Template.xlsx";
-    link.download = "DSE_Import_Template.xlsx";
+    link.href = "/Transactions_Import_Template.xlsx";
+    link.download = "Transactions_Import_Template.xlsx";
     link.click();
   };
 
