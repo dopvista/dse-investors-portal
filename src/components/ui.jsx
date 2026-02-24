@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 // ─── DSE Brand Colors ─────────────────────────────────────────────
 export const C = {
@@ -570,6 +570,278 @@ export function TransactionFormModal({ transaction, companies, onConfirm, onClos
       )}
 
       <FTextarea label="Remarks" value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} placeholder="Optional notes..." style={{ minHeight: 56 }} />
+    </ModalShell>
+  );
+}
+
+// ─── Import Transactions Modal ────────────────────────────────────────────────
+export function ImportTransactionsModal({ companies, onImport, onClose }) {
+  const [step, setStep]         = useState("upload");   // upload | preview
+  const [rows, setRows]         = useState([]);
+  const [errors, setErrors]     = useState([]);
+  const [fileName, setFileName] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef(null);
+
+  // ── Download sample template ──────────────────────────────────
+  const downloadTemplate = () => {
+    const link = document.createElement("a");
+    link.href = "/DSE_Import_Template.xlsx";
+    link.download = "DSE_Import_Template.xlsx";
+    link.click();
+  };
+
+  // ── Parse uploaded Excel file ─────────────────────────────────
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+
+    try {
+      const XLSX = await import("xlsx");
+      const data = await file.arrayBuffer();
+      const wb   = XLSX.read(data, { type: "array", cellDates: true });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      // Find header row (skip title/hint rows)
+      const dataRows = json.filter(row => {
+        const vals = Object.values(row).map(v => String(v).trim());
+        return vals[0] && !vals[0].startsWith("DSE") && !vals[0].startsWith("Fill") && !vals[0].startsWith("Date");
+      });
+
+      const parsed = []; const errs = [];
+      dataRows.forEach((row, i) => {
+        const rowNum = i + 1;
+        const keys   = Object.keys(row);
+        const get    = (idx) => String(row[keys[idx]] ?? "").trim();
+
+        const dateRaw  = get(0);
+        const company  = get(1);
+        const type     = get(2);
+        const qty      = Number(get(3));
+        const price    = Number(get(4));
+        const fees     = Number(get(5)) || 0;
+        const remarks  = get(6);
+
+        const rowErrs = [];
+        if (!dateRaw)                              rowErrs.push("Missing date");
+        if (!company)                              rowErrs.push("Missing company");
+        if (!["Buy","Sell"].includes(type))        rowErrs.push("Type must be Buy or Sell");
+        if (!qty || isNaN(qty) || qty <= 0)        rowErrs.push("Invalid quantity");
+        if (!price || isNaN(price) || price <= 0)  rowErrs.push("Invalid price");
+
+        const matchedCompany = companies.find(c => c.name.toLowerCase() === company.toLowerCase());
+        if (company && !matchedCompany)            rowErrs.push(`Company "${company}" not found in Holdings`);
+
+        // Format date
+        let date = dateRaw;
+        if (dateRaw instanceof Date) {
+          date = dateRaw.toISOString().split("T")[0];
+        } else if (typeof dateRaw === "number") {
+          const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
+          date = d.toISOString().split("T")[0];
+        } else {
+          // Try to parse string dates
+          const parsed = new Date(dateRaw);
+          if (!isNaN(parsed)) date = parsed.toISOString().split("T")[0];
+        }
+
+        if (rowErrs.length) {
+          errs.push({ row: rowNum, errors: rowErrs, data: { date, company, type, qty, price, fees, remarks } });
+        } else {
+          parsed.push({
+            date, company_id: matchedCompany?.id, company_name: matchedCompany?.name,
+            type, qty, price, fees: fees || null, remarks: remarks || null,
+            total: qty * price,
+          });
+        }
+      });
+
+      setRows(parsed);
+      setErrors(errs);
+      setStep("preview");
+    } catch (err) {
+      alert("Failed to read file: " + err.message);
+    }
+  };
+
+  // ── Import all valid rows ─────────────────────────────────────
+  const handleImport = async () => {
+    if (!rows.length) return;
+    setImporting(true);
+    try {
+      await onImport(rows);
+      onClose();
+    } catch (e) {
+      alert("Import failed: " + e.message);
+    }
+    setImporting(false);
+  };
+
+  // ── Upload Step ───────────────────────────────────────────────
+  const UploadStep = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Step 1 - Download template */}
+      <div style={{ background: C.gray50, border: `1.5px solid ${C.gray200}`, borderRadius: 12, padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <div style={{ width: 42, height: 42, background: `${C.green}15`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📥</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>Step 1 — Download Sample Template</div>
+            <div style={{ fontSize: 12, color: C.gray400, marginTop: 3, lineHeight: 1.5 }}>
+              Download the Excel template, fill in your transactions, and save the file.
+            </div>
+            <button
+              onClick={downloadTemplate}
+              style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.green, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+            >
+              <span>⬇️</span> Download DSE_Import_Template.xlsx
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Step 2 - Select file */}
+      <div style={{ background: C.gray50, border: `1.5px dashed ${C.gray300}`, borderRadius: 12, padding: 20 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+          <div style={{ width: 42, height: 42, background: `${C.navy}15`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📂</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>Step 2 — Select File to Import</div>
+            <div style={{ fontSize: 12, color: C.gray400, marginTop: 3, lineHeight: 1.5 }}>
+              Select your filled Excel file (.xlsx). Maximum 500 rows per import.
+            </div>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.navy, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+            >
+              <span>📁</span> {fileName || "Choose Excel File..."}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tips */}
+      <div style={{ background: "#FEF9EC", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "12px 16px" }}>
+        <div style={{ fontSize: 12, color: "#92400E", fontWeight: 600, marginBottom: 6 }}>💡 Tips</div>
+        <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.7 }}>
+          • Company names must match exactly with your Holdings<br/>
+          • Type must be exactly <strong>Buy</strong> or <strong>Sell</strong><br/>
+          • Date format: <strong>YYYY-MM-DD</strong> (e.g. 2026-02-24)<br/>
+          • Delete the 5 sample rows before importing
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Preview Step ──────────────────────────────────────────────
+  const PreviewStep = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* Summary bar */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+        <div style={{ background: C.greenBg, border: `1px solid ${C.green}33`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>{rows.length}</div>
+          <div style={{ fontSize: 11, color: C.green, fontWeight: 600, marginTop: 2 }}>Valid Rows</div>
+        </div>
+        <div style={{ background: errors.length ? C.redBg : C.gray50, border: `1px solid ${errors.length ? C.red : C.gray200}33`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: errors.length ? C.red : C.gray400 }}>{errors.length}</div>
+          <div style={{ fontSize: 11, color: errors.length ? C.red : C.gray400, fontWeight: 600, marginTop: 2 }}>Rows with Errors</div>
+        </div>
+        <div style={{ background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.navy }}>{rows.length + errors.length}</div>
+          <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, marginTop: 2 }}>Total Rows Found</div>
+        </div>
+      </div>
+
+      {/* Error rows */}
+      {errors.length > 0 && (
+        <div style={{ background: C.redBg, border: `1px solid ${C.red}33`, borderRadius: 10, padding: "12px 16px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.red, marginBottom: 8 }}>⚠️ {errors.length} row(s) will be skipped due to errors:</div>
+          {errors.map((e, i) => (
+            <div key={i} style={{ fontSize: 12, color: C.red, marginBottom: 4 }}>
+              <strong>Row {e.row}:</strong> {e.errors.join(" · ")}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Valid rows preview */}
+      {rows.length > 0 && (
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>✅ Preview — {rows.length} rows ready to import:</div>
+          <div style={{ maxHeight: 260, overflowY: "auto", border: `1px solid ${C.gray200}`, borderRadius: 10, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: C.navy }}>
+                  {["#","Date","Company","Type","Qty","Price","Fees","Total"].map(h => (
+                    <th key={h} style={{ padding: "8px 10px", color: C.white, fontWeight: 700, fontSize: 11, textAlign: h === "#" ? "center" : "left", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
+                    <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{i + 1}</td>
+                    <td style={{ padding: "7px 10px", color: C.text }}>{r.date}</td>
+                    <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text }}>{r.company_name}</td>
+                    <td style={{ padding: "7px 10px" }}>
+                      <span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span>
+                    </td>
+                    <td style={{ padding: "7px 10px", color: C.text }}>{fmtInt(r.qty)}</td>
+                    <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600 }}>{fmt(r.price)}</td>
+                    <td style={{ padding: "7px 10px", color: C.gray600 }}>{r.fees ? fmt(r.fees) : "—"}</td>
+                    <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red }}>{fmt(r.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {rows.length === 0 && (
+        <div style={{ textAlign: "center", padding: "30px", color: C.gray400 }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>😟</div>
+          <div style={{ fontWeight: 600 }}>No valid rows found</div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>Check the errors above and fix your file</div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <ModalShell
+      title="⬆️ Import Transactions"
+      subtitle={step === "upload" ? "Upload your filled Excel template" : `Reviewing ${rows.length + errors.length} rows from "${fileName}"`}
+      onClose={onClose}
+      maxWidth={560}
+      footer={
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+          <div>
+            {step === "preview" && (
+              <Btn variant="secondary" onClick={() => { setStep("upload"); setRows([]); setErrors([]); setFileName(""); }}>
+                ← Back
+              </Btn>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+            {step === "preview" && rows.length > 0 && (
+              <Btn variant="primary" onClick={handleImport} icon="⬆️" disabled={importing}>
+                {importing ? "Importing..." : `Import ${rows.length} Transactions`}
+              </Btn>
+            )}
+          </div>
+        </div>
+      }
+    >
+      {step === "upload" ? <UploadStep /> : <PreviewStep />}
     </ModalShell>
   );
 }
