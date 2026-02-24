@@ -18,7 +18,10 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
     : 0;
 
   const submit = async () => {
-    if (!form.name.trim() || !form.price) return alert("Name and Current Price are required.");
+    if (!form.name.trim() || !form.price) {
+      setModal({ open: true, type: "warning", title: "Missing Required Fields", message: "Please fill in both Company Name and Current Price before saving.", targetId: null });
+      return;
+    }
     setSaving(true);
     try {
       if (editId) {
