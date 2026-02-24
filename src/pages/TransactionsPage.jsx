@@ -21,7 +21,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
   const submit = async () => {
     if (!form.date || !form.companyId || !form.qty || !form.price) {
-      setModal({ open: true, title: "Missing Required Fields", message: "Please fill in Date, Company, Quantity and Price per Share before recording the transaction.", targetId: null });
+      setModal({ open: true, type: "warning", title: "Missing Required Fields", message: "Please fill in Date, Company, Quantity and Price per Share before recording the transaction.", targetId: null });
       return;
     }
     const company = companies.find(c => c.id === form.companyId);
@@ -47,7 +47,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
   const del = (id) => {
     const tx = transactions.find(t => t.id === id);
-    setModal({ open: true, title: "Delete Transaction", message: `Are you sure you want to delete this ${tx?.type} transaction for "${tx?.company_name}" on ${tx?.date}? This action cannot be undone.`, targetId: id });
+    setModal({ open: true, type: "confirm", title: "Delete Transaction", message: `Are you sure you want to delete this ${tx?.type} transaction for "${tx?.company_name}" on ${tx?.date}? This action cannot be undone.`, targetId: id });
   };
 
   const confirmDelete = async () => {
@@ -65,7 +65,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   return (
     <div>
       <Modal
-        type="confirm"
+        type={modal.type}
         title={modal.open ? modal.title : ""}
         message={modal.message}
         onConfirm={confirmDelete}
