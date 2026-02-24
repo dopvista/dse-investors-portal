@@ -243,16 +243,16 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               <tfoot>
                 <tr style={{ background: C.navy + "06", borderTop: `2px solid ${C.gray200}` }}>
                   <td colSpan={6} style={{ padding: "14px 12px", fontWeight: 700, color: C.gray600, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>TOTALS</td>
-                  <td style={{ padding: "14px 12px", fontWeight: 700, color: C.text, textAlign: "right" }}>
-                    <div style={{ fontSize: 11, color: C.green }}>▲ {fmt(filtered.filter(t=>t.type==="Buy").reduce((s,t)=>s+Number(t.total||0),0))}</div>
-                    <div style={{ fontSize: 11, color: C.red }}>▼ {fmt(filtered.filter(t=>t.type==="Sell").reduce((s,t)=>s+Number(t.total||0),0))}</div>
+                  <td style={{ padding: "14px 12px", textAlign: "right" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.green }}>▲ {fmt(filtered.filter(t => t.type === "Buy").reduce((s, t) => s + Number(t.total || 0), 0))}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.red }}>▼ {fmt(filtered.filter(t => t.type === "Sell").reduce((s, t) => s + Number(t.total || 0), 0))}</div>
                   </td>
                   <td style={{ padding: "14px 12px", fontWeight: 700, color: C.text, textAlign: "right" }}>
-                    {fmt(filtered.reduce((s,t)=>s+Number(t.fees||0),0))}
+                    {fmt(filtered.reduce((s, t) => s + Number(t.fees || 0), 0))}
                   </td>
                   <td style={{ padding: "14px 12px", textAlign: "right" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.green }}>▲ {fmt(filtered.filter(t=>t.type==="Buy").reduce((s,t)=>s+Number(t.total||0)+Number(t.fees||0),0))}</div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.red }}>▼ {fmt(filtered.filter(t=>t.type==="Sell").reduce((s,t)=>s+Number(t.total||0)+Number(t.fees||0),0))}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: C.green }}>▲ {fmt(filtered.filter(t => t.type === "Buy").reduce((s, t) => s + Number(t.total || 0) + Number(t.fees || 0), 0))}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: C.red }}>▼ {fmt(filtered.filter(t => t.type === "Sell").reduce((s, t) => s + Number(t.total || 0) + Number(t.fees || 0), 0))}</div>
                   </td>
                   <td colSpan={2} />
                 </tr>
