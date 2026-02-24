@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 // ─── DSE Brand Colors ─────────────────────────────────────────────
 export const C = {
   navy: "#0B1F3A",
