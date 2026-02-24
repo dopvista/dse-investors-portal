@@ -511,13 +511,13 @@ export function TransactionFormModal({ transaction, companies, onConfirm, onClos
   return (
     <ModalShell
       title={isEdit ? "✏️ Edit Transaction" : "📝 Record New Transaction"}
-      subtitle={isEdit ? "Update the details of this transaction" : "Record a new buy or sell order"}
+      subtitle={isEdit ? "Update the details below and save" : "Record a new buy or sell order"}
       onClose={onClose}
       maxWidth={620}
       footer={
         <>
           <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn variant={isEdit ? "navy" : "primary"} onClick={handle} icon="💾">
+          <Btn variant="primary" onClick={handle} icon="💾">
             {isEdit ? "Save Changes" : "Record Transaction"}
           </Btn>
         </>
