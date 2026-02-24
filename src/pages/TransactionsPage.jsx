@@ -1,84 +1,6 @@
 import { useState, useMemo } from "react";
 import { sbInsert, sbUpdate, sbDelete } from "../lib/supabase";
-import { C, fmt, fmtInt, Btn, FInput, FSelect, FTextarea, StatCard, SectionCard, Modal, ActionMenu } from "../components/ui";
-
-// ── Transaction Form Modal ─────────────────────────────────────────────────────
-function TransactionFormModal({ transaction, companies, onConfirm, onClose }) {
-  const today = new Date().toISOString().split("T")[0];
-  const [form, setForm] = useState(
-    transaction
-      ? { date: transaction.date, companyId: transaction.company_id, type: transaction.type, qty: transaction.qty, price: transaction.price, fees: transaction.fees || "", remarks: transaction.remarks || "" }
-      : { date: today, companyId: "", type: "Buy", qty: "", price: "", fees: "", remarks: "" }
-  );
-  const total = (Number(form.qty) || 0) * (Number(form.price) || 0);
-  const grandTotal = total + (Number(form.fees) || 0);
-  const isEdit = !!transaction;
-
-  const handleSubmit = () => onConfirm({ ...form, total, grandTotal });
-
-  const overlayStyle = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 };
-  const boxStyle    = { background: "#fff", borderRadius: 16, width: "100%", maxWidth: 620, boxShadow: "0 24px 60px rgba(0,0,0,0.18)", overflow: "hidden" };
-  const headerStyle = { background: C.navy, padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" };
-
-  return (
-    <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={boxStyle}>
-        {/* Header */}
-        <div style={headerStyle}>
-          <div>
-            <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>{isEdit ? "✏️ Edit Transaction" : "📝 Record New Transaction"}</div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 2 }}>{isEdit ? "Update transaction details" : "Record a new buy or sell"}</div>
-          </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-        </div>
-
-        {/* Body */}
-        <div style={{ padding: 24 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-            <FInput label="Date" required type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-            <FSelect label="Company" required value={form.companyId} onChange={e => setForm(f => ({ ...f, companyId: e.target.value }))}>
-              <option value="">Select company...</option>
-              {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </FSelect>
-            <FSelect label="Transaction Type" required value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-              <option value="Buy">🟢 Buy</option>
-              <option value="Sell">🔴 Sell</option>
-            </FSelect>
-            <FInput label="Quantity" required type="number" value={form.qty} onChange={e => setForm(f => ({ ...f, qty: e.target.value }))} placeholder="0" />
-            <FInput label="Price per Share (TZS)" required type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
-            <FInput label="Other Fees (TZS)" type="number" value={form.fees} onChange={e => setForm(f => ({ ...f, fees: e.target.value }))} placeholder="0.00" />
-          </div>
-
-          {/* Auto-calc summary */}
-          {total > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, margin: "20px 0 4px", background: C.navy + "08", border: `1px solid ${C.navy}20`, borderRadius: 10, padding: 16 }}>
-              <div>
-                <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Shares Total</div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginTop: 4 }}>TZS {fmt(total)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Fees</div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginTop: 4 }}>TZS {fmt(form.fees || 0)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Grand Total</div>
-                <div style={{ fontSize: 19, fontWeight: 800, color: C.green, marginTop: 4 }}>TZS {fmt(grandTotal)}</div>
-              </div>
-            </div>
-          )}
-
-          <FTextarea label="Remarks" value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} placeholder="Optional notes..." style={{ minHeight: 56, marginTop: 16 }} />
-
-          {/* Footer */}
-          <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            <Btn onClick={handleSubmit} icon={isEdit ? "✓" : "+"} variant="navy">{isEdit ? "Save Changes" : "Record Transaction"}</Btn>
-            <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { C, fmt, fmtInt, Btn, StatCard, SectionCard, Modal, ActionMenu, TransactionFormModal } from "../components/ui";
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function TransactionsPage({ companies, transactions, setTransactions, showToast }) {
@@ -106,11 +28,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   }, [transactions, search]);
 
   // ── Save (Insert or Update) ────────────────────────────────────
-  const handleFormConfirm = async ({ date, companyId, type, qty, price, fees, remarks, total, grandTotal }) => {
-    if (!date || !companyId || !qty || !price) {
-      setModal({ open: true, type: "warning", title: "Missing Required Fields", message: "Please fill in Date, Company, Quantity and Price per Share before recording the transaction.", targetId: null });
-      return;
-    }
+  const handleFormConfirm = async ({ date, companyId, type, qty, price, fees, remarks, total }) => {
     const isEdit = !!formModal.transaction;
     const company = companies.find(c => c.id === companyId);
     setSaving(true);
