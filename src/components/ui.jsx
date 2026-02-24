@@ -426,7 +426,6 @@ export function PriceHistoryModal({ company, history, onClose }) {
       }
       onClose={onClose}
       maxWidth={900}
-      maxHeight="80vh"
       footer={
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div style={{ fontSize: 12, color: C.gray400 }}>{history.length} price update{history.length !== 1 ? "s" : ""} recorded</div>
@@ -441,44 +440,52 @@ export function PriceHistoryModal({ company, history, onClose }) {
           <div style={{ fontSize: 13, marginTop: 4 }}>Price changes will appear here after the first update</div>
         </div>
       ) : (
-        <div style={{ overflowX: "auto", margin: "0 -28px", padding: "0 0 4px" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: C.gray50 }}>
-                {["#", "Date & Time", "Old Price", "New Price", "Change", "Change %", "Notes", "Updated By"].map(h => (
-                  <th key={h} style={{ padding: "11px 12px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, borderTop: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((h, i) => {
-                const up = h.change_amount >= 0;
-                return (
-                  <tr key={h.id} style={{ borderBottom: `1px solid ${C.gray100}` }}
-                    onMouseEnter={e => e.currentTarget.style.background = C.gray50}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <td style={{ padding: "10px 12px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
-                    <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-                      <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                      <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
-                    </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", color: C.gray600 }}>{fmt(h.old_price)}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</td>
-                    <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                      <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                        {up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%
-                      </span>
-                    </td>
-                    <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{ margin: "0 -28px" }}>
+          {/* ── Frozen header ── */}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: C.gray50 }}>
+                  {["#", "Date & Time", "Old Price", "New Price", "Change", "Change %", "Notes", "Updated By"].map(h => (
+                    <th key={h} style={{ padding: "11px 12px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, borderTop: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+            </table>
+          </div>
+          {/* ── Scrollable body — max 5 rows ── */}
+          <div style={{ maxHeight: 345, overflowY: "auto", overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <tbody>
+                {history.map((h, i) => {
+                  const up = h.change_amount >= 0;
+                  return (
+                    <tr key={h.id} style={{ borderBottom: `1px solid ${C.gray100}` }}
+                      onMouseEnter={e => e.currentTarget.style.background = C.gray50}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <td style={{ padding: "10px 12px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
+                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                        <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                        <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
+                      </td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", color: C.gray600 }}>{fmt(h.old_price)}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                        <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                          {up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%
+                        </span>
+                      </td>
+                      <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </ModalShell>
