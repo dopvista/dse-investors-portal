@@ -547,17 +547,17 @@ export function TransactionFormModal({ transaction, companies, onConfirm, onClos
       {/* Auto-calc summary */}
       {total > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 10, padding: 16 }}>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Shares Total</div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginTop: 4 }}>TZS {fmt(total)}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(total)}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Fees</div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginTop: 4 }}>TZS {fmt(form.fees || 0)}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(form.fees || 0)}</div>
           </div>
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Grand Total</div>
-            <div style={{ fontSize: 19, fontWeight: 800, color: C.green, marginTop: 4 }}>TZS {fmt(grandTotal)}</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: C.green, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(grandTotal)}</div>
           </div>
         </div>
       )}
