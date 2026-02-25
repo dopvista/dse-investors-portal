@@ -68,9 +68,12 @@ export default function App() {
     if (!session) return;
     (async () => {
       try {
+        // Pass the fresh access_token explicitly to avoid stale localStorage
+        // race condition where a previous user's session is still in storage
+        const freshToken = session?.access_token;
         const [p, r, c, t] = await Promise.all([
-          sbGetProfile(),
-          sbGetMyRole(),
+          sbGetProfile(freshToken),
+          sbGetMyRole(freshToken),
           sbGet("companies"),
           sbGet("transactions"),
         ]);
