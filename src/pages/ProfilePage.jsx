@@ -41,7 +41,7 @@ const COUNTRIES = [
 function calcCompletion(form, avatarPreview) {
   const fields = [
     form.full_name, form.phone, form.nationality,
-    form.postal_address, form.nida, form.date_of_birth,
+    form.postal_address, form.national_id, form.date_of_birth,
     form.gender, avatarPreview,
   ];
   const filled = fields.filter(f => f && String(f).trim()).length;
@@ -88,8 +88,8 @@ const inpReadOnly = {
   cursor: "not-allowed", fontWeight: 600,
 };
 
-export default function ProfilePage({ profile, setProfile, showToast, session, role }) {
-  const email = session?.user?.email || session?.email || profile?.email || "";
+export default function ProfilePage({ profile, setProfile, showToast, session, role, email: emailProp }) {
+  const email = emailProp || session?.user?.email || session?.email || profile?.email || "";
 
   const [form, setForm] = useState({
     full_name:      profile?.full_name      || "",
@@ -97,7 +97,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     account_type:   profile?.account_type   || "Individual",
     nationality:    profile?.nationality    || "",
     postal_address: profile?.postal_address || "",
-    nida:           profile?.nida           || "",
+    national_id:    profile?.national_id    || "",
     date_of_birth:  profile?.date_of_birth  || "",
     gender:         profile?.gender         || "",
   });
@@ -437,7 +437,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
 
               <Field label="National ID (NIDA)">
                 <input style={inp()} type="text" placeholder="e.g. 19820618114670000123"
-                  value={form.nida} onChange={e => set("nida", e.target.value)}
+                  value={form.national_id} onChange={e => set("national_id", e.target.value)}
                   onFocus={focusGreen} onBlur={blurGray} />
               </Field>
 
