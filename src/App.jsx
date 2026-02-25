@@ -249,7 +249,7 @@ export default function App() {
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
           {tab === "companies"       && <CompaniesPage      companies={companies}    setCompanies={setCompanies}    transactions={transactions} showToast={showToast} role={role} />}
           {tab === "transactions"    && <TransactionsPage   companies={companies}    transactions={transactions}     setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
-          {tab === "profile"         && <ProfilePage        profile={profile}        setProfile={setProfile}                                                         showToast={showToast} />}
+          {tab === "profile"         && <ProfilePage        profile={profile}        setProfile={setProfile}   session={session}   role={role}                                showToast={showToast} />}
           {tab === "user-management" && <UserManagementPage role={role}              showToast={showToast} />}
         </div>
       </div>
