@@ -127,7 +127,7 @@ export default function App() {
   );
 
   // ── No profile yet → show setup screen ───────────────────────────
-  if (!profile) return <ProfileSetupPage session={session} onComplete={handleProfileDone} />;
+  if (!profile) return <ProfileSetupPage session={session} onComplete={handleProfileDone} onCancel={handleSignOut} />;
 
   // ── Filter nav items by current user's role ───────────────────────
   const visibleNav = NAV.filter(item => !role || item.roles.includes(role));
