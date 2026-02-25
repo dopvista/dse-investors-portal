@@ -16,7 +16,7 @@ import logo from "./assets/logo.jpg";
 const NAV = [
   { id: "companies",       label: "Holdings",         icon: "🏢", roles: ["SA","AD","DE","VR","RO"] },
   { id: "transactions",    label: "Transactions",     icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
-  { id: "user-management", label: "User Management",  icon: "👥", roles: ["SA"] },
+  { id: "user-management", label: "User Management",  icon: "👥", roles: ["SA","AD"] },
   // { id: "portfolio",    label: "Portfolio",        icon: "📊", roles: ["SA","AD","RO"] },
   // { id: "reports",      label: "Reports",          icon: "📄", roles: ["SA","AD","VR","RO"] },
 ];
