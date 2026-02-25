@@ -140,20 +140,14 @@ export default function UserMenu({ profile, session, role, onSignOut, onOpenProf
           <div style={{ color: C.white, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {fullName}
           </div>
-          {/* CDS + role on same line — no extra height */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1, minWidth: 0 }}>
-            <span style={{ color: C.gold, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 1 }}>
-              {cds}
-            </span>
-            {roleLabel && (
-              <>
-                <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 9, flexShrink: 0 }}>·</span>
-                <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 1 }}>
-                  {roleLabel}
-                </span>
-              </>
-            )}
+          <div style={{ color: C.gold, fontSize: 11, fontWeight: 600, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {cds}
           </div>
+          {roleLabel && (
+            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {roleLabel}
+            </div>
+          )}
         </div>
         <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▲</span>
       </button>
