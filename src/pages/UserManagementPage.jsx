@@ -67,7 +67,7 @@ function Field({ label, required, children }) {
 // MODAL — Change Role
 // ═══════════════════════════════════════════════════════
 function ChangeRoleModal({ user, roles, callerRole, onClose, onSave, showToast }) {
-  const available = callerRole === "SA" ? roles : roles.filter(r => ["DE","VR","RO"].includes(r.code));
+  const available = callerRole === "SA" ? roles : roles.filter(r => r.code !== "SA");
   const [sel, setSel] = useState(roles.find(r => r.code === user.role_code)?.id ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -205,7 +205,7 @@ function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToa
       <Field label="Assign Role" required>
         <select style={{ ...inp(), cursor: "pointer" }} value={form.role_id} onChange={e => set("role_id", e.target.value)} onFocus={focusGreen} onBlur={blurGray}>
           <option value="">Select a role...</option>
-          {roles.map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
+          {(isAdmin ? roles.filter(r => r.code !== "SA") : roles).map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
         </select>
       </Field>
     </Modal>
