@@ -152,11 +152,16 @@ export async function sbDelete(table, id) {
 
 // ── PROFILE ────────────────────────────────────────────────────────
 
-export async function sbGetProfile() {
-  const uid = getSession()?.user?.id;
+export async function sbGetProfile(sessionToken) {
+  // Accept explicit token to avoid stale localStorage session race condition
+  const session = sessionToken ? null : getSession();
+  const uid     = sessionToken
+    ? JSON.parse(atob(sessionToken.split(".")[1])).sub   // decode JWT sub
+    : session?.user?.id;
   if (!uid) return null;
+  const tok = sessionToken || token();
   const res = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
-    headers: headers(token()),
+    headers: headers(tok),
   });
   if (!res.ok) return null;
   const rows = await res.json();
@@ -186,10 +191,12 @@ export async function sbUpsertProfile(data) {
 
 // ── ROLES ──────────────────────────────────────────────────────────
 
-export async function sbGetMyRole() {
+export async function sbGetMyRole(sessionToken) {
+  // Accept explicit token to avoid stale localStorage session race condition
+  const tok = sessionToken || token();
   const res = await fetch(`${BASE}/rest/v1/rpc/get_my_role`, {
     method:  "POST",
-    headers: headers(token()),
+    headers: headers(tok),
     body:    JSON.stringify({}),
   });
   if (!res.ok) return null;
