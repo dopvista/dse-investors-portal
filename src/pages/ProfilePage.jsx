@@ -2,30 +2,33 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { C } from "../components/ui";
 import { ROLE_META } from "../App";
+import AvatarCropModal from "../components/AvatarCropModal";
 
 const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
 const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // ── Password change rate limit (3 per day, stored in localStorage) ─
-const PW_LIMIT_KEY  = "dse_pw_changes";
 const PW_MAX_DAILY  = 3;
 
-function getPwChanges() {
+// ── Per-user key so counters don't bleed between accounts ─────────
+const pwKey = (uid) => `dse_pw_changes_${uid || "unknown"}`;
+
+function getPwChanges(uid) {
   try {
-    const raw = JSON.parse(localStorage.getItem(PW_LIMIT_KEY) || "{}");
+    const raw = JSON.parse(localStorage.getItem(pwKey(uid)) || "{}");
     const today = new Date().toDateString();
     if (raw.date !== today) return { date: today, count: 0 };
     return raw;
   } catch { return { date: new Date().toDateString(), count: 0 }; }
 }
-function incrementPwChanges() {
-  const data = getPwChanges();
+function incrementPwChanges(uid) {
+  const data = getPwChanges(uid);
   const next = { date: data.date, count: data.count + 1 };
-  localStorage.setItem(PW_LIMIT_KEY, JSON.stringify(next));
+  localStorage.setItem(pwKey(uid), JSON.stringify(next));
   return next.count;
 }
-function remainingPwChanges() {
-  return PW_MAX_DAILY - getPwChanges().count;
+function remainingPwChanges(uid) {
+  return PW_MAX_DAILY - getPwChanges(uid).count;
 }
 
 // ── Country list — Tanzania first, rest alphabetical ──────────────
@@ -64,7 +67,7 @@ function calcCompletion(form, avatarPreview) {
   const fields = [
     form.full_name, form.phone, form.nationality,
     form.postal_address, form.national_id, form.date_of_birth,
-    form.gender, avatarPreview,
+    form.gender, avatarPreview || profile?.avatar_url,
   ];
   const filled = fields.filter(f => f && String(f).trim()).length;
   return Math.round((filled / fields.length) * 100);
@@ -184,7 +187,7 @@ function CountrySelect({ value, onChange }) {
 }
 
 // ── Change Password Modal ─────────────────────────────────────────
-function ChangePasswordModal({ email, session, onClose, showToast }) {
+function ChangePasswordModal({ email, session, uid, onClose, showToast }) {
   // Steps: "send" → "verify" → "done"
   const [step,      setStep]      = useState("send");
   const [otpSent,   setOtpSent]   = useState(false);
@@ -195,7 +198,7 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
   const [error,     setError]     = useState("");
   const [show,      setShow]      = useState({ new: false, confirm: false });
   const [countdown, setCountdown] = useState(0);
-  const remaining                 = remainingPwChanges();
+  const remaining                 = remainingPwChanges(uid);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -231,7 +234,7 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
 
   // ── Step 1: Send OTP ────────────────────────────────────────────
   const handleSendOtp = async () => {
-    if (remaining <= 0) {
+    if (remainingPwChanges(uid) <= 0) {
       setError(`You have reached the maximum of ${PW_MAX_DAILY} password changes today. Try again tomorrow.`);
       return;
     }
@@ -262,7 +265,7 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
     if (otp.length < 8)              return setError("Enter the 8-digit code from your email");
     if (newPw.length < 6)            return setError("New password must be at least 6 characters");
     if (newPw !== confirmPw)         return setError("Passwords do not match");
-    if (remaining <= 0)              return setError("Daily password change limit reached");
+    if (remainingPwChanges(uid) <= 0) return setError("Daily password change limit reached");
 
     setLoading(true);
     try {
@@ -308,8 +311,8 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
       }
 
       // Increment rate limit counter
-      incrementPwChanges();
-      const newRemaining = remainingPwChanges();
+      incrementPwChanges(uid);
+      const newRemaining = remainingPwChanges(uid);
 
       setStep("done");
       showToast(`Password updated! ${newRemaining} change${newRemaining !== 1 ? "s" : ""} remaining today.`, "success");
@@ -508,7 +511,7 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
                 <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: 6 }}>Password Updated!</div>
                 <div style={{ fontSize: 13, color: C.gray400 }}>Your password has been changed successfully.</div>
                 <div style={{ fontSize: 12, color: C.gray400, marginTop: 6 }}>
-                  {remainingPwChanges()} of {PW_MAX_DAILY} changes remaining today
+                  {remainingPwChanges(uid)} of {PW_MAX_DAILY} changes remaining today
                 </div>
               </div>
             )}
@@ -549,12 +552,20 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     gender:         profile?.gender         || "",
   });
 
-  const [avatarPreview, setAvatarPreview]   = useState(null);
-  const [saving,        setSaving]          = useState(false);
-  const [showPwModal,   setShowPwModal]     = useState(false);
+  // ── Avatar state ────────────────────────────────────────────────
+  const [avatarPreview,  setAvatarPreview]  = useState(profile?.avatar_url || null);
+  const [cropSrc,        setCropSrc]        = useState(null);   // raw image for crop modal
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [saving,         setSaving]         = useState(false);
+  const [showPwModal,    setShowPwModal]    = useState(false);
   const fileRef = useRef();
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  // ── Clean up old generic pw counter key (migration) ─────────────
+  useEffect(() => {
+    localStorage.removeItem("dse_pw_changes");
+  }, []);
 
   const completion      = useMemo(() => calcCompletion(form, avatarPreview), [form, avatarPreview]);
   const completionColor = completion >= 80 ? C.green : completion >= 50 ? "#f59e0b" : C.red;
@@ -564,13 +575,71 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     ? new Date(profile.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
     : null;
 
-  const handleAvatar = (e) => {
+  // ── File selected → open crop modal ─────────────────────────────
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showToast("Image must be under 2MB", "error"); return; }
+    if (file.size > 10 * 1024 * 1024) { showToast("Image must be under 10MB", "error"); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview(ev.target.result);
+    reader.onload = (ev) => setCropSrc(ev.target.result); // open crop modal
     reader.readAsDataURL(file);
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  };
+
+  // ── Crop confirmed → resize → upload to Supabase Storage ──────
+  const handleCropConfirm = async (blob) => {
+    setCropSrc(null);
+    setUploadingAvatar(true);
+    try {
+      const uid      = session?.user?.id || profile?.id;
+      const tok      = session?.access_token || KEY;
+      const fileName = uid; // overwrite same file = auto-replace
+
+      // Upload blob to avatars/{uid}
+      const uploadRes = await fetch(
+        `${BASE}/storage/v1/object/avatars/${fileName}`,
+        {
+          method:  "POST",
+          headers: {
+            "Authorization": `Bearer ${tok}`,
+            "Content-Type":  "image/jpeg",
+            "x-upsert":      "true", // overwrite existing
+          },
+          body: blob,
+        }
+      );
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json().catch(() => ({}));
+        throw new Error(err.message || err.error || "Upload failed");
+      }
+
+      // Build public URL
+      const publicUrl = `${BASE}/storage/v1/object/public/avatars/${fileName}?t=${Date.now()}`;
+
+      // Save avatar_url to profile row
+      const patchRes = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
+        method:  "PATCH",
+        headers: {
+          "Content-Type":  "application/json",
+          "apikey":        KEY,
+          "Authorization": `Bearer ${tok}`,
+          "Prefer":        "return=representation",
+        },
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
+
+      if (!patchRes.ok) throw new Error("Failed to save avatar URL");
+      const rows = await patchRes.json();
+      setProfile(rows[0] || { ...profile, avatar_url: publicUrl });
+      setAvatarPreview(publicUrl);
+      showToast("Profile picture updated!", "success");
+    } catch (err) {
+      showToast("Upload failed: " + err.message, "error");
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const handleSave = async () => {
@@ -613,10 +682,20 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       `}</style>
 
       {/* ── Password modal ── */}
+      {/* ── Crop modal ── */}
+      {cropSrc && (
+        <AvatarCropModal
+          imageSrc={cropSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
+
       {showPwModal && (
         <ChangePasswordModal
           email={email}
           session={session}
+          uid={session?.user?.id || profile?.id}
           onClose={() => setShowPwModal(false)}
           showToast={showToast}
         />
@@ -665,10 +744,16 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                   background: avatarPreview ? "transparent" : C.navy,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   overflow: "hidden", cursor: "pointer", fontSize: 24, fontWeight: 800, color: C.white,
-                }} onClick={() => fileRef.current.click()}>
+                  position: "relative",
+                }} onClick={() => !uploadingAvatar && fileRef.current.click()}>
                   {avatarPreview
                     ? <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : initials}
+                  {uploadingAvatar && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>
+                      <div style={{ width: 20, height: 20, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                    </div>
+                  )}
                 </div>
                 <div onClick={() => fileRef.current.click()} style={{
                   position: "absolute", bottom: 0, right: 0, width: 24, height: 24,
@@ -676,7 +761,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                   display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: "pointer", fontSize: 11,
                 }}>📷</div>
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleAvatar} />
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileSelect} />
               </div>
 
               {/* Name + role only — no email here */}
@@ -760,12 +845,12 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
               {[1,2,3].map(i => (
                 <div key={i} style={{
                   flex: 1, height: 4, borderRadius: 4,
-                  background: i <= (PW_MAX_DAILY - remainingPwChanges()) ? C.navy : C.gray100,
+                  background: i <= (PW_MAX_DAILY - remainingPwChanges(session?.user?.id || profile?.id)) ? C.navy : C.gray100,
                   transition: "background 0.3s",
                 }} />
               ))}
               <span style={{ fontSize: 10, color: C.gray400, marginLeft: 6, whiteSpace: "nowrap" }}>
-                {remainingPwChanges()}/{PW_MAX_DAILY} changes today
+                {remainingPwChanges(session?.user?.id || profile?.id)}/{PW_MAX_DAILY} changes today
               </span>
             </div>
           </Section>
@@ -832,11 +917,11 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
 
           {/* Photo tip */}
           <div style={{ background: `${C.gold}12`, border: `1px solid ${C.gold}44`, borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>💡</span>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>📷</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 3 }}>Profile Picture</div>
               <div style={{ fontSize: 12, color: C.gray400, lineHeight: 1.6 }}>
-                Click your avatar on the left to upload a photo. Max size 2MB. Stored temporarily — resets on next login.
+                Click your avatar to upload a photo. You'll be able to crop and position it before saving. Stored permanently at 200×200px.
               </div>
             </div>
           </div>
