@@ -4,6 +4,9 @@ import { createPortal } from "react-dom";
 import { sbGetAllUsers, sbGetRoles, sbAssignRole, sbDeactivateRole, sbAdminCreateUser } from "../lib/supabase";
 import { C } from "../components/ui";
 
+const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 const ROLE_META = {
   SA: { label: "Super Admin",  bg: "#0A254015", border: "#0A254040", text: "#0A2540" },
   AD: { label: "Admin",        bg: "#1E3A5F15", border: "#1E3A5F40", text: "#1E3A5F" },
@@ -140,7 +143,7 @@ function ToggleStatusModal({ user, onClose, onConfirm }) {
 // MODAL — Invite User
 // ═══════════════════════════════════════════════════════
 function InviteModal({ roles, onClose, onSuccess, showToast }) {
-  const [form, setForm]     = useState({ email: "", password: "", role_id: "" });
+  const [form, setForm]     = useState({ email: "", password: "", cds_number: "", role_id: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -150,12 +153,21 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
     if (!form.email.trim())       return setError("Email is required");
     if (!form.password.trim())    return setError("Temporary password is required");
     if (form.password.length < 6) return setError("Password must be at least 6 characters");
+    if (!form.cds_number.trim())  return setError("CDS Number is required");
     if (!form.role_id)            return setError("Please select a role");
     setSaving(true);
     try {
       const result = await sbAdminCreateUser(form.email, form.password);
       const uid = result?.user?.id || result?.id;
-      if (uid) await sbAssignRole(uid, parseInt(form.role_id));
+      if (uid) {
+        await sbAssignRole(uid, parseInt(form.role_id));
+        // Save CDS number to the new user's profile
+        await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Prefer": "return=minimal" },
+          body: JSON.stringify({ cds_number: form.cds_number.trim().toUpperCase() }),
+        });
+      }
       showToast("User created successfully!", "success");
       onSuccess(); onClose();
     } catch (err) { setError(err.message); }
@@ -169,6 +181,11 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
       <Field label="Email Address" required>
         <input style={inp()} type="email" placeholder="user@example.com"
           value={form.email} onChange={e => set("email", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
+      </Field>
+      <Field label="CDS Number" required>
+        <input style={inp()} type="text" placeholder="e.g. CDS-647305"
+          value={form.cds_number} onChange={e => set("cds_number", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
+        <div style={{ fontSize: 10, color: C.gray400, marginTop: 3 }}>Enter the user's own CDS number — not yours</div>
       </Field>
       <Field label="Temporary Password" required>
         <input style={inp()} type="text" placeholder="Min. 6 characters"
