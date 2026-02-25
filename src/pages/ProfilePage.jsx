@@ -566,11 +566,14 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
   useEffect(() => {
     if (!profile?.cds_number) return;
     const tok = session?.access_token || KEY;
-    fetch(`${BASE}/rest/v1/profiles?cds_number=eq.${profile.cds_number}&select=id`, {
-      headers: { "apikey": KEY, "Authorization": `Bearer ${tok}` }
+    // Use SECURITY DEFINER rpc to bypass RLS — regular query only returns own row
+    fetch(`${BASE}/rest/v1/rpc/get_cds_user_count`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${tok}` },
+      body: JSON.stringify({ cds: profile.cds_number }),
     })
       .then(r => r.json())
-      .then(rows => setCdsUserCount(Array.isArray(rows) ? rows.length : 1))
+      .then(count => setCdsUserCount(typeof count === "number" ? count : 1))
       .catch(() => setCdsUserCount(1));
   }, [profile?.cds_number]);
   const accountType = cdsUserCount > 1 ? "Corporate" : "Individual";
