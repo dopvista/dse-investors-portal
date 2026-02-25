@@ -22,16 +22,12 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   useEffect(() => {
     const img = imgRef.current;
     img.onload = () => {
-      // Canvas sized to match image aspect ratio — no black bars ever
-      const maxW = Math.min(window.innerWidth - 80, 500);
-      const maxH = Math.min(window.innerHeight - 280, 420);
-      const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
-      const w = Math.round(img.naturalWidth  * ratio);
-      const h = Math.round(img.naturalHeight * ratio);
+      // Fixed square canvas — image always centered inside it
+      const size = Math.min(window.innerWidth - 80, window.innerHeight - 280, 480);
       setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-      setCanvasSize({ w, h });
-      const r = Math.round(Math.min(w, h) * 0.42);
-      setCropCircle({ x: Math.round(w / 2), y: Math.round(h / 2), r });
+      setCanvasSize({ w: size, h: size });
+      const r = Math.round(size * 0.42);
+      setCropCircle({ x: Math.round(size / 2), y: Math.round(size / 2), r });
       setImgLoaded(true);
     };
     img.src = imageSrc;
@@ -47,10 +43,16 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Image fills canvas exactly — canvas already matches image aspect ratio
+    // Draw image centered in square canvas (contain — equal space on all sides)
     const img = imgRef.current;
-    const dx = 0, dy = 0, dw = w, dh = h;
-    ctx.drawImage(img, dx, dy, dw, dh);
+    const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+    const dw = Math.round(img.naturalWidth  * scale);
+    const dh = Math.round(img.naturalHeight * scale);
+    const dx = Math.round((w - dw) / 2);
+    const dy = Math.round((h - dh) / 2);
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
 
     // Dim everything outside the circle
     ctx.save();
@@ -63,12 +65,14 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
     ctx.fill();
     ctx.restore();
 
-    // Redraw image inside circle only
+    // Redraw image inside circle only (same centered position)
     ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.fillStyle = "#1e293b";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
     ctx.restore();
 
     // Circle border
@@ -187,13 +191,19 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
       const { w, h }     = canvasSize;
       const nat          = naturalSize;
 
-      // Canvas = image aspect ratio, so simple scale back to natural size
-      const scaleX = nat.w / w;
-      const scaleY = nat.h / h;
-      const srcX   = Math.round(Math.max(0, (x - r) * scaleX));
-      const srcY   = Math.round(Math.max(0, (y - r) * scaleY));
-      const srcW   = Math.round(r * 2 * scaleX);
-      const srcH   = Math.round(r * 2 * scaleY);
+      // Recalculate image position in canvas (same contain logic as draw)
+      const scale = Math.min(w / nat.w, h / nat.h);
+      const dw    = Math.round(nat.w * scale);
+      const dh    = Math.round(nat.h * scale);
+      const dx    = Math.round((w - dw) / 2);
+      const dy    = Math.round((h - dh) / 2);
+      const scaleX = nat.w / dw;
+      const scaleY = nat.h / dh;
+      // Map crop circle back to natural image coords, subtract canvas offset
+      const srcX = Math.round(Math.max(0, (x - r - dx) * scaleX));
+      const srcY = Math.round(Math.max(0, (y - r - dy) * scaleY));
+      const srcW = Math.round(Math.min(nat.w - srcX, r * 2 * scaleX));
+      const srcH = Math.round(Math.min(nat.h - srcY, r * 2 * scaleY));
 
       // Draw to 200×200 output canvas (circular clip)
       const out = document.createElement("canvas");
