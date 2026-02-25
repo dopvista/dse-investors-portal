@@ -218,7 +218,7 @@ function StatCard({ label, value, color, icon }) {
   );
 }
 
-const GRID = "28px 1.8fr 1fr 1.1fr 110px 130px";
+const GRID = "28px 1.5fr 0.9fr 0.8fr 0.8fr 1.1fr 1.3fr 90px 110px";
 
 // ═══════════════════════════════════════════════════════
 // MAIN PAGE
@@ -359,10 +359,11 @@ export default function UserManagementPage({ role, showToast }) {
       </div>
 
       {/* ── Table ── */}
-      <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
+        <div style={{ overflowX: "auto", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {/* Header */}
-        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "8px 14px", borderBottom: `1px solid ${C.gray100}`, background: C.gray50, flexShrink: 0 }}>
-          {["#","User","CDS / Phone","Role","Added","Actions"].map((h, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "8px 14px", minWidth: 900, borderBottom: `1px solid ${C.gray100}`, background: C.gray50, flexShrink: 0 }}>
+          {["#","User","CDS Number","Account Type","Role","Phone Number","Email Address","Created","Actions"].map((h, i) => (
             <div key={i} style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</div>
           ))}
         </div>
@@ -377,7 +378,7 @@ export default function UserManagementPage({ role, showToast }) {
           ) : filtered.map((user, idx) => (
             <div key={user.id} style={{
               display: "grid", gridTemplateColumns: GRID,
-              padding: "9px 14px", borderBottom: `1px solid ${C.gray100}`,
+              padding: "9px 14px", minWidth: 900, borderBottom: `1px solid ${C.gray100}`,
               alignItems: "center", transition: "background 0.12s",
               opacity: user.is_active ? 1 : 0.5,
             }}
@@ -386,26 +387,35 @@ export default function UserManagementPage({ role, showToast }) {
 
               <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600 }}>{idx + 1}</div>
 
+              {/* User */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                 <UserAvatar name={user.full_name} isActive={user.is_active} size={32} />
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.full_name || "New User"}</span>
                     <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 20, flexShrink: 0, background: user.is_active ? "#f0fdf4" : "#fef2f2", border: `1px solid ${user.is_active ? "#bbf7d0" : "#fecaca"}`, color: user.is_active ? "#16a34a" : "#dc2626" }}>
                       {user.is_active ? "Active" : "Inactive"}
                     </span>
                   </div>
-                  <div style={{ fontSize: 10, color: C.gray400, marginTop: 1 }}>{user.account_type || "Individual"}</div>
                 </div>
               </div>
 
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{user.cds_number || <span style={{ color: C.gray400 }}>No CDS</span>}</div>
-                <div style={{ fontSize: 10, color: C.gray400, marginTop: 1 }}>{user.phone || "No phone"}</div>
-              </div>
+              {/* CDS Number */}
+              <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{user.cds_number || <span style={{ color: C.gray400 }}>—</span>}</div>
 
+              {/* Account Type */}
+              <div style={{ fontSize: 11, color: C.text }}>{user.account_type || <span style={{ color: C.gray400 }}>—</span>}</div>
+
+              {/* Role */}
               <div><RoleBadge code={user.role_code} /></div>
 
+              {/* Phone */}
+              <div style={{ fontSize: 11, color: C.text }}>{user.phone || <span style={{ color: C.gray400 }}>—</span>}</div>
+
+              {/* Email */}
+              <div style={{ fontSize: 10, color: C.gray400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email || "—"}</div>
+
+              {/* Created */}
               <div style={{ fontSize: 10, color: C.gray400 }}>
                 {user.assigned_at ? new Date(user.assigned_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
               </div>
@@ -426,6 +436,7 @@ export default function UserManagementPage({ role, showToast }) {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
 
