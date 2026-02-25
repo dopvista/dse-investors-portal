@@ -1,9 +1,8 @@
-// ── src/components/AvatarCropModal.jsx ───────────────────────────
 import { useState, useRef, useEffect, useCallback } from "react";
 import { C } from "./ui";
 
-const CROP_SIZE = 200; // final output px
-const MIN_CROP  = 80;  // minimum crop circle diameter on screen
+const CROP_SIZE = 200; 
+const MIN_CROP  = 80;  
 
 export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   const canvasRef    = useRef();
@@ -12,22 +11,38 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   const resizing     = useRef(false);
   const dragStart    = useRef({ x: 0, y: 0 });
 
-  const [imgLoaded,  setImgLoaded]  = useState(false);
-  const [cropCircle, setCropCircle] = useState({ x: 0, y: 0, r: 100 }); // screen coords
+  const [imgLoaded,   setImgLoaded]   = useState(false);
+  const [cropCircle, setCropCircle] = useState({ x: 0, y: 0, r: 100 });
   const [naturalSize, setNaturalSize] = useState({ w: 1, h: 1 });
-  const [canvasSize,  setCanvasSize]  = useState({ w: 500, h: 380 });
-  const [processing, setProcessing]  = useState(false);
+  const [layout,      setLayout]      = useState({ canvasW: 500, canvasH: 420, drawY: 0, scale: 1 });
+  const [processing, setProcessing]   = useState(false);
 
-  // ── Load image and set canvas dimensions ─────────────────────
+  // ── Load image and calculate centered layout ─────────────────────
   useEffect(() => {
     const img = imgRef.current;
     img.onload = () => {
-      // Fixed square canvas — image always centered inside it
-      const size = Math.min(window.innerWidth - 80, window.innerHeight - 280, 480);
+      const maxW = Math.min(window.innerWidth - 80, 500);
+      const maxH = Math.min(window.innerHeight - 280, 420);
+      
+      // Calculate how the image fits width-wise
+      const scale = maxW / img.naturalWidth;
+      const displayW = maxW;
+      const displayH = img.naturalHeight * scale;
+
+      // If the scaled image is shorter than maxH, we center it vertically
+      // If it's taller, we cap the canvas at maxH (it will be scrollable/clamped)
+      const canvasH = Math.min(displayH, maxH);
+      const drawY = (canvasH - displayH) / 2;
+
       setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-      setCanvasSize({ w: size, h: size });
-      const r = Math.round(size * 0.42);
-      setCropCircle({ x: Math.round(size / 2), y: Math.round(size / 2), r });
+      setLayout({ canvasW: displayW, canvasH, drawY, scale });
+      
+      const r = Math.round(Math.min(displayW, displayH) * 0.35);
+      setCropCircle({ 
+        x: Math.round(displayW / 2), 
+        y: Math.round(canvasH / 2), 
+        r 
+      });
       setImgLoaded(true);
     };
     img.src = imageSrc;
@@ -38,275 +53,164 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
     const canvas = canvasRef.current;
     if (!canvas || !imgLoaded) return;
     const ctx = canvas.getContext("2d");
-    const { w, h } = canvasSize;
+    const { canvasW: w, canvasH: h, drawY, scale } = layout;
     const { x, y, r } = cropCircle;
+    const img = imgRef.current;
 
     ctx.clearRect(0, 0, w, h);
 
-    // Draw image centered in square canvas (contain — equal space on all sides)
-    const img = imgRef.current;
-    const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
-    const dw = Math.round(img.naturalWidth  * scale);
-    const dh = Math.round(img.naturalHeight * scale);
-    const dx = Math.round((w - dw) / 2);
-    const dy = Math.round((h - dh) / 2);
-    ctx.fillStyle = "#1e293b";
-    ctx.fillRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
+    // Image drawn at drawY for vertical centering
+    const drawH = naturalSize.h * scale;
+    const drawImg = () => ctx.drawImage(img, 0, drawY, w, drawH);
 
-    // Dim everything outside the circle
+    // Background (Dimmed)
+    drawImg();
     ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
     ctx.fillRect(0, 0, w, h);
-    // Cut out circle (clear the circle)
+    
+    // Clear the circle
     ctx.globalCompositeOperation = "destination-out";
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Redraw image inside circle only (same centered position)
+    // High-light area inside circle
     ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = "#1e293b";
-    ctx.fillRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
+    drawImg();
     ctx.restore();
 
-    // Circle border
-    ctx.save();
+    // UI Overlays (Borders & Handles)
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth   = 2.5;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
     ctx.stroke();
-    // Dashed inner ring
-    ctx.setLineDash([6, 4]);
-    ctx.strokeStyle = "rgba(255,255,255,0.5)";
-    ctx.lineWidth   = 1;
-    ctx.stroke();
-    ctx.restore();
 
-    // Resize handle — bottom-right of circle
+    // Resize handle
     const hx = x + r * Math.cos(Math.PI * 0.25);
     const hy = y + r * Math.sin(Math.PI * 0.25);
-    ctx.save();
     ctx.beginPath();
-    ctx.arc(hx, hy, 8, 0, Math.PI * 2);
-    ctx.fillStyle   = C.green;
+    ctx.arc(hx, hy, 9, 0, Math.PI * 2);
+    ctx.fillStyle = C.green;
     ctx.strokeStyle = "#fff";
-    ctx.lineWidth   = 2;
+    ctx.lineWidth = 2;
     ctx.fill();
     ctx.stroke();
-    ctx.restore();
-
-    // Center crosshair (subtle)
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
-    ctx.lineWidth   = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(x - 12, y); ctx.lineTo(x + 12, y); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x, y - 12); ctx.lineTo(x, y + 12); ctx.stroke();
-    ctx.restore();
-
-  }, [imgLoaded, cropCircle, canvasSize]);
+  }, [imgLoaded, cropCircle, layout, naturalSize]);
 
   useEffect(() => { draw(); }, [draw]);
 
-  // ── Mouse helpers ─────────────────────────────────────────────
-  const getHandlePos = (cc) => ({
-    hx: cc.x + cc.r * Math.cos(Math.PI * 0.25),
-    hy: cc.y + cc.r * Math.sin(Math.PI * 0.25),
-  });
+  // ── Interaction Helpers ────────────────────────────────────────
+  const clampCircle = (nx, ny, nr) => {
+    const { canvasW, canvasH, drawY, scale } = layout;
+    const imgDisplayH = naturalSize.h * scale;
+    
+    // Limits based on image bounds, not canvas bounds
+    const topLimit = drawY + nr;
+    const bottomLimit = drawY + imgDisplayH - nr;
+    const leftLimit = nr;
+    const rightLimit = canvasW - nr;
 
-  const getPos = (e, canvas) => {
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    return {
+      x: Math.max(leftLimit, Math.min(rightLimit, nx)),
+      y: Math.max(topLimit, Math.min(bottomLimit, ny)),
+      r: nr
+    };
   };
 
-  const clampCircle = (x, y, r, w, h) => ({
-    x: Math.max(r, Math.min(w - r, x)),
-    y: Math.max(r, Math.min(h - r, y)),
-    r,
-  });
-
-  const onMouseDown = useCallback((e) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    const pos    = getPos(e, canvas);
-    const { hx, hy } = getHandlePos(cropCircle);
-    const dHandle = Math.hypot(pos.x - hx, pos.y - hy);
-    const dCenter = Math.hypot(pos.x - cropCircle.x, pos.y - cropCircle.y);
-
-    if (dHandle < 14) {
+  const onMouseDown = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const pos = {
+      x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+      y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+    };
+    
+    const hx = cropCircle.x + cropCircle.r * Math.cos(Math.PI * 0.25);
+    const hy = cropCircle.y + cropCircle.r * Math.sin(Math.PI * 0.25);
+    
+    if (Math.hypot(pos.x - hx, pos.y - hy) < 20) {
       resizing.current = true;
-    } else if (dCenter < cropCircle.r) {
+    } else if (Math.hypot(pos.x - cropCircle.x, pos.y - cropCircle.y) < cropCircle.r) {
       dragging.current = true;
       dragStart.current = { x: pos.x - cropCircle.x, y: pos.y - cropCircle.y };
     }
-  }, [cropCircle]);
+  };
 
-  const onMouseMove = useCallback((e) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const pos = getPos(e, canvas);
-    const { w, h } = canvasSize;
+  const onMouseMove = (e) => {
+    if (!dragging.current && !resizing.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const pos = {
+      x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+      y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+    };
 
     if (dragging.current) {
-      const nx = pos.x - dragStart.current.x;
-      const ny = pos.y - dragStart.current.y;
-      setCropCircle(cc => clampCircle(nx, ny, cc.r, w, h));
+      setCropCircle(prev => clampCircle(pos.x - dragStart.current.x, pos.y - dragStart.current.y, prev.r));
     } else if (resizing.current) {
-      setCropCircle(cc => {
-        const newR = Math.max(MIN_CROP / 2, Math.min(
-          Math.min(w, h) / 2 - 2,
-          Math.hypot(pos.x - cc.x, pos.y - cc.y)
-        ));
-        return clampCircle(cc.x, cc.y, newR, w, h);
-      });
-    } else {
-      // Change cursor
-      const { hx, hy } = getHandlePos(cropCircle);
-      const dHandle = Math.hypot(pos.x - hx, pos.y - hy);
-      const dCenter = Math.hypot(pos.x - cropCircle.x, pos.y - cropCircle.y);
-      canvas.style.cursor = dHandle < 14 ? "se-resize" : dCenter < cropCircle.r ? "move" : "default";
+      const newR = Math.max(MIN_CROP / 2, Math.hypot(pos.x - cropCircle.x, pos.y - cropCircle.y));
+      setCropCircle(prev => clampCircle(prev.x, prev.y, newR));
     }
-  }, [canvasSize, cropCircle]);
+  };
 
-  const onMouseUp = useCallback(() => {
-    dragging.current  = false;
-    resizing.current  = false;
-  }, []);
-
-  // ── Crop and output ───────────────────────────────────────────
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = async () => {
     setProcessing(true);
-    try {
-      const { x, y, r } = cropCircle;
-      const { w, h }     = canvasSize;
-      const nat          = naturalSize;
+    const { x, y, r } = cropCircle;
+    const { scale, drawY } = layout;
 
-      // Recalculate image position in canvas (same contain logic as draw)
-      const scale = Math.min(w / nat.w, h / nat.h);
-      const dw    = Math.round(nat.w * scale);
-      const dh    = Math.round(nat.h * scale);
-      const dx    = Math.round((w - dw) / 2);
-      const dy    = Math.round((h - dh) / 2);
-      const scaleX = nat.w / dw;
-      const scaleY = nat.h / dh;
-      // Map crop circle back to natural image coords, subtract canvas offset
-      const srcX = Math.round(Math.max(0, (x - r - dx) * scaleX));
-      const srcY = Math.round(Math.max(0, (y - r - dy) * scaleY));
-      const srcW = Math.round(Math.min(nat.w - srcX, r * 2 * scaleX));
-      const srcH = Math.round(Math.min(nat.h - srcY, r * 2 * scaleY));
+    // Map screen coordinates back to natural image pixels
+    // Subtract drawY to account for the vertical centering offset
+    const srcX = (x - r) / scale;
+    const srcY = (y - drawY - r) / scale;
+    const srcSide = (r * 2) / scale;
 
-      // Draw to 200×200 output canvas (circular clip)
-      const out = document.createElement("canvas");
-      out.width  = CROP_SIZE;
-      out.height = CROP_SIZE;
-      const ctx  = out.getContext("2d");
+    const out = document.createElement("canvas");
+    out.width = CROP_SIZE;
+    out.height = CROP_SIZE;
+    const ctx = out.getContext("2d");
 
-      // Circular clip
-      ctx.beginPath();
-      ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2, 0, Math.PI * 2);
-      ctx.clip();
+    ctx.beginPath();
+    ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2, 0, Math.PI * 2);
+    ctx.clip();
 
-      ctx.drawImage(imgRef.current, srcX, srcY, srcW, srcH, 0, 0, CROP_SIZE, CROP_SIZE);
-
-      // Convert to JPEG blob (quality 0.85 — typically 10–25KB)
-      out.toBlob(blob => onConfirm(blob), "image/jpeg", 0.85);
-    } catch (err) {
-      console.error("Crop error:", err);
-      setProcessing(false);
-    }
-  }, [cropCircle, canvasSize, naturalSize, onConfirm]);
+    ctx.drawImage(imgRef.current, srcX, srcY, srcSide, srcSide, 0, 0, CROP_SIZE, CROP_SIZE);
+    out.toBlob(blob => onConfirm(blob), "image/jpeg", 0.9);
+  };
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(10,37,64,0.72)",
-      zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center",
-      backdropFilter: "blur(3px)",
-    }}>
-      <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes spin   { to { transform: rotate(360deg); } }
-      `}</style>
-
-      <div style={{
-        background: C.white, borderRadius: 18, overflow: "hidden",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.4)",
-        animation: "fadeIn 0.25s ease", maxWidth: "calc(100vw - 40px)",
-      }}>
-        {/* Header */}
-        <div style={{ background: C.navy, padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ color: C.white, fontWeight: 800, fontSize: 16 }}>Crop Profile Picture</div>
-            <div style={{ color: C.gold, fontSize: 12, marginTop: 2, fontWeight: 500 }}>
-              Drag to reposition · Drag the green handle to resize
-            </div>
-          </div>
-          <button onClick={onCancel} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.8)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ background: "#fff", borderRadius: 20, overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.3)", width: layout.canvasW }}>
+        <div style={{ background: C.navy, padding: "16px 20px", color: "#fff" }}>
+          <div style={{ fontWeight: 700 }}>Adjust Profile Picture</div>
         </div>
 
-        {/* Canvas */}
-        <div style={{ background: "#111", lineHeight: 0 }}>
-          {imgLoaded ? (
+        <div style={{ background: "#000", display: "flex", alignItems: "center", justifyContent: "center", height: layout.canvasH }}>
+          {imgLoaded && (
             <canvas
               ref={canvasRef}
-              width={canvasSize.w}
-              height={canvasSize.h}
+              width={layout.canvasW}
+              height={layout.canvasH}
               onMouseDown={onMouseDown}
               onMouseMove={onMouseMove}
-              onMouseUp={onMouseUp}
-              onMouseLeave={onMouseUp}
+              onMouseUp={() => { dragging.current = false; resizing.current = false; }}
               onTouchStart={onMouseDown}
               onTouchMove={onMouseMove}
-              onTouchEnd={onMouseUp}
-              style={{ display: "block", touchAction: "none" }}
+              onTouchEnd={() => { dragging.current = false; resizing.current = false; }}
+              style={{ touchAction: "none", cursor: "crosshair" }}
             />
-          ) : (
-            <div style={{ width: 400, height: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ color: "#fff", fontSize: 14 }}>Loading image...</div>
-            </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: "16px 24px", display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${C.gray100}` }}>
-          <div style={{ fontSize: 12, color: C.gray400 }}>
-            Output: 200×200px JPEG · Circular crop
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={onCancel} style={{
-              padding: "10px 20px", borderRadius: 9, border: `1.5px solid ${C.gray200}`,
-              background: C.white, color: C.gray400, fontWeight: 600, fontSize: 14,
-              cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
-              Cancel
-            </button>
-            <button onClick={handleConfirm} disabled={!imgLoaded || processing} style={{
-              padding: "10px 24px", borderRadius: 9, border: "none",
-              background: !imgLoaded || processing ? C.gray200 : C.green,
-              color: C.white, fontWeight: 700, fontSize: 14,
-              cursor: !imgLoaded || processing ? "not-allowed" : "pointer",
-              fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8,
-              boxShadow: !imgLoaded || processing ? "none" : `0 4px 12px ${C.green}44`,
-            }}>
-              {processing ? (
-                <>
-                  <div style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                  Processing...
-                </>
-              ) : "✓ Crop & Save"}
-            </button>
-          </div>
+        <div style={{ padding: 20, display: "flex", justifyContent: "flex-end", gap: 12 }}>
+          <button onClick={onCancel} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid #ddd", background: "none", cursor: "pointer" }}>Cancel</button>
+          <button onClick={handleConfirm} disabled={processing} style={{ padding: "8px 20px", borderRadius: 8, background: C.green, color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>
+            {processing ? "Saving..." : "Save Changes"}
+          </button>
         </div>
       </div>
     </div>
