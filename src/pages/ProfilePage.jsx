@@ -506,12 +506,22 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
 
           {/* Account Type */}
           <Section title="Account Type" icon="🏦">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 8px", background: `${C.green}0d`, border: `1.5px solid ${C.green}22`, borderRadius: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 8px", background: `${C.green}0d`, border: `1.5px solid ${C.green}22`, borderRadius: 8, marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: C.green }}>{accountType}</div>
                 <div style={{ fontSize: 9, color: C.gray400, marginTop: 1 }}>{cdsUserCount} user{cdsUserCount !== 1 ? "s" : ""} on this CDS</div>
               </div>
               <span style={{ fontSize: 18 }}>{accountType === "Corporate" ? "🏢" : "👤"}</span>
+            </div>
+            <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.5 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 4 }}>
+                <span>👤</span>
+                <span><strong style={{ color: C.text }}>Individual</strong> — only one user is registered under this CDS number.</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                <span>🏢</span>
+                <span><strong style={{ color: C.text }}>Corporate</strong> — two or more users share this CDS number, indicating a joint or company account.</span>
+              </div>
             </div>
           </Section>
 
