@@ -142,8 +142,9 @@ function ToggleStatusModal({ user, onClose, onConfirm }) {
 // ═══════════════════════════════════════════════════════
 // MODAL — Invite User
 // ═══════════════════════════════════════════════════════
-function InviteModal({ roles, onClose, onSuccess, showToast }) {
-  const [form, setForm]     = useState({ email: "", password: "", cds_number: "", role_id: "" });
+function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToast }) {
+  const isAdmin = callerRole === "AD";
+  const [form, setForm]     = useState({ email: "", password: "", cds_number: isAdmin ? callerCds : "", role_id: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -183,9 +184,18 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
           value={form.email} onChange={e => set("email", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
       </Field>
       <Field label="CDS Number" required>
-        <input style={inp()} type="text" placeholder="e.g. CDS-647305"
-          value={form.cds_number} onChange={e => set("cds_number", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
-        <div style={{ fontSize: 10, color: C.gray400, marginTop: 3 }}>Enter the user's own CDS number — not yours</div>
+        <input
+          style={isAdmin ? { ...inp(), background: "#f9fafb", color: C.gray400, cursor: "not-allowed", border: `1.5px solid ${C.gray100}` } : inp()}
+          type="text" placeholder="e.g. CDS-647305"
+          value={form.cds_number}
+          onChange={e => { if (!isAdmin) set("cds_number", e.target.value); }}
+          readOnly={isAdmin}
+          onFocus={isAdmin ? null : focusGreen}
+          onBlur={isAdmin ? null : blurGray}
+        />
+        <div style={{ fontSize: 10, color: isAdmin ? C.green : C.gray400, marginTop: 3, fontWeight: isAdmin ? 600 : 400 }}>
+          {isAdmin ? "Auto-filled from your account — users will share your CDS" : "Enter the user's own CDS number"}
+        </div>
       </Field>
       <Field label="Temporary Password" required>
         <input style={inp()} type="text" placeholder="Min. 6 characters"
@@ -240,7 +250,7 @@ const GRID = "28px 1.5fr 0.9fr 0.8fr 0.8fr 1.1fr 1.3fr 90px 110px";
 // ═══════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════
-export default function UserManagementPage({ role, showToast }) {
+export default function UserManagementPage({ role, showToast, profile }) {
   const [users, setUsers]               = useState([]);
   const [roles, setRoles]               = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -458,7 +468,7 @@ export default function UserManagementPage({ role, showToast }) {
       </div>
 
       {/* ── Modals ── */}
-      {inviteOpen     && <InviteModal roles={roles} onClose={() => setInviteOpen(false)} onSuccess={loadData} showToast={showToast} />}
+      {inviteOpen     && <InviteModal roles={roles} callerRole={role} callerCds={profile?.cds_number || ""} onClose={() => setInviteOpen(false)} onSuccess={loadData} showToast={showToast} />}
       {changeRoleUser && <ChangeRoleModal user={changeRoleUser} roles={roles} callerRole={role} onClose={() => setChangeRoleUser(null)} onSave={async (uid, rid) => { await handleAssignRole(uid, rid); setChangeRoleUser(null); }} showToast={showToast} />}
       {toggleUser     && <ToggleStatusModal user={toggleUser} onClose={() => setToggleUser(null)} onConfirm={async u => { await handleToggleActive(u); setToggleUser(null); }} />}
     </div>
