@@ -6,11 +6,7 @@ import AvatarCropModal from "../components/AvatarCropModal";
 
 const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
 const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// ── Password change rate limit (3 per day, stored in localStorage) ─
-const PW_MAX_DAILY  = 3;
-
-// ── Per-user key so counters don't bleed between accounts ─────────
+const PW_MAX_DAILY = 3;
 const pwKey = (uid) => `dse_pw_changes_${uid || "unknown"}`;
 
 function getPwChanges(uid) {
@@ -31,7 +27,6 @@ function remainingPwChanges(uid) {
   return PW_MAX_DAILY - getPwChanges(uid).count;
 }
 
-// ── Country list — Tanzania first, rest alphabetical ──────────────
 const COUNTRIES = [
   "Tanzania",
   "Afghanistan","Albania","Algeria","Andorra","Angola","Argentina","Armenia","Australia",
@@ -62,35 +57,41 @@ const COUNTRIES = [
   "Venezuela","Vietnam","Yemen","Zambia","Zimbabwe",
 ];
 
-// ── Completion calculator ─────────────────────────────────────────
+const GENDERS = ["Male", "Female", "Prefer not to say"];
+
 function calcCompletion(form, avatarPreview) {
-  const fields = [
-    form.full_name, form.phone, form.nationality,
-    form.postal_address, form.national_id, form.date_of_birth,
-    form.gender, avatarPreview,
-  ];
-  const filled = fields.filter(f => f && String(f).trim()).length;
-  return Math.round((filled / fields.length) * 100);
+  const fields = [form.full_name, form.phone, form.nationality, form.postal_address, form.national_id, form.date_of_birth, form.gender, avatarPreview];
+  return Math.round((fields.filter(f => f && String(f).trim()).length / fields.length) * 100);
 }
+
+// ── Shared input styles ───────────────────────────────────────────
+const inp = (extra = {}) => ({
+  width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12,
+  border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
+  background: C.white, color: C.text, transition: "border 0.2s",
+  boxSizing: "border-box", ...extra,
+});
+const focusGreen = (e) => e.target.style.borderColor = C.green;
+const blurGray   = (e) => e.target.style.borderColor = C.gray200;
 
 // ── Section card ──────────────────────────────────────────────────
 function Section({ title, icon, children }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, marginBottom: 8 }}>
-      <div style={{ padding: "8px 14px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 7, background: C.gray50 }}>
-        <span style={{ fontSize: 16 }}>{icon}</span>
-        <span style={{ fontWeight: 700, fontSize: 11, color: C.text, textTransform: "uppercase", letterSpacing: "0.05em" }}>{title}</span>
+    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, marginBottom: 8 }}>
+      <div style={{ padding: "7px 12px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 6, background: C.gray50, borderRadius: "12px 12px 0 0" }}>
+        <span style={{ fontSize: 13 }}>{icon}</span>
+        <span style={{ fontWeight: 700, fontSize: 10, color: C.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>{title}</span>
       </div>
       <div style={{ padding: "10px 12px" }}>{children}</div>
     </div>
   );
 }
 
-// ── Field wrapper ────────────────────────────────────────────────
+// ── Field wrapper ─────────────────────────────────────────────────
 function Field({ label, required, children }) {
   return (
     <div style={{ marginBottom: 8 }}>
-      <label style={{ fontSize: 10, fontWeight: 700, color: C.gray400, display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+      <label style={{ fontSize: 10, fontWeight: 700, color: C.gray400, display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>
         {label}{required && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}
       </label>
       {children}
@@ -100,85 +101,51 @@ function Field({ label, required, children }) {
 
 // ── Searchable country dropdown ───────────────────────────────────
 function CountrySelect({ value, onChange }) {
-  const [open,   setOpen]   = useState(false);
+  const [open, setOpen]     = useState(false);
   const [search, setSearch] = useState("");
   const ref                 = useRef();
 
   const filtered = useMemo(() =>
-    COUNTRIES.filter(c => c.toLowerCase().includes(search.toLowerCase())),
-    [search]
-  );
+    COUNTRIES.filter(c => c.toLowerCase().includes(search.toLowerCase())), [search]);
 
-  // Close on outside click
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
-
-  const inp = {
-    width: "100%", padding: "10px 13px", borderRadius: 9, fontSize: 14,
-    border: `1.5px solid ${open ? C.green : C.gray200}`, outline: "none",
-    fontFamily: "inherit", background: C.white, color: C.text,
-    transition: "border 0.2s", boxSizing: "border-box", cursor: "pointer",
-  };
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      {/* Trigger */}
-      <div
-        onClick={() => { setOpen(o => !o); setSearch(""); }}
-        style={{ ...inp, display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" }}
-      >
+      <div onClick={() => { setOpen(o => !o); setSearch(""); }} style={{
+        ...inp(), display: "flex", alignItems: "center", justifyContent: "space-between",
+        cursor: "pointer", userSelect: "none",
+        borderColor: open ? C.green : C.gray200,
+      }}>
         <span style={{ color: value ? C.text : "#9ca3af" }}>{value || "Select country"}</span>
-        <span style={{ fontSize: 11, color: C.gray400, transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+        <span style={{ fontSize: 10, color: C.gray400, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
       </div>
-
-      {/* Dropdown */}
       {open && (
         <div style={{
-          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
-          background: C.white, border: `1.5px solid ${C.green}`,
-          borderRadius: 10, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-          overflow: "hidden",
+          position: "absolute", top: "calc(100% + 3px)", left: 0, right: 0,
+          background: C.white, border: `1.5px solid ${C.green}`, borderRadius: 10,
+          zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden",
         }}>
-          {/* Search input */}
-          <div style={{ padding: "10px 12px", borderBottom: `1px solid ${C.gray100}` }}>
-            <input
-              autoFocus
-              placeholder="🔍 Search country..."
-              value={search}
+          <div style={{ padding: "8px 10px", borderBottom: `1px solid ${C.gray100}` }}>
+            <input autoFocus placeholder="🔍 Search country..." value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{
-                width: "100%", padding: "8px 10px", borderRadius: 8, fontSize: 13,
-                border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
-                boxSizing: "border-box",
-              }}
-            />
+              style={{ width: "100%", padding: "6px 8px", borderRadius: 7, fontSize: 12, border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
           </div>
-          {/* List */}
-          <div style={{ maxHeight: 200, overflowY: "auto" }}>
-            {filtered.length === 0 ? (
-              <div style={{ padding: "12px 14px", color: C.gray400, fontSize: 13 }}>No results</div>
-            ) : filtered.map((c, i) => (
-              <div
-                key={c}
-                onClick={() => { onChange(c); setOpen(false); setSearch(""); }}
-                style={{
-                  padding: "9px 14px", fontSize: 13, cursor: "pointer",
-                  background: c === value ? `${C.green}12` : "transparent",
-                  color: c === value ? C.green : C.text,
-                  fontWeight: c === value ? 700 : 400,
-                  borderBottom: i === 0 && c === "Tanzania" ? `1px solid ${C.gray100}` : "none",
-                  transition: "background 0.1s",
-                }}
-                onMouseEnter={e => { if (c !== value) e.currentTarget.style.background = C.gray50; }}
-                onMouseLeave={e => { if (c !== value) e.currentTarget.style.background = "transparent"; }}
-              >
-                {c === "Tanzania" ? "🇹🇿 " : ""}{c}
-                {c === value && <span style={{ float: "right" }}>✓</span>}
-              </div>
-            ))}
+          <div style={{ maxHeight: 180, overflowY: "auto" }}>
+            {filtered.length === 0
+              ? <div style={{ padding: "10px 12px", color: C.gray400, fontSize: 12 }}>No results</div>
+              : filtered.map((c, i) => (
+                <div key={c} onClick={() => { onChange(c); setOpen(false); setSearch(""); }}
+                  style={{ padding: "7px 12px", fontSize: 12, cursor: "pointer", background: c === value ? `${C.green}12` : "transparent", color: c === value ? C.green : C.text, fontWeight: c === value ? 700 : 400, borderBottom: i === 0 && c === "Tanzania" ? `1px solid ${C.gray100}` : "none" }}
+                  onMouseEnter={e => { if (c !== value) e.currentTarget.style.background = C.gray50; }}
+                  onMouseLeave={e => { if (c !== value) e.currentTarget.style.background = "transparent"; }}>
+                  {c === "Tanzania" ? "🇹🇿 " : ""}{c}{c === value && <span style={{ float: "right" }}>✓</span>}
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -188,331 +155,138 @@ function CountrySelect({ value, onChange }) {
 
 // ── Change Password Modal ─────────────────────────────────────────
 function ChangePasswordModal({ email, session, uid, onClose, showToast }) {
-  // Steps: "send" → "verify" → "done"
-  const [step,      setStep]      = useState("send");
-  const [otpSent,   setOtpSent]   = useState(false);
-  const [otp,       setOtp]       = useState("");
-  const [newPw,     setNewPw]     = useState("");
+  const [step, setStep]           = useState("send");
+  const [otp, setOtp]             = useState("");
+  const [newPw, setNewPw]         = useState("");
   const [confirmPw, setConfirmPw] = useState("");
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState("");
-  const [show,      setShow]      = useState({ new: false, confirm: false });
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState("");
+  const [show, setShow]           = useState({ new: false, confirm: false });
   const [countdown, setCountdown] = useState(0);
   const remaining                 = remainingPwChanges(uid);
 
-  // Countdown timer for resend
   useEffect(() => {
     if (countdown <= 0) return;
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [countdown]);
 
-  // Password strength
   const strength = (p) => {
     if (!p) return { score: 0, label: "", color: C.gray200 };
     let s = 0;
-    if (p.length >= 8)          s++;
-    if (/[A-Z]/.test(p))        s++;
-    if (/[0-9]/.test(p))        s++;
-    if (/[^A-Za-z0-9]/.test(p)) s++;
-    return [
-      { score: 0, label: "",       color: C.gray200  },
-      { score: 1, label: "Weak",   color: "#ef4444"  },
-      { score: 2, label: "Fair",   color: "#f97316"  },
-      { score: 3, label: "Good",   color: "#eab308"  },
-      { score: 4, label: "Strong", color: C.green    },
-    ][s];
+    if (p.length >= 8) s++; if (/[A-Z]/.test(p)) s++; if (/[0-9]/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++;
+    return [{ score:0,label:"",color:C.gray200 },{ score:1,label:"Weak",color:"#ef4444" },{ score:2,label:"Fair",color:"#f97316" },{ score:3,label:"Good",color:"#eab308" },{ score:4,label:"Strong",color:C.green }][s];
   };
   const pw = strength(newPw);
 
-  const inp = (extra = {}) => ({
-    width: "100%", padding: "10px 13px", borderRadius: 9, fontSize: 14,
-    border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
-    background: C.white, color: C.text, transition: "border 0.2s",
-    boxSizing: "border-box", ...extra,
-  });
+  const mInp = (extra = {}) => ({ width: "100%", padding: "10px 13px", borderRadius: 9, fontSize: 14, border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit", background: C.white, color: C.text, transition: "border 0.2s", boxSizing: "border-box", ...extra });
 
-  // ── Step 1: Send OTP ────────────────────────────────────────────
   const handleSendOtp = async () => {
-    if (remainingPwChanges(uid) <= 0) {
-      setError(`You have reached the maximum of ${PW_MAX_DAILY} password changes today. Try again tomorrow.`);
-      return;
-    }
+    if (remaining <= 0) { setError(`Maximum ${PW_MAX_DAILY} changes/day reached. Try tomorrow.`); return; }
     setError(""); setLoading(true);
     try {
-      const res = await fetch(`${BASE}/auth/v1/otp`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", "apikey": KEY },
-        body:    JSON.stringify({ email, type: "email" }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error_description || d.message || "Failed to send code");
-      }
-      setOtpSent(true);
-      setStep("verify");
-      setCountdown(300); // 5 min before resend allowed
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(`${BASE}/auth/v1/otp`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": KEY }, body: JSON.stringify({ email, type: "email" }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error_description || d.message || "Failed to send code"); }
+      setStep("verify"); setCountdown(300);
+    } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
-  // ── Step 2: Verify OTP + update password ───────────────────────
   const handleVerifyAndUpdate = async () => {
     setError("");
     if (otp.length < 8)              return setError("Enter the 8-digit code from your email");
-    if (newPw.length < 6)            return setError("New password must be at least 6 characters");
+    if (newPw.length < 6)            return setError("Password must be at least 6 characters");
     if (newPw !== confirmPw)         return setError("Passwords do not match");
-    if (remainingPwChanges(uid) <= 0) return setError("Daily password change limit reached");
-
+    if (remainingPwChanges(uid) <= 0) return setError("Daily limit reached");
     setLoading(true);
     try {
-      // Step 1: Verify OTP — just validates the code, we don't need the returned session
-      const verifyRes = await fetch(`${BASE}/auth/v1/verify`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", "apikey": KEY },
-        body:    JSON.stringify({ email, token: otp, type: "email" }),
-      });
-
-      // Log full response for debugging
+      const verifyRes  = await fetch(`${BASE}/auth/v1/verify`, { method: "POST", headers: { "Content-Type": "application/json", "apikey": KEY }, body: JSON.stringify({ email, token: otp, type: "email" }) });
       const verifyText = await verifyRes.text();
-      console.log("Verify response:", verifyRes.status, verifyText);
-
-      if (!verifyRes.ok) {
-        let d = {};
-        try { d = JSON.parse(verifyText); } catch(_) {}
-        throw new Error(d.error_description || d.message || "Invalid or expired code. Please request a new one.");
-      }
-
-      // Step 2: Use the existing logged-in session token to update password
-      // The user is already authenticated — OTP was just a second factor check
-      const existingToken = session?.access_token;
-      if (!existingToken) throw new Error("Session expired. Please sign in again.");
-
-      const updateRes = await fetch(`${BASE}/auth/v1/user`, {
-        method:  "PUT",
-        headers: {
-          "Content-Type":  "application/json",
-          "apikey":        KEY,
-          "Authorization": `Bearer ${existingToken}`,
-        },
-        body: JSON.stringify({ password: newPw }),
-      });
-
-      const updateText = await updateRes.text();
-      console.log("Update response:", updateRes.status, updateText);
-
-      if (!updateRes.ok) {
-        let d = {};
-        try { d = JSON.parse(updateText); } catch(_) {}
-        throw new Error(d.error_description || d.message || "Failed to update password");
-      }
-
-      // Increment rate limit counter
+      if (!verifyRes.ok) { let d = {}; try { d = JSON.parse(verifyText); } catch(_){} throw new Error(d.error_description || d.message || "Invalid or expired code"); }
+      const tok = session?.access_token;
+      if (!tok) throw new Error("Session expired. Please sign in again.");
+      const updateRes = await fetch(`${BASE}/auth/v1/user`, { method: "PUT", headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${tok}` }, body: JSON.stringify({ password: newPw }) });
+      if (!updateRes.ok) { const d = await updateRes.json().catch(() => ({})); throw new Error(d.error_description || d.message || "Failed to update password"); }
       incrementPwChanges(uid);
-      const newRemaining = remainingPwChanges(uid);
-
       setStep("done");
-      showToast(`Password updated! ${newRemaining} change${newRemaining !== 1 ? "s" : ""} remaining today.`, "success");
-
+      showToast(`Password updated! ${remainingPwChanges(uid)} change${remainingPwChanges(uid) !== 1 ? "s" : ""} remaining today.`, "success");
       setTimeout(() => onClose(), 2500);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const inpReadOnly = {
-    ...inp(), background: C.gray50, color: C.gray400,
-    cursor: "not-allowed", fontWeight: 600, border: `1.5px solid ${C.gray100}`,
+    } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        style={{
-          position: "fixed", inset: 0, background: "rgba(10,37,64,0.55)",
-          zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
-          backdropFilter: "blur(2px)",
-        }}
-      >
-        {/* Modal */}
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            background: C.white, borderRadius: 18, width: "100%", maxWidth: 420,
-            margin: 20, boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
-            animation: "fadeIn 0.25s ease", overflow: "hidden",
-          }}
-        >
-          {/* Modal header */}
-          <div style={{ background: C.navy, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.55)", zIndex: 200, backdropFilter: "blur(2px)" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 201, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onMouseDown={e => e.stopPropagation()}>
+        <div style={{ background: C.white, borderRadius: 18, overflow: "hidden", width: "100%", maxWidth: 440, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "fadeIn 0.25s ease" }}>
+          <div style={{ background: C.navy, padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <div style={{ color: C.white, fontWeight: 800, fontSize: 16 }}>Change Password</div>
-              <div style={{ color: C.gold, fontSize: 12, marginTop: 2, fontWeight: 600 }}>
-                {remaining > 0
-                  ? `${remaining} of ${PW_MAX_DAILY} changes remaining today`
-                  : "⚠️ Daily limit reached"}
-              </div>
+              <div style={{ color: C.gold, fontSize: 11, marginTop: 2 }}>Verify your identity with a one-time code</div>
             </div>
-            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
           </div>
 
           <div style={{ padding: "24px" }}>
+            {error && <div style={{ background: "#fef2f2", border: `1px solid #fecaca`, borderRadius: 8, padding: "10px 14px", color: "#dc2626", fontSize: 13, marginBottom: 16 }}>{error}</div>}
 
-            {/* ── Step: send ── */}
             {step === "send" && (
               <>
-                <p style={{ color: C.gray600, fontSize: 14, lineHeight: 1.6, margin: "0 0 20px" }}>
-                  For security, we'll send a one-time verification code to your email address before allowing a password change.
-                </p>
-
-                {/* Email display */}
-                <Field label="Your Email Address">
-                  <div style={inpReadOnly}>📧 {email}</div>
-                </Field>
-
-                {error && <div style={{ background: "#fef2f2", border: `1px solid #fecaca`, color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>{error}</div>}
-
-                {remaining <= 0 ? (
-                  <div style={{ background: "#fef2f2", border: `1px solid #fecaca`, color: "#dc2626", borderRadius: 10, padding: "12px 14px", fontSize: 13, textAlign: "center" }}>
-                    ⚠️ You have reached the maximum of {PW_MAX_DAILY} password changes today.<br />
-                    <span style={{ fontWeight: 600 }}>Please try again tomorrow.</span>
-                  </div>
-                ) : (
-                  <button onClick={handleSendOtp} disabled={loading} style={{
-                    width: "100%", padding: "13px", borderRadius: 10, border: "none",
-                    background: loading ? C.gray200 : C.green, color: C.white,
-                    fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
-                    fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  }}>
-                    {loading
-                      ? <><div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Sending...</>
-                      : "📧 Send Verification Code"}
+                <p style={{ fontSize: 13, color: C.gray400, marginBottom: 20 }}>For security, we'll send a one-time verification code to your email before allowing a password change.</p>
+                <div style={{ background: C.gray50, border: `1px solid ${C.gray100}`, borderRadius: 9, padding: "10px 13px", fontSize: 13, color: C.gray400, marginBottom: 20 }}>📧 {email}</div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={handleSendOtp} disabled={loading || remaining <= 0} style={{ flex: 1, padding: "12px", borderRadius: 10, border: "none", background: loading || remaining <= 0 ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 14, cursor: loading || remaining <= 0 ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                    {loading ? "Sending..." : "Send Verification Code"}
                   </button>
-                )}
+                  <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                </div>
+                {remaining <= 0 && <div style={{ fontSize: 12, color: C.red, marginTop: 10, textAlign: "center" }}>Daily limit reached. Try again tomorrow.</div>}
               </>
             )}
 
-            {/* ── Step: verify ── */}
             {step === "verify" && (
               <>
-                <div style={{ background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 10, padding: "12px 14px", fontSize: 13, color: "#16a34a", fontWeight: 600, marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 8 }}>
-                  <span>✉️</span>
-                  <span>An 8-digit code has been sent to <strong>{email}</strong>. Enter it below along with your new password.</span>
-                </div>
-
-                {/* OTP input */}
+                <p style={{ fontSize: 13, color: C.gray400, marginBottom: 16 }}>An 8-digit code has been sent to <strong>{email}</strong>. Enter it below along with your new password.</p>
                 <Field label="Verification Code">
-                  <input
-                    style={inp({ letterSpacing: "0.3em", fontWeight: 800, fontSize: 18, textAlign: "center" })}
-                    type="text" inputMode="numeric" maxLength={8}
-                    placeholder="00000000"
-                    value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                    onFocus={e => e.target.style.borderColor = C.green}
-                    onBlur={e  => e.target.style.borderColor = C.gray200}
-                  />
-                  {/* Resend */}
-                  <div style={{ fontSize: 12, marginTop: 6, color: C.gray400 }}>
-                    {countdown > 0
-                      ? `Resend available in ${Math.floor(countdown/60)}:${String(countdown%60).padStart(2,"0")}`
-                      : <button type="button" onClick={() => { setCountdown(300); handleSendOtp(); }} style={{ background: "none", border: "none", color: C.green, fontWeight: 700, cursor: "pointer", fontSize: 12, padding: 0, fontFamily: "inherit" }}>Resend code</button>
-                    }
-                  </div>
+                  <input style={mInp({ letterSpacing: "0.2em", fontWeight: 700, textAlign: "center", fontSize: 18 })} type="text" inputMode="numeric" maxLength={8} placeholder="00000000" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ""))} />
                 </Field>
-
-                {/* New password */}
                 <Field label="New Password">
                   <div style={{ position: "relative" }}>
-                    <input
-                      style={{ ...inp(), paddingRight: 44 }}
-                      type={show.new ? "text" : "password"}
-                      placeholder="Min. 6 characters"
-                      value={newPw} onChange={e => setNewPw(e.target.value)}
-                      onFocus={e => e.target.style.borderColor = C.green}
-                      onBlur={e  => e.target.style.borderColor = C.gray200}
-                    />
-                    <button type="button" onClick={() => setShow(s => ({ ...s, new: !s.new }))}
-                      style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 15, color: C.gray400 }}>
-                      {show.new ? "🙈" : "👁️"}
-                    </button>
+                    <input style={mInp({ paddingRight: 44 })} type={show.new ? "text" : "password"} placeholder="At least 6 characters" value={newPw} onChange={e => setNewPw(e.target.value)} />
+                    <button type="button" onClick={() => setShow(s => ({ ...s, new: !s.new }))} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.gray400 }}>{show.new ? "🙈" : "👁"}</button>
                   </div>
-                  {/* Strength bar */}
                   {newPw && (
-                    <div style={{ marginTop: 7 }}>
-                      <div style={{ display: "flex", gap: 4, marginBottom: 3 }}>
-                        {[1,2,3,4].map(i => (
-                          <div key={i} style={{ flex: 1, height: 4, borderRadius: 4, background: i <= pw.score ? pw.color : C.gray200, transition: "background 0.3s" }} />
-                        ))}
-                      </div>
-                      {pw.label && <div style={{ fontSize: 11, color: pw.color, fontWeight: 600 }}>{pw.label} password</div>}
+                    <div style={{ marginTop: 6, display: "flex", gap: 3 }}>
+                      {[1,2,3,4].map(i => <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i <= pw.score ? pw.color : C.gray100 }} />)}
+                      <span style={{ fontSize: 10, color: pw.color, marginLeft: 6, fontWeight: 700 }}>{pw.label}</span>
                     </div>
                   )}
                 </Field>
-
-                {/* Confirm password */}
-                <Field label="Confirm Password">
+                <Field label="Confirm New Password">
                   <div style={{ position: "relative" }}>
-                    <input
-                      style={{ ...inp(), paddingRight: 44 }}
-                      type={show.confirm ? "text" : "password"}
-                      placeholder="Repeat new password"
-                      value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
-                      onFocus={e => e.target.style.borderColor = C.green}
-                      onBlur={e  => e.target.style.borderColor = C.gray200}
-                    />
-                    <button type="button" onClick={() => setShow(s => ({ ...s, confirm: !s.confirm }))}
-                      style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 15, color: C.gray400 }}>
-                      {show.confirm ? "🙈" : "👁️"}
-                    </button>
+                    <input style={mInp({ paddingRight: 44 })} type={show.confirm ? "text" : "password"} placeholder="Repeat new password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} />
+                    <button type="button" onClick={() => setShow(s => ({ ...s, confirm: !s.confirm }))} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.gray400 }}>{show.confirm ? "🙈" : "👁"}</button>
                   </div>
-                  {confirmPw && (
-                    <div style={{ fontSize: 11, marginTop: 5, fontWeight: 600, color: newPw === confirmPw ? C.green : C.red }}>
-                      {newPw === confirmPw ? "✓ Passwords match" : "✗ Passwords do not match"}
-                    </div>
-                  )}
                 </Field>
-
-                {error && <div style={{ background: "#fef2f2", border: `1px solid #fecaca`, color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>{error}</div>}
-
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={handleVerifyAndUpdate} disabled={loading} style={{
-                    flex: 2, padding: "12px", borderRadius: 10, border: "none",
-                    background: loading ? C.gray200 : C.green, color: C.white,
-                    fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer",
-                    fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  }}>
-                    {loading
-                      ? <><div style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Updating...</>
-                      : "🔑 Save New Password"}
+                <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                  <button onClick={handleVerifyAndUpdate} disabled={loading} style={{ flex: 1, padding: "12px", borderRadius: 10, border: "none", background: loading ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                    {loading ? "Verifying..." : "Update Password"}
                   </button>
-                  <button onClick={onClose} style={{
-                    flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${C.gray200}`,
-                    background: C.white, color: C.gray400, fontWeight: 600, fontSize: 14,
-                    cursor: "pointer", fontFamily: "inherit",
-                  }}>Cancel</button>
+                  <button onClick={onClose} style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+                </div>
+                <div style={{ textAlign: "center", marginTop: 12 }}>
+                  <button onClick={countdown > 0 ? null : handleSendOtp} disabled={countdown > 0} style={{ background: "none", border: "none", fontSize: 12, color: countdown > 0 ? C.gray400 : C.green, cursor: countdown > 0 ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
+                    {countdown > 0 ? `Resend in ${Math.floor(countdown / 60)}:${String(countdown % 60).padStart(2, "0")}` : "Resend code"}
+                  </button>
                 </div>
               </>
             )}
 
-            {/* ── Step: done ── */}
             {step === "done" && (
               <div style={{ textAlign: "center", padding: "16px 0 8px" }}>
-                <div style={{
-                  width: 64, height: 64, background: `${C.green}15`,
-                  border: `2px solid ${C.green}`, borderRadius: "50%",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 16px", fontSize: 28,
-                }}>✓</div>
+                <div style={{ width: 64, height: 64, background: `${C.green}15`, border: `2px solid ${C.green}`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 28 }}>✓</div>
                 <div style={{ fontWeight: 800, fontSize: 16, color: C.text, marginBottom: 6 }}>Password Updated!</div>
                 <div style={{ fontSize: 13, color: C.gray400 }}>Your password has been changed successfully.</div>
-                <div style={{ fontSize: 12, color: C.gray400, marginTop: 6 }}>
-                  {remainingPwChanges(uid)} of {PW_MAX_DAILY} changes remaining today
-                </div>
+                <div style={{ fontSize: 12, color: C.gray400, marginTop: 6 }}>{remainingPwChanges(uid)} of {PW_MAX_DAILY} changes remaining today</div>
               </div>
             )}
           </div>
@@ -521,21 +295,6 @@ function ChangePasswordModal({ email, session, uid, onClose, showToast }) {
     </>
   );
 }
-
-// ── Shared input style ────────────────────────────────────────────
-const inp = (extra = {}) => ({
-  width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 13,
-  border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
-  background: C.white, color: C.text, transition: "border 0.2s",
-  boxSizing: "border-box", ...extra,
-});
-
-const inpReadOnly = {
-  width: "100%", padding: "10px 13px", borderRadius: 9, fontSize: 14,
-  border: `1.5px solid ${C.gray100}`, fontFamily: "inherit",
-  background: C.gray50, color: C.gray400, boxSizing: "border-box",
-  cursor: "not-allowed", fontWeight: 600,
-};
 
 // ── Main ProfilePage ──────────────────────────────────────────────
 export default function ProfilePage({ profile, setProfile, showToast, session, role, email: emailProp }) {
@@ -551,22 +310,23 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     gender:         profile?.gender         || "",
   });
 
-  // ── Avatar state ────────────────────────────────────────────────
-  const [avatarPreview,  setAvatarPreview]  = useState(profile?.avatar_url || null);
-  const [cropSrc,        setCropSrc]        = useState(null);   // raw image for crop modal
+  const [avatarPreview,   setAvatarPreview]   = useState(profile?.avatar_url || null);
+  const [cropSrc,         setCropSrc]         = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [saving,         setSaving]         = useState(false);
-  const [showPwModal,    setShowPwModal]    = useState(false);
+  const [saving,          setSaving]          = useState(false);
+  const [showPwModal,     setShowPwModal]     = useState(false);
+  const [cdsUserCount,    setCdsUserCount]    = useState(1);
   const fileRef = useRef();
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  // ── Compute account type from number of users sharing this CDS ──
-  const [cdsUserCount, setCdsUserCount] = useState(1);
+  // Clean up old generic key
+  useEffect(() => { localStorage.removeItem("dse_pw_changes"); }, []);
+
+  // Fetch CDS user count via RPC (bypasses RLS)
   useEffect(() => {
     if (!profile?.cds_number) return;
     const tok = session?.access_token || KEY;
-    // Use SECURITY DEFINER rpc to bypass RLS — regular query only returns own row
     fetch(`${BASE}/rest/v1/rpc/get_cds_user_count`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${tok}` },
@@ -576,13 +336,8 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       .then(count => setCdsUserCount(typeof count === "number" ? count : 1))
       .catch(() => setCdsUserCount(1));
   }, [profile?.cds_number]);
-  const accountType = cdsUserCount > 1 ? "Corporate" : "Individual";
 
-  // ── Clean up old generic pw counter key (migration) ─────────────
-  useEffect(() => {
-    localStorage.removeItem("dse_pw_changes");
-  }, []);
-
+  const accountType     = cdsUserCount > 1 ? "Corporate" : "Individual";
   const completion      = useMemo(() => calcCompletion(form, avatarPreview), [form, avatarPreview]);
   const completionColor = completion >= 80 ? C.green : completion >= 50 ? "#f59e0b" : C.red;
   const roleMeta        = ROLE_META[role] || { label: role || "User", color: C.gray400 };
@@ -591,61 +346,34 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     ? new Date(profile.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
     : null;
 
-  // ── File selected → open crop modal ─────────────────────────────
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { showToast("Image must be under 10MB", "error"); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => setCropSrc(ev.target.result); // open crop modal
+    reader.onload = (ev) => setCropSrc(ev.target.result);
     reader.readAsDataURL(file);
-    // Reset input so same file can be selected again
     e.target.value = "";
   };
 
-  // ── Crop confirmed → resize → upload to Supabase Storage ──────
   const handleCropConfirm = async (blob) => {
     setCropSrc(null);
     setUploadingAvatar(true);
     try {
-      const uid      = session?.user?.id || profile?.id;
-      const tok      = session?.access_token || KEY;
-      const fileName = uid; // overwrite same file = auto-replace
-
-      // Upload blob to avatars/{uid}
-      const uploadRes = await fetch(
-        `${BASE}/storage/v1/object/avatars/${fileName}`,
-        {
-          method:  "POST",
-          headers: {
-            "Authorization": `Bearer ${tok}`,
-            "Content-Type":  "image/jpeg",
-            "x-upsert":      "true", // overwrite existing
-          },
-          body: blob,
-        }
-      );
-
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(err.message || err.error || "Upload failed");
-      }
-
-      // Build public URL
-      const publicUrl = `${BASE}/storage/v1/object/public/avatars/${fileName}?t=${Date.now()}`;
-
-      // Save avatar_url to profile row
+      const uid = session?.user?.id || profile?.id;
+      const tok = session?.access_token || KEY;
+      const uploadRes = await fetch(`${BASE}/storage/v1/object/avatars/${uid}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${tok}`, "Content-Type": "image/jpeg", "x-upsert": "true" },
+        body: blob,
+      });
+      if (!uploadRes.ok) { const err = await uploadRes.json().catch(() => ({})); throw new Error(err.message || "Upload failed"); }
+      const publicUrl = `${BASE}/storage/v1/object/public/avatars/${uid}?t=${Date.now()}`;
       const patchRes = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
-        method:  "PATCH",
-        headers: {
-          "Content-Type":  "application/json",
-          "apikey":        KEY,
-          "Authorization": `Bearer ${tok}`,
-          "Prefer":        "return=representation",
-        },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${tok}`, "Prefer": "return=representation" },
         body: JSON.stringify({ avatar_url: publicUrl }),
       });
-
       if (!patchRes.ok) throw new Error("Failed to save avatar URL");
       const rows = await patchRes.json();
       setProfile(rows[0] || { ...profile, avatar_url: publicUrl });
@@ -666,11 +394,8 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       const tok = session?.access_token || KEY;
       const uid = session?.user?.id || profile?.id;
       const res = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
-        method:  "PATCH",
-        headers: {
-          "Content-Type": "application/json", "apikey": KEY,
-          "Authorization": `Bearer ${tok}`, "Prefer": "return=representation",
-        },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${tok}`, "Prefer": "return=representation" },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -684,65 +409,60 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     }
   };
 
-  const GENDERS       = ["Male", "Female", "Prefer not to say"];
+  const uid = session?.user?.id || profile?.id;
+
   return (
-    <div style={{
-      maxWidth: 1100, margin: "0 auto",
-      height: "calc(100vh - 110px)",
-      display: "flex", flexDirection: "column",
-      overflow: "hidden", padding: "0 4px",
-    }}>
+    <div style={{ height: "calc(100vh - 112px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <style>{`
         @keyframes spin   { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         input::placeholder, textarea::placeholder { color: #9ca3af; }
-        .profile-column::-webkit-scrollbar { width: 4px; }
-        .profile-column::-webkit-scrollbar-track { background: transparent; }
-        .profile-column::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
-        .profile-column { scrollbar-width: thin; scrollbar-color: #e5e7eb transparent; }
+        .pcol::-webkit-scrollbar { width: 3px; }
+        .pcol::-webkit-scrollbar-track { background: transparent; }
+        .pcol::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        .pcol { scrollbar-width: thin; scrollbar-color: #e5e7eb transparent; }
       `}</style>
 
       {/* Modals */}
-      {cropSrc && <AvatarCropModal imageSrc={cropSrc} onConfirm={handleCropConfirm} onCancel={() => setCropSrc(null)} />}
-      {showPwModal && <ChangePasswordModal email={email} session={session} uid={session?.user?.id || profile?.id} onClose={() => setShowPwModal(false)} showToast={showToast} />}
+      {cropSrc     && <AvatarCropModal imageSrc={cropSrc} onConfirm={handleCropConfirm} onCancel={() => setCropSrc(null)} />}
+      {showPwModal && <ChangePasswordModal email={email} session={session} uid={uid} onClose={() => setShowPwModal(false)} showToast={showToast} />}
 
-      {/* ── Page header ── */}
+      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexShrink: 0 }}>
-        <div style={{ fontSize: 13, color: C.gray400 }}>
+        <div style={{ fontSize: 12, color: C.gray400 }}>
           Manage your personal information and security settings
-          {lastSaved && <span style={{ marginLeft: 10 }}>· Last saved {lastSaved}</span>}
+          {lastSaved && <span style={{ marginLeft: 8 }}>· Last saved {lastSaved}</span>}
         </div>
         <button onClick={handleSave} disabled={saving} style={{
-          display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
-          borderRadius: 9, border: "none", background: saving ? C.gray200 : C.green,
-          color: C.white, fontWeight: 700, fontSize: 14,
-          cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
-          boxShadow: saving ? "none" : `0 4px 12px ${C.green}44`,
+          display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 9,
+          border: "none", background: saving ? C.gray200 : C.green, color: C.white,
+          fontWeight: 700, fontSize: 13, cursor: saving ? "not-allowed" : "pointer",
+          fontFamily: "inherit", boxShadow: saving ? "none" : `0 4px 12px ${C.green}44`,
         }}>
           {saving
-            ? <><div style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> Saving...</>
-            : <><span>💾</span> Save Changes</>}
+            ? <><div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Saving...</>
+            : <>💾 Save Changes</>}
         </button>
       </div>
 
-      {/* ── Two-column layout ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 12, flex: 1, overflow: "hidden", minHeight: 0 }}>
+      {/* Two-column grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 12, flex: 1, minHeight: 0, overflow: "hidden" }}>
 
-        {/* ══ LEFT COLUMN ══ */}
-        <div className="profile-column" style={{ overflowY: "auto", overflowX: "hidden", height: "100%", paddingRight: 4, paddingBottom: 10 }}>
+        {/* ── LEFT COLUMN ── */}
+        <div className="pcol" style={{ overflowY: "auto", overflowX: "hidden", paddingRight: 3, paddingBottom: 8 }}>
 
           {/* Profile card */}
-          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, marginBottom: 8 }}>
-            <div style={{ height: 48, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)`, borderRadius: "14px 14px 0 0" }} />
-            <div style={{ padding: "0 12px 12px", marginTop: -26 }}>
-              <div style={{ position: "relative", display: "inline-block", marginBottom: 8 }}>
+          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, marginBottom: 8, overflow: "hidden" }}>
+            <div style={{ height: 44, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
+            <div style={{ padding: "0 12px 12px", marginTop: -24 }}>
+
+              {/* Avatar */}
+              <div style={{ position: "relative", display: "inline-block", marginBottom: 6 }}>
                 <div style={{
-                  width: 56, height: 56, borderRadius: "50%",
-                  border: `3px solid ${C.white}`, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                  background: avatarPreview ? "transparent" : C.navy,
+                  width: 52, height: 52, borderRadius: "50%", border: `3px solid ${C.white}`,
+                  boxShadow: "0 3px 10px rgba(0,0,0,0.15)", background: avatarPreview ? "transparent" : C.navy,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  overflow: "hidden", cursor: "pointer", fontSize: 18, fontWeight: 800, color: C.white,
-                  position: "relative",
+                  overflow: "hidden", cursor: "pointer", fontSize: 16, fontWeight: 800, color: C.white, position: "relative",
                 }} onClick={() => !uploadingAvatar && fileRef.current.click()}>
                   {avatarPreview ? <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
                   {uploadingAvatar && (
@@ -751,88 +471,77 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                     </div>
                   )}
                 </div>
-                <div onClick={() => fileRef.current.click()} style={{
-                  position: "absolute", bottom: 0, right: 0, width: 18, height: 18,
-                  borderRadius: "50%", background: C.green, border: `2px solid ${C.white}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 9,
-                }}>📷</div>
+                <div onClick={() => fileRef.current.click()} style={{ position: "absolute", bottom: 0, right: 0, width: 17, height: 17, borderRadius: "50%", background: C.green, border: `2px solid ${C.white}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 8 }}>📷</div>
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileSelect} />
               </div>
 
-              <div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{form.full_name || "Your Name"}</div>
-              <div style={{ fontWeight: 600, fontSize: 10, color: C.gray400, marginTop: 1, marginBottom: 6 }}>{email}</div>
+              <div style={{ fontWeight: 800, fontSize: 13, color: C.text, lineHeight: 1.2 }}>{form.full_name || "Your Name"}</div>
+              <div style={{ fontSize: 10, color: C.gray400, marginTop: 2, marginBottom: 6, fontWeight: 500 }}>{email}</div>
 
               <div style={{ marginBottom: 8 }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: roleMeta.color + "12", border: `1px solid ${roleMeta.color}22`, borderRadius: 20, padding: "2px 8px" }}>
-                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: roleMeta.color }} />
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: roleMeta.color + "15", border: `1px solid ${roleMeta.color}25`, borderRadius: 20, padding: "2px 8px" }}>
+                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: roleMeta.color, display: "inline-block" }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: roleMeta.color }}>{roleMeta.label}</span>
-                </div>
+                </span>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 8, padding: "5px 8px", marginBottom: 8 }}>
-                <span style={{ fontSize: 12 }}>🔒</span>
+                <span>🔒</span>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "0.05em" }}>CDS Number</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "0.05em" }}>CDS Number</div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{profile?.cds_number || "—"}</div>
                 </div>
               </div>
 
-              <div style={{ marginTop: 2 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em" }}>Profile complete</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: completionColor }}>{completion}%</span>
-                </div>
-                <div style={{ height: 4, background: C.gray100, borderRadius: 10, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${completion}%`, background: completionColor, borderRadius: 10, transition: "width 0.5s ease" }} />
-                </div>
-                {completion < 100 && <div style={{ fontSize: 9, color: C.gray400, marginTop: 3 }}>{completion < 50 ? "Fill in more details" : "Almost there — a few fields remaining"}</div>}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                <span style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.04em" }}>Profile complete</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: completionColor }}>{completion}%</span>
               </div>
+              <div style={{ height: 4, background: C.gray100, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${completion}%`, background: completionColor, borderRadius: 10, transition: "width 0.5s ease" }} />
+              </div>
+              {completion < 100 && <div style={{ fontSize: 9, color: C.gray400, marginTop: 3 }}>{completion < 50 ? "Fill in more details" : "Almost there"}</div>}
             </div>
           </div>
 
-          {/* Account type */}
+          {/* Account Type */}
           <Section title="Account Type" icon="🏦">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: `${C.green}0d`, border: `1.5px solid ${C.green}22`, borderRadius: 9 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 8px", background: `${C.green}0d`, border: `1.5px solid ${C.green}22`, borderRadius: 8 }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: C.green }}>{accountType}</div>
                 <div style={{ fontSize: 9, color: C.gray400, marginTop: 1 }}>{cdsUserCount} user{cdsUserCount !== 1 ? "s" : ""} on this CDS</div>
               </div>
-              <div style={{ fontSize: 20 }}>{accountType === "Corporate" ? "🏢" : "👤"}</div>
+              <span style={{ fontSize: 18 }}>{accountType === "Corporate" ? "🏢" : "👤"}</span>
             </div>
           </Section>
 
           {/* Security */}
           <Section title="Security" icon="🔐">
             <button onClick={() => setShowPwModal(true)} style={{
-              width: "100%", padding: "7px", borderRadius: 8,
-              border: `1.5px solid ${C.gray200}`, background: C.white,
-              color: C.text, fontWeight: 600, fontSize: 12,
-              cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+              width: "100%", padding: "7px", borderRadius: 8, border: `1.5px solid ${C.gray200}`,
+              background: C.white, color: C.text, fontWeight: 600, fontSize: 12,
+              cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
             }}
               onMouseEnter={e => { e.currentTarget.style.background = C.navy; e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.white; }}
-              onMouseLeave={e => { e.currentTarget.style.background = C.white; e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}
-            >
+              onMouseLeave={e => { e.currentTarget.style.background = C.white; e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}>
               🔑 Change Password
             </button>
             <div style={{ marginTop: 8, display: "flex", gap: 3, alignItems: "center" }}>
               {[1,2,3].map(i => (
-                <div key={i} style={{ flex: 1, height: 3, borderRadius: 4, background: i <= (PW_MAX_DAILY - remainingPwChanges(session?.user?.id || profile?.id)) ? C.navy : C.gray100 }} />
+                <div key={i} style={{ flex: 1, height: 3, borderRadius: 4, background: i <= (PW_MAX_DAILY - remainingPwChanges(uid)) ? C.navy : C.gray100 }} />
               ))}
-              <span style={{ fontSize: 9, color: C.gray400, marginLeft: 4, whiteSpace: "nowrap" }}>
-                {remainingPwChanges(session?.user?.id || profile?.id)}/{PW_MAX_DAILY} today
-              </span>
+              <span style={{ fontSize: 9, color: C.gray400, marginLeft: 4, whiteSpace: "nowrap" }}>{remainingPwChanges(uid)}/{PW_MAX_DAILY} today</span>
             </div>
           </Section>
         </div>
 
-        {/* ══ RIGHT COLUMN ══ */}
-        <div className="profile-column" style={{ overflowY: "auto", overflowX: "clip", height: "100%", paddingRight: 4, paddingBottom: 10 }}>
+        {/* ── RIGHT COLUMN ── */}
+        <div className="pcol" style={{ overflowY: "auto", overflowX: "clip", paddingRight: 3, paddingBottom: 8 }}>
 
           <Section title="Account Information" icon="👤">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <Field label="Full Name" required>
-                <input style={inp()} type="text" placeholder="e.g. Naomi Maguya"
+                <input style={inp()} type="text" placeholder="e.g. Michael Luzigah"
                   value={form.full_name} onChange={e => set("full_name", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
               </Field>
               <Field label="Phone Number" required>
@@ -863,20 +572,18 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 <CountrySelect value={form.nationality} onChange={v => set("nationality", v)} />
               </Field>
               <Field label="Postal Address">
-                <input style={inp({ height: "100%", minHeight: 34, boxSizing: "border-box" })} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
+                <input style={inp({ height: "100%", minHeight: 33, boxSizing: "border-box" })} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
                   value={form.postal_address} onChange={e => set("postal_address", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
               </Field>
             </div>
           </Section>
 
           {/* Photo tip */}
-          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>📷</span>
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 11, color: C.text }}>Profile Picture</div>
-              <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.4 }}>
-                Click your avatar to upload. Use the crop tool to center your face. Stored permanently at 200×200px.
-              </div>
+              <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.4 }}>Click your avatar to upload. Use the crop tool to center your face. Stored permanently at 200×200px.</div>
             </div>
           </div>
         </div>
