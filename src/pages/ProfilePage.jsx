@@ -259,7 +259,7 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
   // ── Step 2: Verify OTP + update password ───────────────────────
   const handleVerifyAndUpdate = async () => {
     setError("");
-    if (otp.length < 6)              return setError("Enter the 6-digit code from your email");
+    if (otp.length < 8)              return setError("Enter the 8-digit code from your email");
     if (newPw.length < 6)            return setError("New password must be at least 6 characters");
     if (newPw !== confirmPw)         return setError("Passwords do not match");
     if (remaining <= 0)              return setError("Daily password change limit reached");
@@ -387,16 +387,16 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
               <>
                 <div style={{ background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 10, padding: "12px 14px", fontSize: 13, color: "#16a34a", fontWeight: 600, marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 8 }}>
                   <span>✉️</span>
-                  <span>A 6-digit code has been sent to <strong>{email}</strong>. Enter it below along with your new password.</span>
+                  <span>An 8-digit code has been sent to <strong>{email}</strong>. Enter it below along with your new password.</span>
                 </div>
 
                 {/* OTP input */}
                 <Field label="Verification Code">
                   <input
                     style={inp({ letterSpacing: "0.3em", fontWeight: 800, fontSize: 18, textAlign: "center" })}
-                    type="text" inputMode="numeric" maxLength={6}
-                    placeholder="000000"
-                    value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    type="text" inputMode="numeric" maxLength={8}
+                    placeholder="00000000"
+                    value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
                     onFocus={e => e.target.style.borderColor = C.green}
                     onBlur={e  => e.target.style.borderColor = C.gray200}
                   />
