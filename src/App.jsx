@@ -247,7 +247,7 @@ export default function App() {
           {tab === "companies"       && <CompaniesPage      companies={companies}    setCompanies={setCompanies}    transactions={transactions} showToast={showToast} role={role} />}
           {tab === "transactions"    && <TransactionsPage   companies={companies}    transactions={transactions}     setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
           {tab === "profile"         && <ProfilePage profile={profile} setProfile={setProfile} session={session} role={role} email={session?.user?.email || session?.email || ""} showToast={showToast} />}
-          {tab === "user-management" && <UserManagementPage role={role}              showToast={showToast} />}
+          {tab === "user-management" && <UserManagementPage role={role} showToast={showToast} profile={profile} />}
         </div>
       </div>
 
