@@ -275,15 +275,20 @@ export async function sbDeactivateRole(userId) {
 
 /**
  * sbAdminCreateUser(email, password)
- * Creates a new user without logging out the current SA session.
+ * Calls the create-user Edge Function which uses the service role key
+ * to create users via the Admin API — bypasses public signup restriction.
+ * The current SA/AD session is NOT affected.
  */
 export async function sbAdminCreateUser(email, password) {
-  const res = await fetch(`${BASE}/auth/v1/signup`, {
+  const res = await fetch(`${BASE}/functions/v1/create-user`, {
     method:  "POST",
-    headers: { "Content-Type": "application/json", "apikey": KEY },
-    body:    JSON.stringify({ email, password }),
+    headers: {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${token()}`,
+      "apikey":        KEY,
+    },
+    body: JSON.stringify({ email, password }),
   });
   const data = await parseResponse(res, "Failed to create user");
-  // Do NOT call saveSession — that would log out the SA
   return data;
 }
