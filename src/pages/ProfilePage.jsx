@@ -1,7 +1,7 @@
 // ── src/pages/ProfilePage.jsx ─────────────────────────────────────
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { C } from "../components/ui";
-import { ROLE_META } from "../App";
+import { ROLE_META } from "../lib/constants";
 import AvatarCropModal from "../components/AvatarCropModal";
 
 const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
