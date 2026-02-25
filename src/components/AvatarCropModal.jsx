@@ -22,13 +22,16 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   useEffect(() => {
     const img = imgRef.current;
     img.onload = () => {
+      // Scale image to fit within max bounds, preserving aspect ratio exactly
       const maxW = Math.min(window.innerWidth - 80, 560);
       const maxH = Math.min(window.innerHeight - 260, 420);
-      const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+      const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+      // Canvas = exact scaled image size — no black padding
       const w = Math.round(img.naturalWidth  * ratio);
       const h = Math.round(img.naturalHeight * ratio);
       setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
       setCanvasSize({ w, h });
+      // Initial crop circle = 80% of the smaller dimension, centered
       const r = Math.round(Math.min(w, h) * 0.4);
       setCropCircle({ x: Math.round(w / 2), y: Math.round(h / 2), r });
       setImgLoaded(true);
