@@ -16,7 +16,7 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   const [imgLoaded,   setImgLoaded]   = useState(false);
   const [cropCircle, setCropCircle] = useState({ x: 210, y: 210, r: 100 });
   const [naturalSize, setNaturalSize] = useState({ w: 1, h: 1 });
-  const [zoom,        setZoom]        = useState(1); // Scale: 0.5 to 3.0
+  const [zoom,        setZoom]        = useState(1); 
   const [layout,      setLayout]      = useState({ drawX: 0, drawY: 0, drawW: 0, drawH: 0, baseScale: 1 });
   const [processing, setProcessing]   = useState(false);
 
@@ -34,44 +34,55 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
     img.src = imageSrc;
   }, [imageSrc]);
 
-  // Dynamic values based on zoom state
   const currentScale = layout.baseScale * zoom;
   const currentW = naturalSize.w * currentScale;
   const currentH = naturalSize.h * currentScale;
   const currentX = (CANVAS_SIZE - currentW) / 2;
   const currentY = (CANVAS_SIZE - currentH) / 2;
 
+  // ── FIX: Improved Clamping ────────────────────────────────────
   const clampCircle = useCallback((nx, ny, nr) => {
+    // Ensure radius isn't larger than the image itself
     const maxR = Math.min(currentW / 2, currentH / 2);
     const safeR = Math.min(nr, maxR);
+
+    // Keep the circle edges within the image edges
+    const minX = currentX + safeR;
+    const maxX = currentX + currentW - safeR;
+    const minY = currentY + safeR;
+    const maxY = currentY + currentH - safeR;
+
     return {
-      x: Math.max(currentX + safeR, Math.min(currentX + currentW - safeR, nx)),
-      y: Math.max(currentY + safeR, Math.min(currentY + currentH - safeR, ny)),
+      x: Math.max(minX, Math.min(maxX, nx)),
+      y: Math.max(minY, Math.min(maxY, ny)),
       r: safeR
     };
   }, [currentW, currentH, currentX, currentY]);
 
-  // ── Gestures & Inputs ──────────────────────────────────────────
+  // ── Gestures ──────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const handleWheel = (e) => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      const delta = e.deltaY > 0 ? -0.08 : 0.08;
       setZoom(prev => {
         const next = Math.min(Math.max(prev + delta, 0.5), 3);
-        setCropCircle(c => clampCircle(c.x, c.y, c.r));
         return next;
       });
     };
     canvas.addEventListener("wheel", handleWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", handleWheel);
-  }, [clampCircle]);
+  }, []);
+
+  // Update circle bounds when zoom changes
+  useEffect(() => {
+    setCropCircle(prev => clampCircle(prev.x, prev.y, prev.r));
+  }, [zoom, clampCircle]);
 
   const handleReset = () => {
     setZoom(1);
-    const baseR = Math.round(Math.min(layout.drawW, layout.drawH) * 0.4);
-    setCropCircle({ x: 210, y: 210, r: baseR });
+    setCropCircle({ x: 210, y: 210, r: Math.round(Math.min(layout.drawW, layout.drawH) * 0.4) });
   };
 
   // ── Drawing ──────────────────────────────────────────────────
@@ -83,48 +94,53 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
 
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
     
-    // Draw Background (Dimmed)
-    ctx.globalAlpha = 0.4;
+    // Background
+    ctx.globalAlpha = 0.3;
     ctx.drawImage(imgRef.current, currentX, currentY, currentW, currentH);
     ctx.globalAlpha = 1.0;
 
-    // Draw Dark Overlay
-    ctx.fillStyle = "rgba(10,37,64,0.45)";
+    // Overlay
+    ctx.fillStyle = "rgba(10,37,64,0.5)";
     ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-    // Cut out and draw high-res center
+    // High-res circle
     ctx.save();
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
     ctx.drawImage(imgRef.current, currentX, currentY, currentW, currentH);
     ctx.restore();
 
-    // Border & Handle
+    // Border
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.stroke();
 
+    // Handle
     const hx = x + r * Math.cos(Math.PI * 0.25);
     const hy = y + r * Math.sin(Math.PI * 0.25);
-    ctx.beginPath(); ctx.arc(hx, hy, 8, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(hx, hy, 9, 0, Math.PI * 2);
     ctx.fillStyle = C.green; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
     ctx.fill(); ctx.stroke();
   }, [imgLoaded, cropCircle, currentX, currentY, currentW, currentH]);
 
   useEffect(() => { draw(); }, [draw]);
 
-  // ── Interaction Handlers ──────────────────────────────────────
+  // ── Interaction Logic ────────────────────────────────────────
   const handleInteractionStart = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const touches = e.touches || [e];
+    
     if (touches.length === 2) {
       lastPinchDist.current = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
       return;
     }
+
     const px = touches[0].clientX - rect.left;
     const py = touches[0].clientY - rect.top;
+    
+    // Check handle collision
     const hx = cropCircle.x + cropCircle.r * Math.cos(Math.PI * 0.25);
-    const hy = cropCircle.y + cropRule.r * Math.sin(Math.PI * 0.25); // corrected typo: cropCircle.r
+    const hy = cropCircle.y + cropCircle.r * Math.sin(Math.PI * 0.25);
 
-    if (Math.hypot(px - hx, py - (cropCircle.y + cropCircle.r * Math.sin(Math.PI * 0.25))) < 25) {
+    if (Math.hypot(px - hx, py - hy) < 30) {
       resizing.current = true;
     } else if (Math.hypot(px - cropCircle.x, py - cropCircle.y) < cropCircle.r) {
       dragging.current = true;
@@ -135,19 +151,25 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   const handleInteractionMove = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const touches = e.touches || [e];
+
     if (touches.length === 2 && lastPinchDist.current !== null) {
       const dist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
-      const delta = (dist - lastPinchDist.current) / 150;
+      const delta = (dist - lastPinchDist.current) / 120;
       setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 3));
-      setCropCircle(prev => clampCircle(prev.x, prev.y, prev.r));
       lastPinchDist.current = dist;
       return;
     }
+
     if (!dragging.current && !resizing.current) return;
     const px = touches[0].clientX - rect.left;
     const py = touches[0].clientY - rect.top;
-    if (dragging.current) setCropCircle(prev => clampCircle(px - dragStart.current.x, py - dragStart.current.y, prev.r));
-    else if (resizing.current) setCropCircle(prev => clampCircle(prev.x, prev.y, Math.max(MIN_CROP / 2, Math.hypot(px - cropCircle.x, py - cropCircle.y))));
+
+    if (dragging.current) {
+      setCropCircle(prev => clampCircle(px - dragStart.current.x, py - dragStart.current.y, prev.r));
+    } else if (resizing.current) {
+      const dist = Math.hypot(px - cropCircle.x, py - cropCircle.y);
+      setCropCircle(prev => clampCircle(prev.x, prev.y, dist));
+    }
   };
 
   const handleConfirm = async () => {
@@ -156,6 +178,7 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
     const srcX = (x - r - currentX) / currentScale;
     const srcY = (y - r - currentY) / currentScale;
     const srcSide = (r * 2) / currentScale;
+
     const out = document.createElement("canvas");
     out.width = CROP_SIZE; out.height = CROP_SIZE;
     const ctx = out.getContext("2d");
@@ -165,13 +188,13 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.72)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(3px)" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.75)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
       <style>{`.zoom-slider { -webkit-appearance: none; width: 100%; height: 6px; background: ${C.gray100}; border-radius: 5px; outline: none; } .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: ${C.green}; border-radius: 50%; cursor: pointer; border: 2px solid white; }`}</style>
-      <div style={{ background: C.white, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.4)", width: CANVAS_SIZE }}>
+      <div style={{ background: C.white, borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.5)", width: CANVAS_SIZE }}>
         <div style={{ background: C.navy, padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ color: C.white, fontWeight: 800, fontSize: 16 }}>Edit Profile Picture</div>
-            <div style={{ color: C.gold, fontSize: 11, marginTop: 2, fontWeight: 500 }}>Zoom out to see more, zoom in to focus</div>
+            <div style={{ color: C.white, fontWeight: 800, fontSize: 16 }}>Crop Profile Picture</div>
+            <div style={{ color: C.gold, fontSize: 11, marginTop: 2, fontWeight: 500 }}>Zoom out to fit more · Drag to position</div>
           </div>
           <button onClick={onCancel} style={{ background: "none", border: "none", color: C.white, cursor: "pointer", fontSize: 18 }}>✕</button>
         </div>
@@ -179,10 +202,13 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
         <div style={{ background: "#000" }}>
           <canvas
             ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE}
-            onMouseDown={handleInteractionStart} onMouseMove={handleInteractionMove}
-            onMouseUp={() => { dragging.current = false; resizing.current = false; lastPinchDist.current = null; }}
-            onTouchStart={handleInteractionStart} onTouchMove={handleInteractionMove}
-            onTouchEnd={() => { dragging.current = false; resizing.current = false; lastPinchDist.current = null; }}
+            onMouseDown={handleInteractionStart}
+            onMouseMove={handleInteractionMove}
+            onMouseUp={() => { dragging.current = false; resizing.current = false; }}
+            onMouseLeave={() => { dragging.current = false; resizing.current = false; }}
+            onTouchStart={handleInteractionStart}
+            onTouchMove={handleInteractionMove}
+            onTouchEnd={() => { dragging.current = false; resizing.current = false; }}
             style={{ display: "block", cursor: "move", touchAction: "none" }}
           />
         </div>
@@ -194,7 +220,7 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
                 <button onClick={handleReset} style={{ background: "none", border: "none", color: C.gold, fontSize: 11, fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0 }}>Reset</button>
             </div>
             <div style={{ width: "70%" }}>
-                <input type="range" min="0.5" max="3" step="0.01" value={zoom} onChange={(e) => { setZoom(parseFloat(e.target.value)); setCropCircle(prev => clampCircle(prev.x, prev.y, prev.r)); }} className="zoom-slider" />
+                <input type="range" min="0.5" max="3" step="0.01" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="zoom-slider" />
             </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
