@@ -685,18 +685,12 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
   };
 
   const GENDERS       = ["Male", "Female", "Prefer not to say"];
-  const focusGreen    = (e) => e.target.style.borderColor = C.green;
-  const blurGray      = (e) => e.target.style.borderColor = C.gray200;
-
   return (
     <div style={{
-      maxWidth: 1100,
-      margin: "0 auto",
+      maxWidth: 1100, margin: "0 auto",
       height: "calc(100vh - 110px)",
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      padding: "0 4px",
+      display: "flex", flexDirection: "column",
+      overflow: "hidden", padding: "0 4px",
     }}>
       <style>{`
         @keyframes spin   { to { transform: rotate(360deg); } }
@@ -709,12 +703,8 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       `}</style>
 
       {/* Modals */}
-      {cropSrc && (
-        <AvatarCropModal imageSrc={cropSrc} onConfirm={handleCropConfirm} onCancel={() => setCropSrc(null)} />
-      )}
-      {showPwModal && (
-        <ChangePasswordModal email={email} session={session} uid={session?.user?.id || profile?.id} onClose={() => setShowPwModal(false)} showToast={showToast} />
-      )}
+      {cropSrc && <AvatarCropModal imageSrc={cropSrc} onConfirm={handleCropConfirm} onCancel={() => setCropSrc(null)} />}
+      {showPwModal && <ChangePasswordModal email={email} session={session} uid={session?.user?.id || profile?.id} onClose={() => setShowPwModal(false)} showToast={showToast} />}
 
       {/* ── Page header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexShrink: 0 }}>
@@ -723,11 +713,10 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           {lastSaved && <span style={{ marginLeft: 10 }}>· Last saved {lastSaved}</span>}
         </div>
         <button onClick={handleSave} disabled={saving} style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 16px", borderRadius: 9, border: "none",
-          background: saving ? C.gray200 : C.green, color: C.white,
-          fontWeight: 700, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
-          fontFamily: "inherit", transition: "all 0.2s",
+          display: "flex", alignItems: "center", gap: 8, padding: "8px 16px",
+          borderRadius: 9, border: "none", background: saving ? C.gray200 : C.green,
+          color: C.white, fontWeight: 700, fontSize: 14,
+          cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
           boxShadow: saving ? "none" : `0 4px 12px ${C.green}44`,
         }}>
           {saving
@@ -737,25 +726,16 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       </div>
 
       {/* ── Two-column layout ── */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "280px 1fr",
-        gap: 12,
-        flex: 1,
-        overflow: "hidden",
-        minHeight: 0,
-      }}>
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 12, flex: 1, overflow: "hidden", minHeight: 0 }}>
 
         {/* ══ LEFT COLUMN ══ */}
-        <div className="profile-column" style={{ overflowY: "auto", overflowX: "hidden", height: "100%", paddingRight: 6, paddingBottom: 20 }}>
+        <div className="profile-column" style={{ overflowY: "auto", overflowX: "hidden", height: "100%", paddingRight: 4, paddingBottom: 10 }}>
 
           {/* Profile card */}
           <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, marginBottom: 8 }}>
-            <div style={{ height: 48, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
+            <div style={{ height: 48, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)`, borderRadius: "14px 14px 0 0" }} />
             <div style={{ padding: "0 12px 12px", marginTop: -26 }}>
-
-              {/* Avatar */}
-              <div style={{ position: "relative", display: "inline-block", marginBottom: 10 }}>
+              <div style={{ position: "relative", display: "inline-block", marginBottom: 8 }}>
                 <div style={{
                   width: 56, height: 56, borderRadius: "50%",
                   border: `3px solid ${C.white}`, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
@@ -764,9 +744,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                   overflow: "hidden", cursor: "pointer", fontSize: 18, fontWeight: 800, color: C.white,
                   position: "relative",
                 }} onClick={() => !uploadingAvatar && fileRef.current.click()}>
-                  {avatarPreview
-                    ? <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : initials}
+                  {avatarPreview ? <img src={avatarPreview} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
                   {uploadingAvatar && (
                     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>
                       <div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -781,11 +759,9 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileSelect} />
               </div>
 
-              {/* Name + email */}
               <div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{form.full_name || "Your Name"}</div>
               <div style={{ fontWeight: 600, fontSize: 10, color: C.gray400, marginTop: 1, marginBottom: 6 }}>{email}</div>
 
-              {/* Role badge */}
               <div style={{ marginBottom: 8 }}>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: roleMeta.color + "12", border: `1px solid ${roleMeta.color}22`, borderRadius: 20, padding: "2px 8px" }}>
                   <div style={{ width: 4, height: 4, borderRadius: "50%", background: roleMeta.color }} />
@@ -793,7 +769,6 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 </div>
               </div>
 
-              {/* CDS pill */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 8, padding: "5px 8px", marginBottom: 8 }}>
                 <span style={{ fontSize: 12 }}>🔒</span>
                 <div>
@@ -802,7 +777,6 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 </div>
               </div>
 
-              {/* Completion bar */}
               <div style={{ marginTop: 2 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                   <span style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em" }}>Profile complete</span>
@@ -811,11 +785,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 <div style={{ height: 4, background: C.gray100, borderRadius: 10, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${completion}%`, background: completionColor, borderRadius: 10, transition: "width 0.5s ease" }} />
                 </div>
-                {completion < 100 && (
-                  <div style={{ fontSize: 9, color: C.gray400, marginTop: 3 }}>
-                    {completion < 50 ? "Fill in more details" : "Almost there — a few fields remaining"}
-                  </div>
-                )}
+                {completion < 100 && <div style={{ fontSize: 9, color: C.gray400, marginTop: 3 }}>{completion < 50 ? "Fill in more details" : "Almost there — a few fields remaining"}</div>}
               </div>
             </div>
           </div>
@@ -834,25 +804,22 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           {/* Security */}
           <Section title="Security" icon="🔐">
             <button onClick={() => setShowPwModal(true)} style={{
-              width: "100%", padding: "9px", borderRadius: 9,
+              width: "100%", padding: "7px", borderRadius: 8,
               border: `1.5px solid ${C.gray200}`, background: C.white,
-              color: C.text, fontWeight: 600, fontSize: 13,
+              color: C.text, fontWeight: 600, fontSize: 12,
               cursor: "pointer", fontFamily: "inherit",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
             }}
               onMouseEnter={e => { e.currentTarget.style.background = C.navy; e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.white; }}
               onMouseLeave={e => { e.currentTarget.style.background = C.white; e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}
             >
               🔑 Change Password
             </button>
-            <div style={{ marginTop: 10, display: "flex", gap: 3, alignItems: "center" }}>
+            <div style={{ marginTop: 8, display: "flex", gap: 3, alignItems: "center" }}>
               {[1,2,3].map(i => (
-                <div key={i} style={{
-                  flex: 1, height: 3, borderRadius: 4,
-                  background: i <= (PW_MAX_DAILY - remainingPwChanges(session?.user?.id || profile?.id)) ? C.navy : C.gray100,
-                }} />
+                <div key={i} style={{ flex: 1, height: 3, borderRadius: 4, background: i <= (PW_MAX_DAILY - remainingPwChanges(session?.user?.id || profile?.id)) ? C.navy : C.gray100 }} />
               ))}
-              <span style={{ fontSize: 10, color: C.gray400, marginLeft: 5 }}>
+              <span style={{ fontSize: 9, color: C.gray400, marginLeft: 4, whiteSpace: "nowrap" }}>
                 {remainingPwChanges(session?.user?.id || profile?.id)}/{PW_MAX_DAILY} today
               </span>
             </div>
@@ -860,19 +827,17 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         </div>
 
         {/* ══ RIGHT COLUMN ══ */}
-        <div className="profile-column" style={{ overflowY: "auto", overflowX: "clip", height: "100%", paddingRight: 6, paddingBottom: 20 }}>
+        <div className="profile-column" style={{ overflowY: "auto", overflowX: "clip", height: "100%", paddingRight: 4, paddingBottom: 10 }}>
 
           <Section title="Account Information" icon="👤">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <Field label="Full Name" required>
                 <input style={inp()} type="text" placeholder="e.g. Naomi Maguya"
-                  value={form.full_name} onChange={e => set("full_name", e.target.value)}
-                  onFocus={focusGreen} onBlur={blurGray} />
+                  value={form.full_name} onChange={e => set("full_name", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
               </Field>
               <Field label="Phone Number" required>
                 <input style={inp()} type="tel" placeholder="e.g. +255713262087"
-                  value={form.phone} onChange={e => set("phone", e.target.value)}
-                  onFocus={focusGreen} onBlur={blurGray} />
+                  value={form.phone} onChange={e => set("phone", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
               </Field>
               <Field label="Gender">
                 <select style={{ ...inp(), cursor: "pointer" }} value={form.gender} onChange={e => set("gender", e.target.value)} onFocus={focusGreen} onBlur={blurGray}>
@@ -886,8 +851,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
               <div style={{ gridColumn: "1 / -1" }}>
                 <Field label="National ID (NIDA)">
                   <input style={inp()} type="text" placeholder="e.g. 19820618114670000123"
-                    value={form.national_id} onChange={e => set("national_id", e.target.value)}
-                    onFocus={focusGreen} onBlur={blurGray} />
+                    value={form.national_id} onChange={e => set("national_id", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
                 </Field>
               </div>
             </div>
@@ -899,18 +863,17 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 <CountrySelect value={form.nationality} onChange={v => set("nationality", v)} />
               </Field>
               <Field label="Postal Address">
-                <input style={inp()} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
-                  value={form.postal_address} onChange={e => set("postal_address", e.target.value)}
-                  onFocus={focusGreen} onBlur={blurGray} />
+                <input style={inp({ height: "100%", minHeight: 34, boxSizing: "border-box" })} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
+                  value={form.postal_address} onChange={e => set("postal_address", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
               </Field>
             </div>
           </Section>
 
           {/* Photo tip */}
-          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
-            <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>📷</span>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 11, color: C.text, marginBottom: 1 }}>Profile Picture</div>
+              <div style={{ fontWeight: 700, fontSize: 11, color: C.text }}>Profile Picture</div>
               <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.4 }}>
                 Click your avatar to upload. Use the crop tool to center your face. Stored permanently at 200×200px.
               </div>
