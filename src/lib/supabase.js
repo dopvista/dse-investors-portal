@@ -47,14 +47,12 @@ async function refreshSession() {
   const session      = getSession();
   const refreshToken = session?.refresh_token;
   if (!refreshToken) { clearSession(); return null; }
-
   const res = await fetch(`${BASE}/auth/v1/token?grant_type=refresh_token`, {
     method:  "POST",
     headers: { "Content-Type": "application/json", "apikey": KEY },
     body:    JSON.stringify({ refresh_token: refreshToken }),
   });
   if (!res.ok) { clearSession(); return null; }
-
   const data = await res.json();
   saveSession(data);
   return data.access_token;
@@ -112,8 +110,6 @@ export async function sbGet(table, params = {}) {
   let res = await fetch(`${BASE}/rest/v1/${table}${q ? "?" + q : ""}`, {
     headers: headers(token()),
   });
-
-  // JWT expired — refresh and retry once
   if (res.status === 401) {
     const newToken = await refreshSession();
     if (!newToken) throw new Error("Session expired. Please log in again.");
@@ -121,7 +117,6 @@ export async function sbGet(table, params = {}) {
       headers: headers(newToken),
     });
   }
-
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -191,11 +186,6 @@ export async function sbUpsertProfile(data) {
 
 // ── ROLES ──────────────────────────────────────────────────────────
 
-/**
- * sbGetMyRole()
- * Returns the current user's role code: 'SA' | 'AD' | 'DE' | 'VR' | 'RO' | null
- * Calls the get_my_role() Postgres function. Called once on login.
- */
 export async function sbGetMyRole() {
   const res = await fetch(`${BASE}/rest/v1/rpc/get_my_role`, {
     method:  "POST",
@@ -207,11 +197,6 @@ export async function sbGetMyRole() {
   return data || null;
 }
 
-/**
- * sbGetRoles()
- * Returns all 5 roles from the roles table.
- * Used to populate role dropdowns in User Management.
- */
 export async function sbGetRoles() {
   const res = await fetch(`${BASE}/rest/v1/roles?order=id.asc`, {
     headers: headers(token()),
@@ -220,13 +205,6 @@ export async function sbGetRoles() {
   return res.json();
 }
 
-/**
- * sbGetAllUsers()
- * Fetches all profiles joined with their active role.
- * RLS ensures only SA sees all rows — others only see their own.
- * Returns: { id, full_name, cds_number, phone, account_type,
- *            role_id, role_code, role_name, assigned_at, is_active }
- */
 export async function sbGetAllUsers() {
   const profilesRes = await fetch(
     `${BASE}/rest/v1/profiles?select=id,full_name,cds_number,phone,account_type`,
@@ -235,7 +213,6 @@ export async function sbGetAllUsers() {
   if (!profilesRes.ok) throw new Error(await profilesRes.text());
   const profiles = await profilesRes.json();
 
-  // Fetch ALL user_roles (active + inactive) to support reactivation
   const rolesRes = await fetch(
     `${BASE}/rest/v1/user_roles?select=user_id,role_id,is_active,assigned_at,roles(code,name)&order=assigned_at.desc`,
     { headers: headers(token()) }
@@ -244,78 +221,61 @@ export async function sbGetAllUsers() {
   const userRoles = await rolesRes.json();
 
   return profiles.map(p => {
-    // Prefer the active role; fall back to most recent inactive one
     const active   = userRoles.find(r => r.user_id === p.id && r.is_active);
     const fallback = userRoles.find(r => r.user_id === p.id);
     const ur       = active || fallback;
     return {
       ...p,
-      role_id:     ur?.role_id     ?? null,
+      role_id:     ur?.role_id         ?? null,
       role_code:   active?.roles?.code ?? null,
       role_name:   active?.roles?.name ?? "No Role",
-      assigned_at: ur?.assigned_at ?? null,
-      is_active:   active ? true   : false,
+      assigned_at: ur?.assigned_at     ?? null,
+      is_active:   active ? true       : false,
     };
   });
 }
 
 /**
  * sbAssignRole(userId, roleId)
- * Deactivates any current active role, then assigns the new one.
- * Only SA can do this — enforced by RLS.
+ * Calls the assign_user_role() DB function which runs as SECURITY DEFINER
+ * — bypasses RLS entirely, handles deactivate + upsert internally.
  */
 export async function sbAssignRole(userId, roleId) {
-  const assignerId = getSession()?.user?.id;
-
-  // Deactivate existing active role
-  const deactivateRes = await fetch(
-    `${BASE}/rest/v1/user_roles?user_id=eq.${userId}&is_active=eq.true`,
-    {
-      method:  "PATCH",
-      headers: { ...headers(token()), "Prefer": "return=minimal" },
-      body:    JSON.stringify({ is_active: false }),
-    }
-  );
-  if (!deactivateRes.ok) throw new Error(await deactivateRes.text());
-
-  // Assign new role
-  const res = await fetch(`${BASE}/rest/v1/user_roles`, {
+  const res = await fetch(`${BASE}/rest/v1/rpc/assign_user_role`, {
     method:  "POST",
     headers: headers(token()),
     body:    JSON.stringify({
-      user_id:     userId,
-      role_id:     roleId,
-      assigned_by: assignerId,
-      is_active:   true,
+      target_user_id: userId,
+      target_role_id: roleId,
     }),
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to assign role");
+  }
+  return true;
 }
 
 /**
  * sbDeactivateRole(userId)
- * Soft-removes a user's active role (is_active = false).
- * Record is kept for audit trail. Only SA can do this.
+ * Calls the deactivate_user_role() DB function which runs as SECURITY DEFINER.
  */
 export async function sbDeactivateRole(userId) {
-  const res = await fetch(
-    `${BASE}/rest/v1/user_roles?user_id=eq.${userId}&is_active=eq.true`,
-    {
-      method:  "PATCH",
-      headers: { ...headers(token()), "Prefer": "return=minimal" },
-      body:    JSON.stringify({ is_active: false }),
-    }
-  );
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE}/rest/v1/rpc/deactivate_user_role`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify({ target_user_id: userId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to deactivate user");
+  }
   return true;
 }
 
 /**
  * sbAdminCreateUser(email, password)
- * Creates a new auth user WITHOUT overwriting the current SA session.
- * The SA stays logged in — only the new user's data is returned.
- * Note: uses the public signup endpoint (anon key).
+ * Creates a new user without logging out the current SA session.
  */
 export async function sbAdminCreateUser(email, password) {
   const res = await fetch(`${BASE}/auth/v1/signup`, {
@@ -324,6 +284,6 @@ export async function sbAdminCreateUser(email, password) {
     body:    JSON.stringify({ email, password }),
   });
   const data = await parseResponse(res, "Failed to create user");
-  // IMPORTANT: do NOT call saveSession(data) here — that would log out the SA
+  // Do NOT call saveSession — that would log out the SA
   return data;
 }
