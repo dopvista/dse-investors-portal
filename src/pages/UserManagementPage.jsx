@@ -83,7 +83,12 @@ function ModalFooter({ onCancel, onConfirm, confirmLabel, confirmColor, saving }
 // ══════════════════════════════════════════════════════════════════
 // MODAL 1 — Change Role
 // ══════════════════════════════════════════════════════════════════
-function ChangeRoleModal({ user, roles, onClose, onSave, showToast }) {
+function ChangeRoleModal({ user, roles, callerRole, onClose, onSave, showToast }) {
+  // AD can only assign DE, VR, RO — SA can assign all
+  const availableRoles = callerRole === "SA"
+    ? roles
+    : roles.filter(r => ["DE", "VR", "RO"].includes(r.code));
+
   const [selectedId, setSelectedId] = useState(
     roles.find(r => r.code === user.role_code)?.id ?? ""
   );
@@ -146,7 +151,7 @@ function ChangeRoleModal({ user, roles, onClose, onSave, showToast }) {
           Select New Role
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {roles.map(r => {
+          {availableRoles.map(r => {
             const m       = ROLE_META[r.code];
             const checked = String(selectedId) === String(r.id);
             return (
@@ -408,13 +413,13 @@ export default function UserManagementPage({ role, showToast }) {
   const [toggleUser, setToggleUser]       = useState(null);   // user to activate/deactivate
 
   // ── SA only ───────────────────────────────────────────────────
-  if (role !== "SA") {
+  if (!["SA", "AD"].includes(role)) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.text }}>Access Restricted</div>
-          <div style={{ fontSize: 14, color: C.gray400, marginTop: 6 }}>Only Super Admins can manage users.</div>
+          <div style={{ fontSize: 14, color: C.gray400, marginTop: 6 }}>Only Admins and Super Admins can manage users.</div>
         </div>
       </div>
     );
@@ -671,6 +676,7 @@ export default function UserManagementPage({ role, showToast }) {
         <ChangeRoleModal
           user={changeRoleUser}
           roles={roles}
+          callerRole={role}
           onClose={() => setChangeRoleUser(null)}
           onSave={async (userId, roleId) => {
             await handleAssignRole(userId, roleId);
