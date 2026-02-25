@@ -116,10 +116,19 @@ function ChangeRoleModal({ user, roles, callerRole, onClose, onSave, showToast }
 // ═══════════════════════════════════════════════════════
 // MODAL — Toggle Status
 // ═══════════════════════════════════════════════════════
-function ToggleStatusModal({ user, onClose, onConfirm }) {
+function ToggleStatusModal({ user, onClose, onConfirm, showToast }) {
   const [saving, setSaving] = useState(false);
   const deactivating = user.is_active;
-  const handleConfirm = async () => { setSaving(true); await onConfirm(user); setSaving(false); onClose(); };
+  const handleConfirm = async () => {
+    setSaving(true);
+    try {
+      await onConfirm(user);
+      onClose();
+    } catch (e) {
+      setSaving(false);
+      showToast(e.message, "error");
+    }
+  };
 
   return (
     <Modal title={deactivating ? "Deactivate User" : "Reactivate User"} onClose={onClose}
@@ -470,7 +479,7 @@ export default function UserManagementPage({ role, showToast, profile }) {
       {/* ── Modals ── */}
       {inviteOpen     && <InviteModal roles={roles} callerRole={role} callerCds={profile?.cds_number || ""} onClose={() => setInviteOpen(false)} onSuccess={loadData} showToast={showToast} />}
       {changeRoleUser && <ChangeRoleModal user={changeRoleUser} roles={roles} callerRole={role} onClose={() => setChangeRoleUser(null)} onSave={async (uid, rid) => { await handleAssignRole(uid, rid); setChangeRoleUser(null); }} showToast={showToast} />}
-      {toggleUser     && <ToggleStatusModal user={toggleUser} onClose={() => setToggleUser(null)} onConfirm={async u => { await handleToggleActive(u); setToggleUser(null); }} />}
+      {toggleUser     && <ToggleStatusModal user={toggleUser} onClose={() => setToggleUser(null)} onConfirm={handleToggleActive} showToast={showToast} />}
     </div>
   );
 }
