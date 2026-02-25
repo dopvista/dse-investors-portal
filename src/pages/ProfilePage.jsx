@@ -76,12 +76,12 @@ function calcCompletion(form, avatarPreview) {
 // ── Section card ──────────────────────────────────────────────────
 function Section({ title, icon, children }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 18 }}>
+    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
       <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 8, background: C.gray50 }}>
         <span style={{ fontSize: 16 }}>{icon}</span>
         <span style={{ fontWeight: 700, fontSize: 13, color: C.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>{title}</span>
       </div>
-      <div style={{ padding: "20px" }}>{children}</div>
+      <div style={{ padding: "14px" }}>{children}</div>
     </div>
   );
 }
@@ -89,7 +89,7 @@ function Section({ title, icon, children }) {
 // ── Field wrapper ────────────────────────────────────────────────
 function Field({ label, required, children }) {
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: 10 }}>
       <label style={{ fontSize: 12, fontWeight: 700, color: C.gray400, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
         {label}{required && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}
       </label>
@@ -544,7 +544,6 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
   const [form, setForm] = useState({
     full_name:      profile?.full_name      || "",
     phone:          profile?.phone          || "",
-    account_type:   profile?.account_type   || "Individual",
     nationality:    profile?.nationality    || "",
     postal_address: profile?.postal_address || "",
     national_id:    profile?.national_id    || "",
@@ -561,6 +560,20 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
   const fileRef = useRef();
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  // ── Compute account type from number of users sharing this CDS ──
+  const [cdsUserCount, setCdsUserCount] = useState(1);
+  useEffect(() => {
+    if (!profile?.cds_number) return;
+    const tok = session?.access_token || KEY;
+    fetch(`${BASE}/rest/v1/profiles?cds_number=eq.${profile.cds_number}&select=id`, {
+      headers: { "apikey": KEY, "Authorization": `Bearer ${tok}` }
+    })
+      .then(r => r.json())
+      .then(rows => setCdsUserCount(Array.isArray(rows) ? rows.length : 1))
+      .catch(() => setCdsUserCount(1));
+  }, [profile?.cds_number]);
+  const accountType = cdsUserCount > 1 ? "Corporate" : "Individual";
 
   // ── Clean up old generic pw counter key (migration) ─────────────
   useEffect(() => {
@@ -668,13 +681,12 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     }
   };
 
-  const ACCOUNT_TYPES = ["Individual", "Joint", "Corporate"];
   const GENDERS       = ["Male", "Female", "Prefer not to say"];
   const focusGreen    = (e) => e.target.style.borderColor = C.green;
   const blurGray      = (e) => e.target.style.borderColor = C.gray200;
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", height: "calc(100vh - 130px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes fadeIn  { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -726,15 +738,15 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       </div>
 
       {/* ── Two-column layout ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 20, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 18, alignItems: "start", flex: 1, overflow: "hidden" }}>
 
         {/* ══ LEFT COLUMN ══ */}
-        <div>
+        <div style={{ overflowY: "auto", height: "100%", paddingRight: 4 }}>
 
           {/* Profile card */}
-          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 18 }}>
+          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
             <div style={{ height: 72, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
-            <div style={{ padding: "0 20px 20px", marginTop: -36 }}>
+            <div style={{ padding: "0 16px 16px", marginTop: -32 }}>
 
               {/* Avatar — no email below name, just name + role */}
               <div style={{ position: "relative", display: "inline-block", marginBottom: 12 }}>
@@ -764,8 +776,9 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileSelect} />
               </div>
 
-              {/* Name + role only — no email here */}
+              {/* Name + email under it */}
               <div style={{ fontWeight: 800, fontSize: 16, color: C.text }}>{form.full_name || "Your Name"}</div>
+              <div style={{ fontWeight: 700, fontSize: 12, color: C.gray400, marginTop: 3, marginBottom: 2 }}>{email}</div>
               <div style={{ marginTop: 8, marginBottom: 14 }}>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: roleMeta.color + "18", border: `1px solid ${roleMeta.color}33`, borderRadius: 20, padding: "4px 12px" }}>
                   <div style={{ width: 6, height: 6, borderRadius: "50%", background: roleMeta.color, flexShrink: 0 }} />
@@ -783,7 +796,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
               </div>
 
               {/* Completion bar */}
-              <div>
+              <div style={{ marginTop: 6 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em" }}>Profile complete</span>
                   <span style={{ fontSize: 12, fontWeight: 800, color: completionColor }}>{completion}%</span>
@@ -800,31 +813,21 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
             </div>
           </div>
 
-          {/* Account type */}
+          {/* Account type — auto computed from CDS user count */}
           <Section title="Account Type" icon="🏦">
-            <div style={{ display: "flex", gap: 8 }}>
-              {ACCOUNT_TYPES.map(t => (
-                <button key={t} type="button" onClick={() => set("account_type", t)} style={{
-                  flex: 1, padding: "9px 0", borderRadius: 9,
-                  border: `1.5px solid ${form.account_type === t ? C.green : C.gray200}`,
-                  background: form.account_type === t ? `${C.green}12` : C.white,
-                  color: form.account_type === t ? C.green : C.gray400,
-                  fontWeight: form.account_type === t ? 700 : 500,
-                  fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                }}>{t}</button>
-              ))}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: `${C.green}0d`, border: `1.5px solid ${C.green}33`, borderRadius: 9 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: C.green }}>{accountType}</div>
+                <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>
+                  {cdsUserCount} user{cdsUserCount !== 1 ? "s" : ""} on this CDS
+                </div>
+              </div>
+              <div style={{ fontSize: 20 }}>{accountType === "Corporate" ? "🏢" : "👤"}</div>
             </div>
           </Section>
 
           {/* Security — email only here, no duplication */}
           <Section title="Security" icon="🔐">
-            <Field label="Email Address">
-              <div style={{ ...inpReadOnly, display: "flex", alignItems: "center", gap: 8 }}>
-                <span>📧</span><span style={{ fontSize: 13 }}>{email || "—"}</span>
-              </div>
-              <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>Email cannot be changed</div>
-            </Field>
-
             <button
               onClick={() => setShowPwModal(true)}
               style={{
@@ -857,7 +860,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         </div>
 
         {/* ══ RIGHT COLUMN ══ */}
-        <div>
+        <div style={{ overflowY: "auto", height: "100%", paddingRight: 2 }}>
           {/* Account Information — no CDS field here */}
           <Section title="Account Information" icon="👤">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
