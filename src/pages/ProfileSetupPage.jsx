@@ -1,13 +1,12 @@
 // ── src/pages/ProfileSetupPage.jsx ────────────────────────────────
-// Shown once after registration — collects mandatory profile fields
 import { useState } from "react";
-import { sbUpsertProfile } from "../lib/supabase";
+import { sbUpsertProfile, sbSignOut } from "../lib/supabase";
 import { C } from "../components/ui";
 import logo from "../assets/logo.jpg";
 
 const ACCOUNT_TYPES = ["Individual", "Joint", "Corporate"];
 
-export default function ProfileSetupPage({ session, onComplete }) {
+export default function ProfileSetupPage({ session, onComplete, onCancel }) {
   const email = session?.user?.email || session?.email || "";
 
   const [form, setForm] = useState({
@@ -16,8 +15,9 @@ export default function ProfileSetupPage({ session, onComplete }) {
     phone:        "",
     account_type: "Individual",
   });
-  const [saving, setSaving] = useState(false);
-  const [error,  setError]  = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [error,     setError]     = useState("");
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -29,13 +29,57 @@ export default function ProfileSetupPage({ session, onComplete }) {
     if (!form.phone.trim())      return setError("Phone number is required");
     setSaving(true);
     try {
-      const profile = await sbUpsertProfile(form);
-      onComplete(profile);
+      // Insert a fresh profile row for this user
+      const uid = session?.user?.id || session?.id;
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "apikey":        import.meta.env.VITE_SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            "Prefer":        "return=representation",
+          },
+          body: JSON.stringify({ ...form, id: uid }),
+        }
+      );
+
+      if (!res.ok) {
+        // If insert fails (profile already exists), try PATCH instead
+        const patchRes = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?id=eq.${uid}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type":  "application/json",
+              "apikey":        import.meta.env.VITE_SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              "Prefer":        "return=representation",
+            },
+            body: JSON.stringify(form),
+          }
+        );
+        if (!patchRes.ok) throw new Error(await patchRes.text());
+        const rows = await patchRes.json();
+        onComplete(rows[0] || { ...form, id: uid });
+        return;
+      }
+
+      const rows = await res.json();
+      onComplete(rows[0] || { ...form, id: uid });
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Failed to save profile. Please try again.");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    await sbSignOut();
+    if (onCancel) onCancel();
+    else window.location.reload();
   };
 
   // ── Shared styles ──────────────────────────────────────────────
@@ -43,8 +87,9 @@ export default function ProfileSetupPage({ session, onComplete }) {
     width: "100%", padding: "11px 14px", borderRadius: 10, fontSize: 14,
     border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
     background: C.gray50, color: C.text, transition: "border 0.2s",
+    boxSizing: "border-box",
   };
-  const label = (text, required) => (
+  const lbl = (text, required) => (
     <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: "block", marginBottom: 6 }}>
       {text} {required && <span style={{ color: C.red }}>*</span>}
     </label>
@@ -83,8 +128,8 @@ export default function ProfileSetupPage({ session, onComplete }) {
         <form onSubmit={handleSubmit}>
           {/* Full Name */}
           <div style={{ marginBottom: 16 }}>
-            {label("Full Name", true)}
-            <input style={inp} type="text" placeholder="e.g. Michael Luzigah" value={form.full_name}
+            {lbl("Full Name", true)}
+            <input style={inp} type="text" placeholder="e.g. Naomi Maguya" value={form.full_name}
               onChange={e => set("full_name", e.target.value)}
               onFocus={e => e.target.style.borderColor = C.green}
               onBlur={e  => e.target.style.borderColor = C.gray200} />
@@ -92,7 +137,7 @@ export default function ProfileSetupPage({ session, onComplete }) {
 
           {/* CDS Number */}
           <div style={{ marginBottom: 16 }}>
-            {label("CDS Number", true)}
+            {lbl("CDS Number", true)}
             <input style={inp} type="text" placeholder="e.g. CDS-647305" value={form.cds_number}
               onChange={e => set("cds_number", e.target.value)}
               onFocus={e => e.target.style.borderColor = C.green}
@@ -101,7 +146,7 @@ export default function ProfileSetupPage({ session, onComplete }) {
 
           {/* Phone */}
           <div style={{ marginBottom: 16 }}>
-            {label("Phone Number", true)}
+            {lbl("Phone Number", true)}
             <input style={inp} type="tel" placeholder="e.g. +255713262087" value={form.phone}
               onChange={e => set("phone", e.target.value)}
               onFocus={e => e.target.style.borderColor = C.green}
@@ -110,7 +155,7 @@ export default function ProfileSetupPage({ session, onComplete }) {
 
           {/* Account Type */}
           <div style={{ marginBottom: 28 }}>
-            {label("Account Type", true)}
+            {lbl("Account Type", true)}
             <div style={{ display: "flex", gap: 10 }}>
               {ACCOUNT_TYPES.map(t => (
                 <button key={t} type="button" onClick={() => set("account_type", t)} style={{
@@ -129,13 +174,27 @@ export default function ProfileSetupPage({ session, onComplete }) {
           </div>
 
           {/* Submit */}
-          <button type="submit" disabled={saving} style={{
+          <button type="submit" disabled={saving || cancelling} style={{
             width: "100%", padding: "13px", borderRadius: 10, border: "none",
             background: saving ? C.gray200 : C.green, color: C.white,
             fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer",
-            fontFamily: "inherit", transition: "background 0.2s",
+            fontFamily: "inherit", transition: "background 0.2s", marginBottom: 10,
           }}>
             {saving ? "Saving..." : "Continue to Portal →"}
+          </button>
+
+          {/* Cancel — signs out so another user can log in */}
+          <button type="button" onClick={handleCancel} disabled={saving || cancelling} style={{
+            width: "100%", padding: "11px", borderRadius: 10,
+            border: `1.5px solid ${C.gray200}`, background: C.white,
+            color: C.gray400, fontWeight: 600, fontSize: 14,
+            cursor: cancelling ? "not-allowed" : "pointer",
+            fontFamily: "inherit", transition: "all 0.15s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#dc2626"; e.currentTarget.style.color = "#dc2626"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}
+          >
+            {cancelling ? "Signing out..." : "Cancel & Sign Out"}
           </button>
 
           <div style={{ fontSize: 12, color: C.gray400, textAlign: "center", marginTop: 12 }}>
