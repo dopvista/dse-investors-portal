@@ -23,23 +23,18 @@ export const C = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────
-// Standard format — no trailing .00, shows decimals only if meaningful
 export const fmt = (n) => {
   const v = Number(n || 0);
   return v % 1 === 0
     ? v.toLocaleString("en-US")
     : v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
-
-// Integer format — no decimals ever
-export const fmtInt = (n) => Number(n || 0).toLocaleString("en-US");
-
-// Smart format — abbreviates large numbers for stat cards
+export const fmtInt   = (n) => Number(n || 0).toLocaleString("en-US");
 export const fmtSmart = (n) => {
   const v = Number(n || 0);
   if (v >= 1_000_000_000) return (v / 1_000_000_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "B";
-  if (v >= 1_000_000)     return (v / 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "M";
-  if (v >= 1_000)         return (v / 1_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "K";
+  if (v >= 1_000_000)     return (v / 1_000_000).toLocaleString("en-US",     { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "M";
+  if (v >= 1_000)         return (v / 1_000).toLocaleString("en-US",         { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "K";
   return v.toLocaleString("en-US");
 };
 
@@ -54,7 +49,7 @@ export function Spinner({ size = 18, color = "#fff" }) {
 export function Toast({ msg, type }) {
   if (!msg) return null;
   return (
-    <div style={{ position: "fixed", bottom: 28, right: 28, background: type === "error" ? C.red : C.green, color: C.white, padding: "14px 22px", borderRadius: 10, fontSize: 14, fontWeight: 500, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ position: "fixed", bottom: 28, right: 28, background: type === "error" ? C.red : C.green, color: C.white, padding: "14px 22px", borderRadius: 10, fontSize: 14, fontWeight: 500, zIndex: 99999, boxShadow: "0 8px 24px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10 }}>
       <span>{type === "error" ? "✕" : "✓"}</span>{msg}
     </div>
   );
@@ -203,19 +198,8 @@ export function ActionMenu({ actions }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// ─── MODAL SHELL (shared structure for ALL modals) ────────────────
+// ─── MODAL SHELL ─────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════
-//
-//  Every modal in this system uses this shell. The anatomy is:
-//
-//  ┌─────────────────────────────────┐  ← white card, rounded-16, shadow
-//  │  HEADER  title / subtitle / ✕  │  ← white bg, border-bottom
-//  ├─────────────────────────────────┤
-//  │  BODY    (children)             │  ← scrollable if maxHeight set
-//  ├─────────────────────────────────┤
-//  │  FOOTER  action buttons         │  ← gray50 bg, border-top
-//  └─────────────────────────────────┘
-//
 function ModalShell({ title, subtitle, headerRight, onClose, footer, children, maxWidth = 460, maxHeight }) {
   return (
     <div
@@ -223,8 +207,6 @@ function ModalShell({ title, subtitle, headerRight, onClose, footer, children, m
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth, display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", ...(maxHeight ? { maxHeight } : {}) }}>
-
-        {/* ── Header ── */}
         <div style={{ padding: "22px 28px 16px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.text }}>{title}</div>
@@ -232,20 +214,12 @@ function ModalShell({ title, subtitle, headerRight, onClose, footer, children, m
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginLeft: 16, flexShrink: 0 }}>
             {headerRight}
-            <button
-              onClick={onClose}
-              style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.gray200}`, background: C.gray50, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", color: C.gray600, flexShrink: 0 }}>
-              ✕
-            </button>
+            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.gray200}`, background: C.gray50, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", color: C.gray600, flexShrink: 0 }}>✕</button>
           </div>
         </div>
-
-        {/* ── Body ── */}
         <div style={{ padding: "20px 28px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto", flex: 1 }}>
           {children}
         </div>
-
-        {/* ── Footer ── */}
         {footer && (
           <div style={{ padding: "16px 28px", borderTop: `1px solid ${C.gray200}`, display: "flex", gap: 10, justifyContent: "flex-end", alignItems: "center", background: C.gray50, borderRadius: "0 0 16px 16px", flexShrink: 0 }}>
             {footer}
@@ -262,26 +236,9 @@ export function Modal({ type = "confirm", title, message, onConfirm, onClose }) 
   const isWarn = type === "warning";
   return (
     <ModalShell
-      title={
-        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ width: 34, height: 34, borderRadius: 10, background: isWarn ? C.redBg : "#FFF7ED", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-            {isWarn ? "🚫" : "🗑️"}
-          </span>
-          {title}
-        </span>
-      }
-      onClose={onClose}
-      maxWidth={420}
-      footer={
-        isWarn ? (
-          <Btn variant="secondary" onClick={onClose}>Close</Btn>
-        ) : (
-          <>
-            <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-            <Btn variant="danger" onClick={onConfirm} style={{ background: C.red, color: C.white, border: "none" }}>Yes, Delete</Btn>
-          </>
-        )
-      }
+      title={<span style={{ display: "flex", alignItems: "center", gap: 10 }}><span style={{ width: 34, height: 34, borderRadius: 10, background: isWarn ? C.redBg : "#FFF7ED", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{isWarn ? "🚫" : "🗑️"}</span>{title}</span>}
+      onClose={onClose} maxWidth={420}
+      footer={isWarn ? (<Btn variant="secondary" onClick={onClose}>Close</Btn>) : (<><Btn variant="secondary" onClick={onClose}>Cancel</Btn><Btn variant="danger" onClick={onConfirm} style={{ background: C.red, color: C.white, border: "none" }}>Yes, Delete</Btn></>)}
     >
       <div style={{ fontSize: 14, color: C.gray600, lineHeight: 1.7 }}>{message}</div>
     </ModalShell>
@@ -308,26 +265,12 @@ export function CompanyFormModal({ company, onConfirm, onClose }) {
     <ModalShell
       title={isEdit ? "✏️ Edit Company" : "➕ Register New Company"}
       subtitle={isEdit ? "To change the price use the 💰 Price button" : undefined}
-      onClose={onClose}
-      maxWidth={460}
-      footer={
-        <>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" onClick={handle} icon="💾">
-            {isEdit ? "Save Changes" : "Register Company"}
-          </Btn>
-        </>
-      }
+      onClose={onClose} maxWidth={460}
+      footer={<><Btn variant="secondary" onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={handle} icon="💾">{isEdit ? "Save Changes" : "Register Company"}</Btn></>}
     >
-      {error && (
-        <div style={{ background: C.redBg, border: `1px solid #FECACA`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.red, fontWeight: 500 }}>
-          ⚠️ {error}
-        </div>
-      )}
+      {error && <div style={{ background: C.redBg, border: `1px solid #FECACA`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.red, fontWeight: 500 }}>⚠️ {error}</div>}
       <FInput label="Company Name" required value={name} onChange={e => { setName(e.target.value); setError(""); }} placeholder="e.g. Tanzania Breweries" autoFocus />
-      {!isEdit && (
-        <FInput label="Opening Price (TZS)" required type="number" value={price} onChange={e => { setPrice(e.target.value); setError(""); }} placeholder="0.00" />
-      )}
+      {!isEdit && <FInput label="Opening Price (TZS)" required type="number" value={price} onChange={e => { setPrice(e.target.value); setError(""); }} placeholder="0.00" />}
       <FTextarea label="Remarks" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional notes..." style={{ minHeight: 72 }} />
     </ModalShell>
   );
@@ -345,10 +288,7 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
   if (!company) return null;
 
   const handleConfirm = () => {
-    if (!newPrice || isNaN(Number(newPrice)) || Number(newPrice) <= 0) {
-      setError("Please enter a valid price greater than 0.");
-      return;
-    }
+    if (!newPrice || isNaN(Number(newPrice)) || Number(newPrice) <= 0) { setError("Please enter a valid price greater than 0."); return; }
     setError("");
     onConfirm({ newPrice: Number(newPrice), datetime, reason });
   };
@@ -361,37 +301,21 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
     <ModalShell
       title="💰 Update Share Price"
       subtitle={<span style={{ fontSize: 17, fontWeight: 800, color: C.text }}>{company.name}</span>}
-      onClose={onClose}
-      maxWidth={440}
-      footer={
-        <>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" onClick={handleConfirm} icon="💾">Update Price</Btn>
-        </>
-      }
+      onClose={onClose} maxWidth={440}
+      footer={<><Btn variant="secondary" onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={handleConfirm} icon="💾">Update Price</Btn></>}
     >
-      {/* Current Price display */}
       <div style={{ background: C.gray50, borderRadius: 10, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 12, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div>
         <div style={{ fontSize: 18, fontWeight: 800, color: C.navy }}>TZS {fmt(company.price)}</div>
       </div>
-
-      {/* New Price input */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          New Price (TZS) <span style={{ color: C.red }}>*</span>
-        </label>
-        <input
-          type="number" value={newPrice} onChange={e => { setNewPrice(e.target.value); setError(""); }}
-          placeholder="Enter new price..." autoFocus
+        <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>New Price (TZS) <span style={{ color: C.red }}>*</span></label>
+        <input type="number" value={newPrice} onChange={e => { setNewPrice(e.target.value); setError(""); }} placeholder="Enter new price..." autoFocus
           style={{ border: `1.5px solid ${error ? C.red : C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 15, fontWeight: 700, outline: "none", fontFamily: "inherit", color: C.text, width: "100%", boxSizing: "border-box" }}
           onFocus={e => !error && (e.target.style.borderColor = C.green)}
-          onBlur={e => !error && (e.target.style.borderColor = C.gray200)}
-        />
+          onBlur={e => !error && (e.target.style.borderColor = C.gray200)} />
         {error && <div style={{ fontSize: 12, color: C.red }}>{error}</div>}
       </div>
-
-      {/* Price movement preview */}
       {changeAmt !== null && newPrice && (
         <div style={{ background: up ? C.greenBg : C.redBg, border: `1px solid ${up ? "#BBF7D0" : "#FECACA"}`, borderRadius: 10, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 12, color: C.gray600, fontWeight: 600 }}>Price Movement</div>
@@ -401,27 +325,17 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
           </div>
         </div>
       )}
-
-      {/* Date & Time */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date & Time</label>
-        <input
-          type="datetime-local" value={datetime} onChange={e => setDatetime(e.target.value)}
+        <input type="datetime-local" value={datetime} onChange={e => setDatetime(e.target.value)}
           style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, width: "100%", boxSizing: "border-box" }}
-          onFocus={e => (e.target.style.borderColor = C.green)}
-          onBlur={e => (e.target.style.borderColor = C.gray200)}
-        />
+          onFocus={e => (e.target.style.borderColor = C.green)} onBlur={e => (e.target.style.borderColor = C.gray200)} />
       </div>
-
-      {/* Reason */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <label style={{ fontSize: 12, fontWeight: 600, color: C.gray600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Reason</label>
-        <input
-          type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="Reason for price change..."
+        <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder="Reason for price change..."
           style={{ border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, width: "100%", boxSizing: "border-box" }}
-          onFocus={e => (e.target.style.borderColor = C.green)}
-          onBlur={e => (e.target.style.borderColor = C.gray200)}
-        />
+          onFocus={e => (e.target.style.borderColor = C.green)} onBlur={e => (e.target.style.borderColor = C.gray200)} />
       </div>
     </ModalShell>
   );
@@ -434,20 +348,9 @@ export function PriceHistoryModal({ company, history, onClose }) {
     <ModalShell
       title="📈 Price History"
       subtitle={<span style={{ fontSize: 17, fontWeight: 800, color: C.text }}>{company.name}</span>}
-      headerRight={
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>TZS {fmt(company.price)}</div>
-        </div>
-      }
-      onClose={onClose}
-      maxWidth={900}
-      footer={
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-          <div style={{ fontSize: 12, color: C.gray400 }}>{history.length} price update{history.length !== 1 ? "s" : ""} recorded</div>
-          <Btn variant="secondary" onClick={onClose}>Close</Btn>
-        </div>
-      }
+      headerRight={<div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div><div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>TZS {fmt(company.price)}</div></div>}
+      onClose={onClose} maxWidth={900}
+      footer={<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}><div style={{ fontSize: 12, color: C.gray400 }}>{history.length} price update{history.length !== 1 ? "s" : ""} recorded</div><Btn variant="secondary" onClick={onClose}>Close</Btn></div>}
     >
       {history.length === 0 ? (
         <div style={{ textAlign: "center", padding: "30px 20px", color: C.gray400 }}>
@@ -457,7 +360,6 @@ export function PriceHistoryModal({ company, history, onClose }) {
         </div>
       ) : (
         <div style={{ margin: "0 -28px" }}>
-          {/* ── Frozen header ── */}
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
@@ -469,7 +371,6 @@ export function PriceHistoryModal({ company, history, onClose }) {
               </thead>
             </table>
           </div>
-          {/* ── Scrollable body — max 5 rows ── */}
           <div style={{ maxHeight: 285, overflowY: "auto", overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <tbody>
@@ -488,14 +389,10 @@ export function PriceHistoryModal({ company, history, onClose }) {
                       <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</td>
                       <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                        <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                          {up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%
-                        </span>
+                        <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%</span>
                       </td>
                       <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span>
-                      </td>
+                      <td style={{ padding: "10px 12px" }}><span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span></td>
                     </tr>
                   );
                 })}
@@ -523,10 +420,7 @@ export function TransactionFormModal({ transaction, companies, onConfirm, onClos
   const grandTotal = total + (Number(form.fees) || 0);
 
   const handle = () => {
-    if (!form.date || !form.companyId || !form.qty || !form.price) {
-      setError("Please fill in Date, Company, Quantity and Price per Share.");
-      return;
-    }
+    if (!form.date || !form.companyId || !form.qty || !form.price) { setError("Please fill in Date, Company, Quantity and Price per Share."); return; }
     setError("");
     onConfirm({ ...form, total, grandTotal });
   };
@@ -535,23 +429,10 @@ export function TransactionFormModal({ transaction, companies, onConfirm, onClos
     <ModalShell
       title={isEdit ? "✏️ Edit Transaction" : "📝 Record New Transaction"}
       subtitle={isEdit ? "Update the details below and save" : "Record a new buy or sell order"}
-      onClose={onClose}
-      maxWidth={620}
-      footer={
-        <>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn variant="primary" onClick={handle} icon="💾">
-            {isEdit ? "Save Changes" : "Record Transaction"}
-          </Btn>
-        </>
-      }
+      onClose={onClose} maxWidth={620}
+      footer={<><Btn variant="secondary" onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={handle} icon="💾">{isEdit ? "Save Changes" : "Record Transaction"}</Btn></>}
     >
-      {error && (
-        <div style={{ background: C.redBg, border: `1px solid #FECACA`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.red, fontWeight: 500 }}>
-          ⚠️ {error}
-        </div>
-      )}
-
+      {error && <div style={{ background: C.redBg, border: `1px solid #FECACA`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: C.red, fontWeight: 500 }}>⚠️ {error}</div>}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
         <FInput label="Date" required type="date" value={form.date} onChange={e => { setForm(f => ({ ...f, date: e.target.value })); setError(""); }} />
         <FSelect label="Company" required value={form.companyId} onChange={e => { setForm(f => ({ ...f, companyId: e.target.value })); setError(""); }}>
@@ -566,43 +447,29 @@ export function TransactionFormModal({ transaction, companies, onConfirm, onClos
         <FInput label="Price per Share (TZS)" required type="number" value={form.price} onChange={e => { setForm(f => ({ ...f, price: e.target.value })); setError(""); }} placeholder="0.00" />
         <FInput label="Other Fees (TZS)" type="number" value={form.fees} onChange={e => setForm(f => ({ ...f, fees: e.target.value }))} placeholder="0.00" />
       </div>
-
-      {/* Auto-calc summary */}
       {total > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 10, padding: 16 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Shares Total</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(total)}</div>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Fees</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(form.fees || 0)}</div>
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Grand Total</div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.green, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(grandTotal)}</div>
-          </div>
+          <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Shares Total</div><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(total)}</div></div>
+          <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Fees</div><div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(form.fees || 0)}</div></div>
+          <div style={{ minWidth: 0 }}><div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Grand Total</div><div style={{ fontSize: 14, fontWeight: 800, color: C.green, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>TZS {fmt(grandTotal)}</div></div>
         </div>
       )}
-
       <FTextarea label="Remarks" value={form.remarks} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} placeholder="Optional notes..." style={{ minHeight: 56 }} />
     </ModalShell>
   );
 }
 
-// ─── Import Transactions Modal ────────────────────────────────────────────────
+// ─── Import Transactions Modal ────────────────────────────────────
 export function ImportTransactionsModal({ companies, onImport, onClose }) {
-  const [step, setStep]         = useState("upload");
-  const [rows, setRows]         = useState([]);
-  const [errors, setErrors]     = useState([]);
-  const [fileName, setFileName] = useState("");
+  const [step, setStep]           = useState("upload");
+  const [rows, setRows]           = useState([]);
+  const [errors, setErrors]       = useState([]);
+  const [fileName, setFileName]   = useState("");
   const [importing, setImporting] = useState(false);
-  const [parsing, setParsing]   = useState(false);
+  const [parsing, setParsing]     = useState(false);
   const fileRef = useRef(null);
-
   const MAX_ROWS = 500;
 
-  // ── Download template ─────────────────────────────────────────
   const downloadTemplate = () => {
     const link = document.createElement("a");
     link.href = "/Transactions_Import_Template.xlsx";
@@ -610,91 +477,46 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     link.click();
   };
 
-  // ── Reset to upload step ──────────────────────────────────────
   const resetToUpload = () => {
-    setStep("upload");
-    setRows([]);
-    setErrors([]);
-    setFileName("");
-    // Reset file input so same file can be re-selected
+    setStep("upload"); setRows([]); setErrors([]); setFileName("");
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  // ── Parse uploaded Excel file ─────────────────────────────────
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Validate file type
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      alert("Please select an Excel file (.xlsx or .xls)");
-      return;
-    }
-
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { alert("Please select an Excel file (.xlsx or .xls)"); return; }
     setFileName(file.name);
     setParsing(true);
-
     try {
       const data = await file.arrayBuffer();
       const wb   = XLSX.read(data, { type: "array", cellDates: true });
       const ws   = wb.Sheets[wb.SheetNames[0]];
       const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
-
-      // Skip header/hint/title rows
       const SKIP_PREFIXES = ["dse", "fill", "date", "dd/", "yyyy", "column", "step", "important", "•", "note"];
       const dataRows = json.filter(row => {
         const first = String(Object.values(row)[0] ?? "").trim().toLowerCase();
         if (!first) return false;
         return !SKIP_PREFIXES.some(p => first.startsWith(p));
       });
+      if (dataRows.length > MAX_ROWS) { alert(`This file has ${dataRows.length} rows. Maximum allowed is ${MAX_ROWS} rows per import.`); setParsing(false); if (fileRef.current) fileRef.current.value = ""; return; }
+      if (dataRows.length === 0) { setRows([]); setErrors([]); setStep("preview"); setParsing(false); return; }
 
-      // Enforce 500 row limit
-      if (dataRows.length > MAX_ROWS) {
-        alert(`This file has ${dataRows.length} rows. Maximum allowed is ${MAX_ROWS} rows per import. Please split into smaller files.`);
-        setParsing(false);
-        if (fileRef.current) fileRef.current.value = "";
-        return;
-      }
-
-      if (dataRows.length === 0) {
-        setRows([]);
-        setErrors([]);
-        setStep("preview");
-        setParsing(false);
-        return;
-      }
-
-      const parsed = [];
-      const errs   = [];
-
+      const parsed = [], errs = [];
       dataRows.forEach((row, i) => {
-        const rowNum = i + 1;
-        const keys   = Object.keys(row);
+        const keys = Object.keys(row);
         const getRaw = (idx) => row[keys[idx]];
         const get    = (idx) => String(row[keys[idx]] ?? "").trim();
-
-        const dateRaw = getRaw(0);
-        const company = get(1).trim();
-        const type    = get(2).trim();
-        const qty     = Number(get(3));
-        const price   = Number(get(4));
-        const fees    = Number(get(5)) || 0;
-        const remarks = get(6);
-
+        const dateRaw = getRaw(0), company = get(1).trim(), type = get(2).trim();
+        const qty = Number(get(3)), price = Number(get(4)), fees = Number(get(5)) || 0, remarks = get(6);
         const rowErrs = [];
         if (!dateRaw) rowErrs.push("Missing date");
         if (!company) rowErrs.push("Missing company name");
         if (!["Buy", "Sell"].includes(type)) rowErrs.push("Type must be exactly 'Buy' or 'Sell'");
         if (!qty || isNaN(qty) || qty <= 0)   rowErrs.push("Invalid quantity");
         if (!price || isNaN(price) || price <= 0) rowErrs.push("Invalid price");
-
-        // Case-insensitive + trimmed company match
-        const matchedCompany = companies.find(c =>
-          c.name.toLowerCase().trim() === company.toLowerCase()
-        );
+        const matchedCompany = companies.find(c => c.name.toLowerCase().trim() === company.toLowerCase());
         if (company && !matchedCompany) rowErrs.push(`Company "${company}" not found in Holdings`);
-
-        // Convert date → YYYY-MM-DD for Supabase
         let date = "";
         if (dateRaw instanceof Date && !isNaN(dateRaw)) {
           date = `${dateRaw.getFullYear()}-${String(dateRaw.getMonth()+1).padStart(2,"0")}-${String(dateRaw.getDate()).padStart(2,"0")}`;
@@ -703,82 +525,39 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
           date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
         } else {
           const dateStr = String(dateRaw).trim();
-          if (dateStr.includes("/")) {
-            const [dd, mm, yyyy] = dateStr.split("/");
-            date = `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
-          } else {
-            date = dateStr; // Already YYYY-MM-DD
-          }
+          if (dateStr.includes("/")) { const [dd, mm, yyyy] = dateStr.split("/"); date = `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`; }
+          else { date = dateStr; }
         }
-
-        if (rowErrs.length) {
-          errs.push({ row: rowNum, errors: rowErrs });
-        } else {
-          parsed.push({
-            date,
-            company_id:   matchedCompany.id,
-            company_name: matchedCompany.name,
-            type,
-            qty,
-            price,
-            fees:    fees || null,
-            remarks: remarks || null,
-            total:   qty * price,  // total = shares only, fees stored separately
-          });
-        }
+        if (rowErrs.length) { errs.push({ row: i + 1, errors: rowErrs }); }
+        else { parsed.push({ date, company_id: matchedCompany.id, company_name: matchedCompany.name, type, qty, price, fees: fees || null, remarks: remarks || null, total: qty * price }); }
       });
-
-      setRows(parsed);
-      setErrors(errs);
-      setStep("preview");
-    } catch (err) {
-      alert("Failed to read file: " + err.message);
-      if (fileRef.current) fileRef.current.value = "";
-    } finally {
-      setParsing(false);
-    }
+      setRows(parsed); setErrors(errs); setStep("preview");
+    } catch (err) { alert("Failed to read file: " + err.message); if (fileRef.current) fileRef.current.value = ""; }
+    finally { setParsing(false); }
   };
 
-  // ── Import all valid rows ─────────────────────────────────────
   const handleImport = async () => {
     if (!rows.length) return;
     setImporting(true);
-    try {
-      await onImport(rows);
-      onClose();
-    } catch (e) {
-      alert("Import failed: " + e.message);
-    } finally {
-      setImporting(false);
-    }
+    try { await onImport(rows); onClose(); }
+    catch (e) { alert("Import failed: " + e.message); }
+    finally { setImporting(false); }
   };
 
-  // ── Upload Step ───────────────────────────────────────────────
   const UploadStep = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-      {/* Step 1 */}
       <div style={{ background: C.gray50, border: `1.5px solid ${C.gray200}`, borderRadius: 12, padding: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{ width: 42, height: 42, background: `${C.green}15`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>📥</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>Step 1 — Download Sample Template</div>
-            <div style={{ fontSize: 12, color: C.gray400, marginTop: 3, lineHeight: 1.5 }}>
-              Download the Excel template, fill in your transactions, and save the file.
-            </div>
-            <button
-              onClick={downloadTemplate}
-              style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.green, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-            >
+            <div style={{ fontSize: 12, color: C.gray400, marginTop: 3, lineHeight: 1.5 }}>Download the Excel template, fill in your transactions, and save the file.</div>
+            <button onClick={downloadTemplate} style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.green, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }} onMouseEnter={e => e.currentTarget.style.opacity = "0.9"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
               <span>⬇️</span> Download Import_Transactions_Template.xlsx
             </button>
           </div>
         </div>
       </div>
-
-      {/* Step 2 */}
       <div style={{ background: C.gray50, border: `1.5px dashed ${C.gray300}`, borderRadius: 12, padding: 20 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{ width: 42, height: 42, background: `${C.navy}15`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
@@ -786,22 +565,14 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>Step 2 — Select File to Import</div>
-            <div style={{ fontSize: 12, color: C.gray400, marginTop: 3, lineHeight: 1.5 }}>
-              Select your filled Excel file (.xlsx). Maximum {MAX_ROWS} rows per import.
-            </div>
+            <div style={{ fontSize: 12, color: C.gray400, marginTop: 3, lineHeight: 1.5 }}>Select your filled Excel file (.xlsx). Maximum {MAX_ROWS} rows per import.</div>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={handleFile} style={{ display: "none" }} />
-            <button
-              onClick={() => !parsing && fileRef.current?.click()}
-              disabled={parsing}
-              style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.navy, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: parsing ? "wait" : "pointer", opacity: parsing ? 0.7 : 1, fontFamily: "inherit" }}
-            >
+            <button onClick={() => !parsing && fileRef.current?.click()} disabled={parsing} style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 8, background: C.navy, color: C.white, border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: parsing ? "wait" : "pointer", opacity: parsing ? 0.7 : 1, fontFamily: "inherit" }}>
               <span>📁</span> {parsing ? "Reading file..." : fileName || "Choose Excel File..."}
             </button>
           </div>
         </div>
       </div>
-
-      {/* Tips */}
       <div style={{ background: "#FEF9EC", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "12px 16px" }}>
         <div style={{ fontSize: 12, color: "#92400E", fontWeight: 600, marginBottom: 6 }}>💡 Tips</div>
         <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.7 }}>
@@ -815,39 +586,19 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     </div>
   );
 
-  // ── Preview Step ──────────────────────────────────────────────
   const PreviewStep = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-      {/* Summary */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-        <div style={{ background: C.greenBg, border: `1px solid ${C.green}33`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>{rows.length}</div>
-          <div style={{ fontSize: 11, color: C.green, fontWeight: 600, marginTop: 2 }}>Valid Rows</div>
-        </div>
-        <div style={{ background: errors.length ? C.redBg : C.gray50, border: `1px solid ${errors.length ? C.red : C.gray200}33`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: errors.length ? C.red : C.gray400 }}>{errors.length}</div>
-          <div style={{ fontSize: 11, color: errors.length ? C.red : C.gray400, fontWeight: 600, marginTop: 2 }}>Rows with Errors</div>
-        </div>
-        <div style={{ background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.navy }}>{rows.length + errors.length}</div>
-          <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, marginTop: 2 }}>Total Rows Found</div>
-        </div>
+        <div style={{ background: C.greenBg, border: `1px solid ${C.green}33`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>{rows.length}</div><div style={{ fontSize: 11, color: C.green, fontWeight: 600, marginTop: 2 }}>Valid Rows</div></div>
+        <div style={{ background: errors.length ? C.redBg : C.gray50, border: `1px solid ${errors.length ? C.red : C.gray200}33`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: errors.length ? C.red : C.gray400 }}>{errors.length}</div><div style={{ fontSize: 11, color: errors.length ? C.red : C.gray400, fontWeight: 600, marginTop: 2 }}>Rows with Errors</div></div>
+        <div style={{ background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: C.navy }}>{rows.length + errors.length}</div><div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, marginTop: 2 }}>Total Rows Found</div></div>
       </div>
-
-      {/* Errors */}
       {errors.length > 0 && (
         <div style={{ background: C.redBg, border: `1px solid ${C.red}33`, borderRadius: 10, padding: "12px 16px", maxHeight: 160, overflowY: "auto" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.red, marginBottom: 8 }}>⚠️ {errors.length} row(s) will be skipped:</div>
-          {errors.map((e, i) => (
-            <div key={i} style={{ fontSize: 12, color: C.red, marginBottom: 4 }}>
-              <strong>Row {e.row}:</strong> {e.errors.join(" · ")}
-            </div>
-          ))}
+          {errors.map((e, i) => <div key={i} style={{ fontSize: 12, color: C.red, marginBottom: 4 }}><strong>Row {e.row}:</strong> {e.errors.join(" · ")}</div>)}
         </div>
       )}
-
-      {/* Preview table */}
       {rows.length > 0 && (
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>✅ Preview — {rows.length} rows ready to import:</div>
@@ -862,17 +613,13 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
               </thead>
               <tbody>
                 {rows.map((r, i) => {
-                  const displayDate = r.date && r.date.includes("-")
-                    ? r.date.split("-").reverse().join("/")
-                    : r.date;
+                  const displayDate = r.date && r.date.includes("-") ? r.date.split("-").reverse().join("/") : r.date;
                   return (
                     <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
                       <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{i + 1}</td>
                       <td style={{ padding: "7px 10px", color: C.text, whiteSpace: "nowrap" }}>{displayDate}</td>
                       <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.company_name}</td>
-                      <td style={{ padding: "7px 10px" }}>
-                        <span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span>
-                      </td>
+                      <td style={{ padding: "7px 10px" }}><span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span></td>
                       <td style={{ padding: "7px 10px", color: C.text, textAlign: "right" }}>{fmtInt(r.qty)}</td>
                       <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600, textAlign: "right" }}>{fmtInt(r.price)}</td>
                       <td style={{ padding: "7px 10px", color: C.gray600, textAlign: "right" }}>{r.fees ? fmtInt(r.fees) : "—"}</td>
@@ -885,7 +632,6 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
           </div>
         </div>
       )}
-
       {rows.length === 0 && (
         <div style={{ textAlign: "center", padding: "30px", color: C.gray400 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>😟</div>
@@ -900,15 +646,10 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     <ModalShell
       title="⬆️ Import Transactions"
       subtitle={step === "upload" ? "Upload your filled Excel template" : `Reviewing ${rows.length + errors.length} rows from "${fileName}"`}
-      onClose={onClose}
-      maxWidth={640}
+      onClose={onClose} maxWidth={640}
       footer={
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-          <div>
-            {step === "preview" && (
-              <Btn variant="secondary" onClick={resetToUpload}>← Back</Btn>
-            )}
-          </div>
+          <div>{step === "preview" && <Btn variant="secondary" onClick={resetToUpload}>← Back</Btn>}</div>
           <div style={{ display: "flex", gap: 10 }}>
             <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
             {step === "preview" && rows.length > 0 && (
