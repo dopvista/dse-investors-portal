@@ -206,8 +206,6 @@ export async function sbGetRoles() {
 }
 
 export async function sbGetAllUsers() {
-  // Calls get_all_users() SECURITY DEFINER function which reads auth.users
-  // directly — returns ALL users including those without profiles yet
   const res = await fetch(`${BASE}/rest/v1/rpc/get_all_users`, {
     method:  "POST",
     headers: headers(token()),
@@ -222,8 +220,8 @@ export async function sbGetAllUsers() {
 
 /**
  * sbAssignRole(userId, roleId)
- * Calls the assign_user_role() DB function which runs as SECURITY DEFINER
- * — bypasses RLS entirely, handles deactivate + upsert internally.
+ * Calls assign_user_role() DB function (SECURITY DEFINER).
+ * Enforces CDS scoping server-side — AD can only assign within their CDS.
  */
 export async function sbAssignRole(userId, roleId) {
   const res = await fetch(`${BASE}/rest/v1/rpc/assign_user_role`, {
@@ -243,7 +241,7 @@ export async function sbAssignRole(userId, roleId) {
 
 /**
  * sbDeactivateRole(userId)
- * Calls the deactivate_user_role() DB function which runs as SECURITY DEFINER.
+ * Calls deactivate_user_role() DB function (SECURITY DEFINER).
  */
 export async function sbDeactivateRole(userId) {
   const res = await fetch(`${BASE}/rest/v1/rpc/deactivate_user_role`, {
@@ -259,12 +257,21 @@ export async function sbDeactivateRole(userId) {
 }
 
 /**
- * sbAdminCreateUser(email, password)
+ * sbAdminCreateUser(email, password, cdsNumber)
+ *
  * Calls the create-user Edge Function which uses the service role key
  * to create users via the Admin API — bypasses public signup restriction.
- * The current SA/AD session is NOT affected.
+ *
+ * cdsNumber behaviour:
+ *   SA — required, passed explicitly, user is created under that CDS
+ *   AD — optional/ignored, the edge function derives it server-side
+ *        from the caller's own profile so it cannot be spoofed
+ *
+ * After creating the auth user the edge function also seeds a partial
+ * profile row { id, cds_number, account_type: 'Individual' } so the
+ * new user lands on ProfileSetupPage with CDS pre-filled and locked.
  */
-export async function sbAdminCreateUser(email, password) {
+export async function sbAdminCreateUser(email, password, cdsNumber) {
   const res = await fetch(`${BASE}/functions/v1/create-user`, {
     method:  "POST",
     headers: {
@@ -272,7 +279,11 @@ export async function sbAdminCreateUser(email, password) {
       "Authorization": `Bearer ${token()}`,
       "apikey":        KEY,
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      cds_number: cdsNumber || null,
+    }),
   });
   const data = await parseResponse(res, "Failed to create user");
   return data;
