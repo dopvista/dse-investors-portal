@@ -536,7 +536,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         </div>
 
         {/* ── RIGHT COLUMN ── */}
-        <div className="pcol" style={{ overflowY: "auto", overflowX: "clip", paddingRight: 3, paddingBottom: 8 }}>
+        <div className="pcol" style={{ overflowY: "auto", overflowX: "clip", paddingRight: 3, paddingBottom: 8, display: "flex", flexDirection: "column" }}>
 
           <Section title="Account Information" icon="👤">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -581,7 +581,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           </Section>
 
           {/* Photo tip */}
-          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 11, color: C.text }}>Profile Picture</div>
