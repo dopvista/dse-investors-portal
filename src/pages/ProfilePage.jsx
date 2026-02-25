@@ -536,7 +536,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         </div>
 
         {/* ── RIGHT COLUMN ── */}
-        <div className="pcol" style={{ overflowY: "auto", overflowX: "clip", paddingRight: 3, paddingBottom: 8, display: "flex", flexDirection: "column" }}>
+        <div className="pcol" style={{ overflowY: "auto", overflowX: "clip", paddingRight: 3, paddingBottom: 8, height: "100%", display: "flex", flexDirection: "column" }}>
 
           <Section title="Account Information" icon="👤">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
