@@ -67,7 +67,7 @@ function calcCompletion(form, avatarPreview) {
   const fields = [
     form.full_name, form.phone, form.nationality,
     form.postal_address, form.national_id, form.date_of_birth,
-    form.gender, avatarPreview || profile?.avatar_url,
+    form.gender, avatarPreview,
   ];
   const filled = fields.filter(f => f && String(f).trim()).length;
   return Math.round((filled / fields.length) * 100);
