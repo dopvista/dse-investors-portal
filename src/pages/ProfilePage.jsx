@@ -318,7 +318,6 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
     <>
       {/* Backdrop */}
       <div
-        onClick={step !== "done" ? onClose : undefined}
         style={{
           position: "fixed", inset: 0, background: "rgba(10,37,64,0.55)",
           zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center",
