@@ -573,7 +573,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
               </Field>
               <div style={{ alignSelf: "start" }}>
                 <Field label="Postal Address">
-                  <input style={inp()} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
+                  <input style={inp({ padding: "5px 10px" })} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
                     value={form.postal_address} onChange={e => set("postal_address", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
                 </Field>
               </div>
