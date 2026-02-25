@@ -1,6 +1,6 @@
 // ── src/pages/ProfilePage.jsx ─────────────────────────────────────
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { C } from "../components/ui"; 
+import { C } from "../components/ui";
 import { ROLE_META } from "../lib/constants";
 import AvatarCropModal from "../components/AvatarCropModal";
 
@@ -831,6 +831,32 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
             </div>
           </Section>
 
+          {/* Security */}
+          <Section title="Security" icon="🔐">
+            <button onClick={() => setShowPwModal(true)} style={{
+              width: "100%", padding: "9px", borderRadius: 9,
+              border: `1.5px solid ${C.gray200}`, background: C.white,
+              color: C.text, fontWeight: 600, fontSize: 13,
+              cursor: "pointer", fontFamily: "inherit",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.navy; e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.white; }}
+              onMouseLeave={e => { e.currentTarget.style.background = C.white; e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}
+            >
+              🔑 Change Password
+            </button>
+            <div style={{ marginTop: 10, display: "flex", gap: 3, alignItems: "center" }}>
+              {[1,2,3].map(i => (
+                <div key={i} style={{
+                  flex: 1, height: 3, borderRadius: 4,
+                  background: i <= (PW_MAX_DAILY - remainingPwChanges(session?.user?.id || profile?.id)) ? C.navy : C.gray100,
+                }} />
+              ))}
+              <span style={{ fontSize: 10, color: C.gray400, marginLeft: 5 }}>
+                {remainingPwChanges(session?.user?.id || profile?.id)}/{PW_MAX_DAILY} today
+              </span>
+            </div>
+          </Section>
         </div>
 
         {/* ══ RIGHT COLUMN ══ */}
@@ -873,57 +899,24 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 <CountrySelect value={form.nationality} onChange={v => set("nationality", v)} />
               </Field>
               <Field label="Postal Address">
-                <input style={inp({ height: "100%", minHeight: 34, boxSizing: "border-box" })} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
+                <input style={inp()} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
                   value={form.postal_address} onChange={e => set("postal_address", e.target.value)}
                   onFocus={focusGreen} onBlur={blurGray} />
               </Field>
             </div>
           </Section>
 
-        </div>
-      </div>
-
-      {/* ── Bottom row: Security + Photo tip side by side ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 12, flexShrink: 0, marginTop: 10 }}>
-
-        {/* Security */}
-        <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setShowPwModal(true)} style={{
-            flex: 1, padding: "7px", borderRadius: 8,
-            border: `1.5px solid ${C.gray200}`, background: C.white,
-            color: C.text, fontWeight: 600, fontSize: 12,
-            cursor: "pointer", fontFamily: "inherit",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = C.navy; e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.white; }}
-            onMouseLeave={e => { e.currentTarget.style.background = C.white; e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}
-          >
-            🔑 Change Password
-          </button>
-          <div style={{ display: "flex", gap: 3, alignItems: "center", flexShrink: 0 }}>
-            {[1,2,3].map(i => (
-              <div key={i} style={{
-                width: 18, height: 3, borderRadius: 4,
-                background: i <= (PW_MAX_DAILY - remainingPwChanges(session?.user?.id || profile?.id)) ? C.navy : C.gray100,
-              }} />
-            ))}
-            <span style={{ fontSize: 9, color: C.gray400, marginLeft: 3, whiteSpace: "nowrap" }}>
-              {remainingPwChanges(session?.user?.id || profile?.id)}/{PW_MAX_DAILY}
-            </span>
-          </div>
-        </div>
-
-        {/* Photo tip */}
-        <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>📷</span>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 11, color: C.text }}>Profile Picture</div>
-            <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.4 }}>
-              Click your avatar to upload. Use the crop tool to center your face. Stored permanently at 200×200px.
+          {/* Photo tip */}
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 11, color: C.text, marginBottom: 1 }}>Profile Picture</div>
+              <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.4 }}>
+                Click your avatar to upload. Use the crop tool to center your face. Stored permanently at 200×200px.
+              </div>
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );
