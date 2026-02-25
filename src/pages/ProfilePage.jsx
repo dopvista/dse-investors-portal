@@ -1,6 +1,6 @@
 // ── src/pages/ProfilePage.jsx ─────────────────────────────────────
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { C } from "../components/ui";
+import { C } from "../components/ui"; 
 import { ROLE_META } from "../lib/constants";
 import AvatarCropModal from "../components/AvatarCropModal";
 
