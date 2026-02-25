@@ -219,7 +219,10 @@ export default function AvatarCropModal({ imageSrc, onConfirm, onCancel }) {
       zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center",
       backdropFilter: "blur(3px)",
     }}>
-      <style>{`@keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }`}</style>
+      <style>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin   { to { transform: rotate(360deg); } }
+      `}</style>
 
       <div style={{
         background: C.white, borderRadius: 18, overflow: "hidden",
