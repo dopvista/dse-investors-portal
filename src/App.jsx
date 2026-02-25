@@ -6,22 +6,19 @@ import TransactionsPage from "./pages/TransactionsPage";
 import LoginPage from "./pages/LoginPage";
 import ProfileSetupPage from "./pages/ProfileSetupPage";
 import ProfilePage from "./pages/ProfilePage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import UserMenu from "./components/UserMenu";
 import logo from "./assets/logo.jpg";
 
 // ── Role-based nav visibility ──────────────────────────────────────
-// Each nav item declares which role codes can see it.
-// SA and AD can see everything. DE, VR, RO have limited access.
 const NAV = [
-  { id: "companies",       label: "Holdings",         icon: "🏢", roles: ["SA","AD","DE","VR","RO"] },
-  { id: "transactions",    label: "Transactions",     icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
-  { id: "user-management", label: "User Management",  icon: "👥", roles: ["SA","AD"] },
-  // { id: "portfolio",    label: "Portfolio",        icon: "📊", roles: ["SA","AD","RO"] },
-  // { id: "reports",      label: "Reports",          icon: "📄", roles: ["SA","AD","VR","RO"] },
+  { id: "companies",       label: "Holdings",        icon: "🏢", roles: ["SA","AD","DE","VR","RO"] },
+  { id: "transactions",    label: "Transactions",    icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
+  { id: "user-management", label: "User Management", icon: "👥", roles: ["SA","AD"] },
 ];
 
-// ── Role display config (badge color + label) ──────────────────────
+// ── Role display config ────────────────────────────────────────────
 export const ROLE_META = {
   SA: { label: "Super Admin",  color: "#0A2540" },
   AD: { label: "Admin",        color: "#1E3A5F" },
@@ -33,21 +30,35 @@ export const ROLE_META = {
 export default function App() {
   const [session, setSession]           = useState(undefined);
   const [profile, setProfile]           = useState(undefined);
-  const [role, setRole]                 = useState(null);      // 'SA' | 'AD' | 'DE' | 'VR' | 'RO' | null
+  const [role, setRole]                 = useState(null);
   const [tab, setTab]                   = useState("companies");
   const [companies, setCompanies]       = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [dbError, setDbError]           = useState(null);
   const [toast, setToast]               = useState({ msg: "", type: "" });
+  const [recoveryMode, setRecoveryMode] = useState(false); // ← password reset flow
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: "", type: "" }), 3500);
   };
 
-  // ── Check session on mount ───────────────────────────────────────
+  // ── Check session on mount — also intercepts recovery tokens ────
   useEffect(() => {
+    // Detect #type=recovery in the URL hash (from password reset email)
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery")) {
+      const params = new URLSearchParams(hash.replace("#", ""));
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        localStorage.setItem("sb_recovery_token", accessToken);
+        window.history.replaceState(null, "", window.location.pathname); // clean URL
+        setRecoveryMode(true);
+        setSession(null); // ensure we don't try to load app data
+        return;
+      }
+    }
     const s = getSession();
     setSession(s || null);
   }, []);
@@ -59,12 +70,12 @@ export default function App() {
       try {
         const [p, r, c, t] = await Promise.all([
           sbGetProfile(),
-          sbGetMyRole(),       // ← fetch role alongside everything else
+          sbGetMyRole(),
           sbGet("companies"),
           sbGet("transactions"),
         ]);
         setProfile(p);
-        setRole(r);            // e.g. 'SA', 'AD', 'DE', 'VR', 'RO'
+        setRole(r);
         setCompanies(c);
         setTransactions(t);
       } catch (e) {
@@ -74,8 +85,7 @@ export default function App() {
     })();
   }, [session]);
 
-  const handleLogin = (s) => setSession(s);
-
+  const handleLogin    = (s) => setSession(s);
   const handleProfileDone = (p) => setProfile(p);
 
   const handleSignOut = async () => {
@@ -88,6 +98,14 @@ export default function App() {
     setLoading(true);
     setDbError(null);
   };
+
+  // ── Password recovery mode — intercept before everything else ────
+  if (recoveryMode) return (
+    <ResetPasswordPage onDone={() => {
+      setRecoveryMode(false);
+      localStorage.removeItem("sb_recovery_token");
+    }} />
+  );
 
   // ── Checking session ─────────────────────────────────────────────
   if (session === undefined) return (
@@ -127,9 +145,11 @@ export default function App() {
   );
 
   // ── No profile yet → show setup screen ───────────────────────────
-  if (!profile) return <ProfileSetupPage session={session} onComplete={handleProfileDone} onCancel={handleSignOut} />;
+  if (!profile) return (
+    <ProfileSetupPage session={session} onComplete={handleProfileDone} onCancel={handleSignOut} />
+  );
 
-  // ── Filter nav items by current user's role ───────────────────────
+  // ── Filter nav by role ────────────────────────────────────────────
   const visibleNav = NAV.filter(item => !role || item.roles.includes(role));
   const counts = { companies: companies.length, transactions: transactions.length };
   const now = new Date();
@@ -139,10 +159,8 @@ export default function App() {
     <div style={{ display: "flex", height: "100vh", width: "100%", fontFamily: "'Inter', system-ui, sans-serif", background: C.gray50, overflow: "hidden" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* ── Sidebar ─────────────────────────────────────────────── */}
+      {/* ── Sidebar ── */}
       <div style={{ width: 240, background: C.navy, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", overflowY: "auto" }}>
-
-        {/* Logo */}
         <div style={{ padding: "24px 20px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <img src={logo} alt="DI" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }} />
@@ -161,7 +179,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Supabase connected */}
         <div style={{ margin: "0 16px 12px", display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 7, height: 7, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
           <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Supabase connected</span>
@@ -169,7 +186,6 @@ export default function App() {
 
         <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "0 16px" }} />
 
-        {/* Nav — filtered by role */}
         <nav style={{ padding: "16px 12px", flex: 1 }}>
           <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", padding: "0 12px", marginBottom: 8 }}>Navigation</div>
           {visibleNav.map(item => {
@@ -196,7 +212,6 @@ export default function App() {
           })}
         </nav>
 
-        {/* User Menu */}
         <UserMenu
           profile={profile}
           session={session}
@@ -206,15 +221,13 @@ export default function App() {
         />
       </div>
 
-      {/* ── Main content ─────────────────────────────────────────── */}
+      {/* ── Main content ── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, height: "100vh", overflow: "hidden" }}>
-
-        {/* Top bar */}
         <div style={{ background: C.white, borderBottom: `1px solid ${C.gray200}`, padding: "0 32px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 18, color: C.text }}>
-              {tab === "profile"          && "My Profile"}
-              {tab === "user-management"  && "User Management"}
+              {tab === "profile"         && "My Profile"}
+              {tab === "user-management" && "User Management"}
               {tab !== "profile" && tab !== "user-management" && NAV.find(n => n.id === tab)?.label}
             </div>
             <div style={{ fontSize: 12, color: C.gray400, marginTop: 1 }}>
@@ -233,12 +246,11 @@ export default function App() {
           </div>
         </div>
 
-        {/* Page renderer */}
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-          {tab === "companies"       && <CompaniesPage     companies={companies}    setCompanies={setCompanies}       transactions={transactions} showToast={showToast} role={role} />}
-          {tab === "transactions"    && <TransactionsPage  companies={companies}    transactions={transactions}        setTransactions={setTransactions}                showToast={showToast} role={role} />}
-          {tab === "profile"         && <ProfilePage       profile={profile}        setProfile={setProfile}                                                            showToast={showToast} />}
-          {tab === "user-management" && <UserManagementPage role={role}             showToast={showToast} />}
+          {tab === "companies"       && <CompaniesPage      companies={companies}    setCompanies={setCompanies}    transactions={transactions} showToast={showToast} role={role} />}
+          {tab === "transactions"    && <TransactionsPage   companies={companies}    transactions={transactions}     setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
+          {tab === "profile"         && <ProfilePage        profile={profile}        setProfile={setProfile}                                                         showToast={showToast} />}
+          {tab === "user-management" && <UserManagementPage role={role}              showToast={showToast} />}
         </div>
       </div>
 
