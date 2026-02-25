@@ -248,7 +248,7 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
       }
       setOtpSent(true);
       setStep("verify");
-      setCountdown(60); // 60s before resend allowed
+      setCountdown(300); // 5 min before resend allowed
     } catch (e) {
       setError(e.message);
     } finally {
@@ -266,31 +266,44 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
 
     setLoading(true);
     try {
-      // Verify OTP — this returns a new session
+      // Step 1: Verify OTP — just validates the code, we don't need the returned session
       const verifyRes = await fetch(`${BASE}/auth/v1/verify`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "apikey": KEY },
         body:    JSON.stringify({ email, token: otp, type: "email" }),
       });
-      if (!verifyRes.ok) {
-        const d = await verifyRes.json().catch(() => ({}));
-        throw new Error(d.error_description || d.message || "Invalid or expired code");
-      }
-      const verifyData = await verifyRes.json();
-      const freshToken = verifyData.access_token;
 
-      // Update password using the verified session token
+      // Log full response for debugging
+      const verifyText = await verifyRes.text();
+      console.log("Verify response:", verifyRes.status, verifyText);
+
+      if (!verifyRes.ok) {
+        let d = {};
+        try { d = JSON.parse(verifyText); } catch(_) {}
+        throw new Error(d.error_description || d.message || "Invalid or expired code. Please request a new one.");
+      }
+
+      // Step 2: Use the existing logged-in session token to update password
+      // The user is already authenticated — OTP was just a second factor check
+      const existingToken = session?.access_token;
+      if (!existingToken) throw new Error("Session expired. Please sign in again.");
+
       const updateRes = await fetch(`${BASE}/auth/v1/user`, {
         method:  "PUT",
         headers: {
           "Content-Type":  "application/json",
           "apikey":        KEY,
-          "Authorization": `Bearer ${freshToken}`,
+          "Authorization": `Bearer ${existingToken}`,
         },
         body: JSON.stringify({ password: newPw }),
       });
+
+      const updateText = await updateRes.text();
+      console.log("Update response:", updateRes.status, updateText);
+
       if (!updateRes.ok) {
-        const d = await updateRes.json().catch(() => ({}));
+        let d = {};
+        try { d = JSON.parse(updateText); } catch(_) {}
         throw new Error(d.error_description || d.message || "Failed to update password");
       }
 
@@ -403,8 +416,8 @@ function ChangePasswordModal({ email, session, onClose, showToast }) {
                   {/* Resend */}
                   <div style={{ fontSize: 12, marginTop: 6, color: C.gray400 }}>
                     {countdown > 0
-                      ? `Resend available in ${countdown}s`
-                      : <button type="button" onClick={() => { setCountdown(60); handleSendOtp(); }} style={{ background: "none", border: "none", color: C.green, fontWeight: 700, cursor: "pointer", fontSize: 12, padding: 0, fontFamily: "inherit" }}>Resend code</button>
+                      ? `Resend available in ${Math.floor(countdown/60)}:${String(countdown%60).padStart(2,"0")}`
+                      : <button type="button" onClick={() => { setCountdown(300); handleSendOtp(); }} style={{ background: "none", border: "none", color: C.green, fontWeight: 700, cursor: "pointer", fontSize: 12, padding: 0, fontFamily: "inherit" }}>Resend code</button>
                     }
                   </div>
                 </Field>
