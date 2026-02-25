@@ -571,10 +571,12 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
               <Field label="Nationality">
                 <CountrySelect value={form.nationality} onChange={v => set("nationality", v)} />
               </Field>
-              <Field label="Postal Address">
-                <input style={inp({ height: "100%", minHeight: 33, boxSizing: "border-box" })} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
-                  value={form.postal_address} onChange={e => set("postal_address", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
-              </Field>
+              <div style={{ alignSelf: "start" }}>
+                <Field label="Postal Address">
+                  <input style={inp()} type="text" placeholder="e.g. P.O. Box 1234, Dar es Salaam"
+                    value={form.postal_address} onChange={e => set("postal_address", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
+                </Field>
+              </div>
             </div>
           </Section>
 
