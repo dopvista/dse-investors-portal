@@ -76,7 +76,7 @@ function calcCompletion(form, avatarPreview) {
 // ── Section card ──────────────────────────────────────────────────
 function Section({ title, icon, children }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
+    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, marginBottom: 8 }}>
       <div style={{ padding: "8px 14px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 7, background: C.gray50 }}>
         <span style={{ fontSize: 16 }}>{icon}</span>
         <span style={{ fontWeight: 700, fontSize: 11, color: C.text, textTransform: "uppercase", letterSpacing: "0.05em" }}>{title}</span>
@@ -139,7 +139,7 @@ function CountrySelect({ value, onChange }) {
         <div style={{
           position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
           background: C.white, border: `1.5px solid ${C.green}`,
-          borderRadius: 10, zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          borderRadius: 10, zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
           overflow: "hidden",
         }}>
           {/* Search input */}
@@ -750,7 +750,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         <div className="profile-column" style={{ overflowY: "auto", overflowX: "hidden", height: "100%", paddingRight: 6, paddingBottom: 20 }}>
 
           {/* Profile card */}
-          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
+          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, marginBottom: 8 }}>
             <div style={{ height: 48, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
             <div style={{ padding: "0 12px 12px", marginTop: -26 }}>
 
@@ -860,7 +860,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         </div>
 
         {/* ══ RIGHT COLUMN ══ */}
-        <div className="profile-column" style={{ overflowY: "auto", overflowX: "hidden", height: "100%", paddingRight: 6, paddingBottom: 20 }}>
+        <div className="profile-column" style={{ overflowY: "auto", overflowX: "clip", height: "100%", paddingRight: 6, paddingBottom: 20 }}>
 
           <Section title="Account Information" icon="👤">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
