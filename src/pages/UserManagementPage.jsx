@@ -1,10 +1,10 @@
 // ── src/pages/UserManagementPage.jsx ──────────────────────────────
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { sbGetAllUsers, sbGetRoles, sbAssignRole, sbDeactivateRole, sbAdminCreateUser } from "../lib/supabase";
 import { C } from "../components/ui";
 
-// ── Role badge config ──────────────────────────────────────────────
+// ── Role config ────────────────────────────────────────────────────
 const ROLE_META = {
   SA: { label: "Super Admin",  bg: "#0A254015", border: "#0A254040", text: "#0A2540" },
   AD: { label: "Admin",        bg: "#1E3A5F15", border: "#1E3A5F40", text: "#1E3A5F" },
@@ -13,71 +13,236 @@ const ROLE_META = {
   RO: { label: "Read Only",    bg: "#37415115", border: "#37415140", text: "#374151" },
 };
 
-// ── Role badge ─────────────────────────────────────────────────────
-const RoleBadge = ({ code }) => {
-  const m = ROLE_META[code];
-  if (!m) return (
-    <span style={{
-      fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-      background: "#fffbeb", border: "1px solid #fde68a", color: "#b45309",
-    }}>No Role</span>
-  );
-  return (
-    <span style={{
-      fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-      background: m.bg, border: `1px solid ${m.border}`, color: m.text,
-      letterSpacing: "0.03em", whiteSpace: "nowrap",
-    }}>
-      {m.label}
-    </span>
-  );
-};
-
-// ── Avatar with status dot ─────────────────────────────────────────
-const AVATAR_COLORS = ["#0A2540","#1E3A5F","#1D4ED8","#065F46","#374151","#7C3AED","#B45309","#0369A1"];
-const Avatar = ({ name, size = 38, isActive }) => {
-  const initials = (name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  const color    = AVATAR_COLORS[(name || "").charCodeAt(0) % AVATAR_COLORS.length];
-  return (
-    <div style={{ position: "relative", flexShrink: 0 }}>
-      <div style={{
-        width: size, height: size, borderRadius: 10,
-        background: `linear-gradient(135deg, ${color}, ${color}99)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontWeight: 800, fontSize: size * 0.35, color: "#fff",
+// ── Shared modal overlay wrapper ───────────────────────────────────
+function ModalOverlay({ onClose, children }) {
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+      }}
+    >
+      <div onClick={e => e.stopPropagation()} style={{
+        background: C.white, borderRadius: 20, width: "100%", maxWidth: 440,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.2)", overflow: "hidden",
       }}>
-        {initials}
+        {children}
       </div>
-      <div style={{
-        position: "absolute", bottom: -1, right: -1,
-        width: 11, height: 11, borderRadius: "50%",
-        border: `2px solid ${C.white}`,
-        background: isActive ? "#16a34a" : "#d1d5db",
-      }} />
+    </div>,
+    document.body
+  );
+}
+
+// ── Modal header ───────────────────────────────────────────────────
+function ModalHeader({ title, subtitle, onClose }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "24px 24px 0",
+    }}>
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 17, color: C.text }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 12, color: C.gray400, marginTop: 2 }}>{subtitle}</div>}
+      </div>
+      <button onClick={onClose} style={{
+        background: C.gray50, border: "none", cursor: "pointer",
+        borderRadius: 8, width: 32, height: 32, fontSize: 16,
+        color: C.gray400, flexShrink: 0,
+      }}>✕</button>
     </div>
   );
-};
+}
 
-// ── Stat card ──────────────────────────────────────────────────────
-const StatCard = ({ label, value, color, icon }) => (
-  <div style={{
-    background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14,
-    padding: "16px 20px", display: "flex", alignItems: "center", gap: 14,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.05)", flex: 1, minWidth: 110,
-  }}>
-    <div style={{
-      width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-      background: `${color}20`, border: `1px solid ${color}30`,
-      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
-    }}>{icon}</div>
-    <div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: C.text, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 12, color: C.gray400, marginTop: 3 }}>{label}</div>
+// ── Modal footer buttons ───────────────────────────────────────────
+function ModalFooter({ onCancel, onConfirm, confirmLabel, confirmColor, saving }) {
+  return (
+    <div style={{ display: "flex", gap: 10, padding: "0 24px 24px" }}>
+      <button onClick={onCancel} style={{
+        flex: 1, padding: "11px", borderRadius: 10,
+        border: `1.5px solid ${C.gray200}`, background: C.white,
+        color: C.text, fontWeight: 600, fontSize: 14,
+        cursor: "pointer", fontFamily: "inherit",
+      }}>
+        Cancel
+      </button>
+      <button onClick={onConfirm} disabled={saving} style={{
+        flex: 2, padding: "11px", borderRadius: 10, border: "none",
+        background: saving ? C.gray200 : (confirmColor || C.green),
+        color: C.white, fontWeight: 700, fontSize: 14,
+        cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
+        transition: "opacity 0.2s",
+      }}>
+        {saving ? "Saving..." : confirmLabel}
+      </button>
     </div>
-  </div>
-);
+  );
+}
 
-// ── Invite Modal ───────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// MODAL 1 — Change Role
+// ══════════════════════════════════════════════════════════════════
+function ChangeRoleModal({ user, roles, onClose, onSave, showToast }) {
+  const [selectedId, setSelectedId] = useState(
+    roles.find(r => r.code === user.role_code)?.id ?? ""
+  );
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!selectedId) return showToast("Please select a role", "error");
+    setSaving(true);
+    try {
+      await onSave(user.id, parseInt(selectedId));
+      onClose();
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalOverlay onClose={onClose}>
+      <ModalHeader
+        title="Change Role"
+        subtitle={`Assigning role to ${user.full_name || "user"}`}
+        onClose={onClose}
+      />
+
+      {/* User info strip */}
+      <div style={{
+        margin: "16px 24px", padding: "12px 16px", borderRadius: 12,
+        background: C.gray50, border: `1px solid ${C.gray200}`,
+        display: "flex", alignItems: "center", gap: 12,
+      }}>
+        <div style={{
+          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+          background: "#0A254099",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontWeight: 800, fontSize: 14, color: C.white,
+        }}>
+          {(user.full_name || "?").split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase()}
+        </div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{user.full_name || "User"}</div>
+          <div style={{ fontSize: 12, color: C.gray400 }}>{user.cds_number || "No CDS"}</div>
+        </div>
+        {user.role_code && (
+          <span style={{
+            marginLeft: "auto", fontSize: 11, fontWeight: 700, padding: "3px 10px",
+            borderRadius: 20, background: ROLE_META[user.role_code]?.bg,
+            border: `1px solid ${ROLE_META[user.role_code]?.border}`,
+            color: ROLE_META[user.role_code]?.text,
+          }}>
+            {ROLE_META[user.role_code]?.label}
+          </span>
+        )}
+      </div>
+
+      {/* Role selection */}
+      <div style={{ padding: "0 24px 20px" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 10 }}>
+          Select New Role
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {roles.map(r => {
+            const m       = ROLE_META[r.code];
+            const checked = String(selectedId) === String(r.id);
+            return (
+              <button
+                key={r.id}
+                onClick={() => setSelectedId(r.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 14,
+                  padding: "13px 16px", borderRadius: 12, cursor: "pointer",
+                  fontFamily: "inherit", textAlign: "left", transition: "all 0.15s",
+                  border: `2px solid ${checked ? m.text : C.gray200}`,
+                  background: checked ? m.bg : C.white,
+                }}
+              >
+                {/* Radio circle */}
+                <div style={{
+                  width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+                  border: `2px solid ${checked ? m.text : C.gray300}`,
+                  background: checked ? m.text : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {checked && <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.white }} />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{r.name}</div>
+                  <div style={{ fontSize: 11, color: C.gray400, marginTop: 1 }}>{r.description || ""}</div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
+                  background: m.bg, border: `1px solid ${m.border}`, color: m.text,
+                }}>{r.code}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <ModalFooter
+        onCancel={onClose}
+        onConfirm={handleSave}
+        confirmLabel="✓ Save Role"
+        saving={saving}
+      />
+    </ModalOverlay>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODAL 2 — Confirm Deactivate / Reactivate
+// ══════════════════════════════════════════════════════════════════
+function ToggleStatusModal({ user, onClose, onConfirm }) {
+  const [saving, setSaving] = useState(false);
+  const isDeactivating = user.is_active;
+
+  const handleConfirm = async () => {
+    setSaving(true);
+    await onConfirm(user);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <ModalOverlay onClose={onClose}>
+      <ModalHeader
+        title={isDeactivating ? "Deactivate User" : "Reactivate User"}
+        onClose={onClose}
+      />
+      <div style={{ padding: "16px 24px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 44, marginBottom: 12 }}>
+          {isDeactivating ? "🚫" : "✅"}
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8 }}>
+          {isDeactivating
+            ? `Deactivate ${user.full_name}?`
+            : `Reactivate ${user.full_name}?`}
+        </div>
+        <div style={{ fontSize: 13, color: C.gray400, lineHeight: 1.6, marginBottom: 24 }}>
+          {isDeactivating
+            ? "This user will lose access to the system immediately. Their data will not be deleted. You can reactivate them at any time."
+            : "This user will regain access to the system with their previous role restored."}
+        </div>
+        <ModalFooter
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel={isDeactivating ? "Yes, Deactivate" : "Yes, Reactivate"}
+          confirmColor={isDeactivating ? "#dc2626" : "#16a34a"}
+          saving={saving}
+        />
+      </div>
+    </ModalOverlay>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODAL 3 — Invite New User
+// ══════════════════════════════════════════════════════════════════
 function InviteModal({ roles, onClose, onSuccess, showToast }) {
   const [form, setForm]     = useState({ email: "", password: "", role_id: "" });
   const [saving, setSaving] = useState(false);
@@ -110,36 +275,23 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
     }
   };
 
-  return createPortal(
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999,
-      display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
-    }} onClick={onClose}>
-      <div style={{
-        background: C.white, borderRadius: 20, padding: "32px 28px",
-        width: "100%", maxWidth: 440, boxShadow: "0 24px 64px rgba(0,0,0,0.2)",
-      }} onClick={e => e.stopPropagation()}>
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 18, color: C.text }}>Invite New User</div>
-            <div style={{ fontSize: 12, color: C.gray400, marginTop: 2 }}>Create account and assign a role</div>
-          </div>
-          <button onClick={onClose} style={{
-            background: C.gray50, border: "none", cursor: "pointer",
-            borderRadius: 8, width: 32, height: 32, fontSize: 16, color: C.gray400,
-          }}>✕</button>
-        </div>
-
+  return (
+    <ModalOverlay onClose={onClose}>
+      <ModalHeader
+        title="Invite New User"
+        subtitle="Create an account and assign a role"
+        onClose={onClose}
+      />
+      <div style={{ padding: "16px 24px 0" }}>
         {error && (
-          <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
+          <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14 }}>
             {error}
           </div>
         )}
 
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: "block", marginBottom: 6 }}>
-            Email Address <span style={{ color: C.red }}>*</span>
+            Email Address <span style={{ color: "#dc2626" }}>*</span>
           </label>
           <input style={inp} type="email" placeholder="user@example.com"
             value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
@@ -147,9 +299,9 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
             onBlur={e  => e.target.style.borderColor = C.gray200} />
         </div>
 
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: "block", marginBottom: 6 }}>
-            Temporary Password <span style={{ color: C.red }}>*</span>
+            Temporary Password <span style={{ color: "#dc2626" }}>*</span>
           </label>
           <input style={inp} type="text" placeholder="Min. 6 characters"
             value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
@@ -160,9 +312,9 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
           </div>
         </div>
 
-        <div style={{ marginBottom: 28 }}>
+        <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: "block", marginBottom: 6 }}>
-            Assign Role <span style={{ color: C.red }}>*</span>
+            Assign Role <span style={{ color: "#dc2626" }}>*</span>
           </label>
           <select style={{ ...inp, cursor: "pointer" }}
             value={form.role_id} onChange={e => setForm(p => ({ ...p, role_id: e.target.value }))}
@@ -174,162 +326,69 @@ function InviteModal({ roles, onClose, onSuccess, showToast }) {
             ))}
           </select>
         </div>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={onClose} style={{
-            flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`,
-            background: C.white, color: C.text, fontWeight: 600, fontSize: 14,
-            cursor: "pointer", fontFamily: "inherit",
-          }}>Cancel</button>
-          <button onClick={handleSubmit} disabled={saving} style={{
-            flex: 2, padding: "11px", borderRadius: 10, border: "none",
-            background: saving ? C.gray200 : C.green, color: C.white,
-            fontWeight: 700, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
-            fontFamily: "inherit", transition: "background 0.2s",
-          }}>
-            {saving ? "Creating..." : "✉️ Create & Invite"}
-          </button>
-        </div>
       </div>
-    </div>,
-    document.body
+
+      <ModalFooter
+        onCancel={onClose}
+        onConfirm={handleSubmit}
+        confirmLabel="✉️ Create & Invite"
+        saving={saving}
+      />
+    </ModalOverlay>
   );
 }
 
-// ── Role dropdown — rendered via portal to escape overflow:hidden ──
-function RoleDropdown({ user, roles, onAssign }) {
-  const [open, setOpen]     = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [pos, setPos]       = useState({ top: 0, left: 0 });
-  const btnRef = useRef(null);
-
-  // Calculate dropdown position from the button's screen position
-  const handleOpen = () => {
-    if (btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({
-        top:  rect.bottom + window.scrollY + 4,
-        left: rect.left   + window.scrollX,
-      });
-    }
-    setOpen(o => !o);
-  };
-
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => {
-      if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  // Close on scroll so it doesn't float away
-  useEffect(() => {
-    if (!open) return;
-    const h = () => setOpen(false);
-    window.addEventListener("scroll", h, true);
-    return () => window.removeEventListener("scroll", h, true);
-  }, [open]);
-
-  const handleSelect = async (role) => {
-    setOpen(false);
-    setSaving(true);
-    await onAssign(user.id, role.id);
-    setSaving(false);
-  };
-
+// ── Role badge ─────────────────────────────────────────────────────
+const RoleBadge = ({ code }) => {
+  const m = ROLE_META[code];
+  if (!m) return (
+    <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: "#fffbeb", border: "1px solid #fde68a", color: "#b45309" }}>
+      No Role
+    </span>
+  );
   return (
-    <>
-      <button
-        ref={btnRef}
-        onClick={handleOpen}
-        disabled={saving}
-        style={{
-          display: "flex", alignItems: "center", gap: 4, padding: "3px 8px",
-          borderRadius: 6, border: `1px solid ${C.gray200}`, background: C.white,
-          cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit",
-          fontSize: 11, color: C.gray400, transition: "all 0.15s",
-        }}
-        onMouseEnter={e => { if (!saving) e.currentTarget.style.borderColor = C.green; }}
-        onMouseLeave={e => e.currentTarget.style.borderColor = C.gray200}
-      >
-        {saving ? "..." : "Change ▾"}
-      </button>
-
-      {/* Rendered into document.body — completely outside overflow:hidden */}
-      {open && createPortal(
-        <div style={{
-          position: "absolute",
-          top:  pos.top,
-          left: pos.left,
-          zIndex: 99999,
-          background: C.white,
-          border: `1px solid ${C.gray200}`,
-          borderRadius: 10,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-          minWidth: 180,
-          overflow: "hidden",
-        }}>
-          {/* Header */}
-          <div style={{ padding: "8px 14px 6px", borderBottom: `1px solid ${C.gray100}` }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Assign Role
-            </div>
-            <div style={{ fontSize: 11, color: C.gray600, marginTop: 1 }}>
-              {user.full_name || "User"}
-            </div>
-          </div>
-
-          {/* Role options */}
-          {roles.map(r => (
-            <button key={r.id} onClick={() => handleSelect(r)} style={{
-              width: "100%", padding: "10px 14px", border: "none", background: "none",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-              fontFamily: "inherit", textAlign: "left", transition: "background 0.1s",
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = C.gray50}
-              onMouseLeave={e => e.currentTarget.style.background = "none"}
-            >
-              <span style={{
-                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6,
-                background: ROLE_META[r.code]?.bg,
-                border: `1px solid ${ROLE_META[r.code]?.border}`,
-                color: ROLE_META[r.code]?.text,
-                flexShrink: 0,
-              }}>{r.code}</span>
-              <span style={{ fontSize: 13, color: C.text, flex: 1 }}>{r.name}</span>
-              {user.role_code === r.code && (
-                <span style={{ color: C.green, fontSize: 14, flexShrink: 0 }}>✓</span>
-              )}
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-    </>
+    <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: m.bg, border: `1px solid ${m.border}`, color: m.text, whiteSpace: "nowrap" }}>
+      {m.label}
+    </span>
   );
-}
+};
 
-// ── Shared grid column definition ─────────────────────────────────
-const GRID = "36px 1.8fr 1fr 1fr 1.3fr 110px 80px";
+// ── Avatar with status dot ─────────────────────────────────────────
+const COLORS = ["#0A2540","#1E3A5F","#1D4ED8","#065F46","#374151","#7C3AED","#B45309","#0369A1"];
+const Avatar = ({ name, isActive }) => {
+  const initials = (name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const color    = COLORS[(name || "").charCodeAt(0) % COLORS.length];
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: 10,
+        background: `linear-gradient(135deg, ${color}, ${color}99)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontWeight: 800, fontSize: 13, color: "#fff",
+      }}>{initials}</div>
+      <div style={{
+        position: "absolute", bottom: -1, right: -1,
+        width: 11, height: 11, borderRadius: "50%",
+        border: `2px solid ${C.white}`,
+        background: isActive ? "#16a34a" : "#d1d5db",
+      }} />
+    </div>
+  );
+};
 
-// ── Table header ───────────────────────────────────────────────────
-const TableHeader = () => (
-  <div style={{
-    display: "grid", gridTemplateColumns: GRID,
-    padding: "11px 20px", borderBottom: `1px solid ${C.gray100}`,
-    background: C.gray50,
-  }}>
-    {["#", "User", "CDS / Phone", "Account", "Role", "Added", "Actions"].map((h, i) => (
-      <div key={i} style={{
-        fontSize: 10, fontWeight: 700, color: C.gray400,
-        textTransform: "uppercase", letterSpacing: "0.07em",
-      }}>{h}</div>
-    ))}
+// ── Stat card ──────────────────────────────────────────────────────
+const StatCard = ({ label, value, color, icon }) => (
+  <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", flex: 1, minWidth: 110 }}>
+    <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: `${color}20`, border: `1px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{icon}</div>
+    <div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: C.text, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 12, color: C.gray400, marginTop: 3 }}>{label}</div>
+    </div>
   </div>
 );
+
+// ── Shared grid ────────────────────────────────────────────────────
+const GRID = "36px 1.8fr 1fr 1fr 1.3fr 110px 130px";
 
 // ══════════════════════════════════════════════════════════════════
 // MAIN PAGE
@@ -342,9 +401,13 @@ export default function UserManagementPage({ role, showToast }) {
   const [search, setSearch]             = useState("");
   const [filterRole, setFilterRole]     = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
-  const [showInvite, setShowInvite]     = useState(false);
 
-  // ── SA-only guard ──────────────────────────────────────────────
+  // Modal state
+  const [inviteOpen, setInviteOpen]       = useState(false);
+  const [changeRoleUser, setChangeRoleUser] = useState(null); // user to change role for
+  const [toggleUser, setToggleUser]       = useState(null);   // user to activate/deactivate
+
+  // ── SA only ───────────────────────────────────────────────────
   if (role !== "SA") {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
@@ -372,38 +435,28 @@ export default function UserManagementPage({ role, showToast }) {
 
   useEffect(() => { loadData(); }, []);
 
+  // ── Role change handler ────────────────────────────────────────
   const handleAssignRole = async (userId, roleId) => {
-    try {
-      await sbAssignRole(userId, roleId);
-      const name = roles.find(r => r.id === roleId)?.name || "role";
-      showToast(`Role updated to ${name}`, "success");
-      await loadData();
-    } catch (e) {
-      showToast("Error: " + e.message, "error");
-    }
+    await sbAssignRole(userId, roleId);
+    const name = roles.find(r => r.id === roleId)?.name || "role";
+    showToast(`Role updated to ${name}`, "success");
+    await loadData();
   };
 
+  // ── Toggle active handler ──────────────────────────────────────
   const handleToggleActive = async (user) => {
-    if (!user.role_code) {
-      showToast("No role assigned — assign a role first", "error");
-      return;
-    }
-    try {
-      if (user.is_active) {
-        await sbDeactivateRole(user.id);
-        showToast(`${user.full_name} deactivated`, "success");
-      } else {
-        if (!user.role_id) {
-          showToast("No previous role — assign a role first", "error");
-          return;
-        }
-        await sbAssignRole(user.id, user.role_id);
-        showToast(`${user.full_name} reactivated`, "success");
+    if (user.is_active) {
+      await sbDeactivateRole(user.id);
+      showToast(`${user.full_name} deactivated`, "success");
+    } else {
+      if (!user.role_id) {
+        showToast("No previous role — assign a role first", "error");
+        return;
       }
-      await loadData();
-    } catch (e) {
-      showToast("Error: " + e.message, "error");
+      await sbAssignRole(user.id, user.role_id);
+      showToast(`${user.full_name} reactivated`, "success");
     }
+    await loadData();
   };
 
   // ── Filter logic ───────────────────────────────────────────────
@@ -439,9 +492,7 @@ export default function UserManagementPage({ role, showToast }) {
   );
 
   if (error) return (
-    <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 12, padding: 20 }}>
-      ⚠️ {error}
-    </div>
+    <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 12, padding: 20 }}>⚠️ {error}</div>
   );
 
   return (
@@ -450,11 +501,9 @@ export default function UserManagementPage({ role, showToast }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: 22, color: C.text }}>User Management</div>
-          <div style={{ fontSize: 13, color: C.gray400, marginTop: 3 }}>
-            Manage system users and assign roles
-          </div>
+          <div style={{ fontSize: 13, color: C.gray400, marginTop: 3 }}>Manage system users and assign roles</div>
         </div>
-        <button onClick={() => setShowInvite(true)} style={{
+        <button onClick={() => setInviteOpen(true)} style={{
           display: "flex", alignItems: "center", gap: 8, padding: "10px 20px",
           borderRadius: 10, border: "none", background: C.green, color: C.white,
           fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
@@ -477,59 +526,43 @@ export default function UserManagementPage({ role, showToast }) {
         <StatCard label="Verifiers"     value={rCounts.VR || 0} color="#065F46" icon="✔️" />
       </div>
 
-      {/* ── Search + filters ────────────────────────────────────── */}
+      {/* ── Filters ─────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: C.gray400, pointerEvents: "none" }}>🔍</span>
           <input placeholder="Search by name, CDS or phone..."
             value={search} onChange={e => setSearch(e.target.value)}
-            style={{
-              width: "100%", padding: "10px 14px 10px 36px", borderRadius: 10, fontSize: 13,
-              border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
-              background: C.white, color: C.text, boxSizing: "border-box",
-            }}
+            style={{ width: "100%", padding: "10px 14px 10px 36px", borderRadius: 10, fontSize: 13, border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit", background: C.white, color: C.text, boxSizing: "border-box" }}
             onFocus={e => e.target.style.borderColor = C.green}
             onBlur={e  => e.target.style.borderColor = C.gray200}
           />
         </div>
-
-        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{
-          padding: "10px 14px", borderRadius: 10, fontSize: 13, cursor: "pointer",
-          border: `1.5px solid ${C.gray200}`, outline: "none",
-          fontFamily: "inherit", background: C.white, color: C.text,
-        }}>
+        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{ padding: "10px 14px", borderRadius: 10, fontSize: 13, cursor: "pointer", border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit", background: C.white, color: C.text }}>
           <option value="ALL">All Roles</option>
-          {Object.entries(ROLE_META).map(([code, m]) => (
-            <option key={code} value={code}>{m.label}</option>
-          ))}
+          {Object.entries(ROLE_META).map(([code, m]) => <option key={code} value={code}>{m.label}</option>)}
           <option value="">No Role</option>
         </select>
-
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{
-          padding: "10px 14px", borderRadius: 10, fontSize: 13, cursor: "pointer",
-          border: `1.5px solid ${C.gray200}`, outline: "none",
-          fontFamily: "inherit", background: C.white, color: C.text,
-        }}>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: "10px 14px", borderRadius: 10, fontSize: 13, cursor: "pointer", border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit", background: C.white, color: C.text }}>
           <option value="ALL">All Status</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
         </select>
-
-        <div style={{
-          padding: "10px 14px", fontSize: 13, color: C.gray400,
-          background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 10,
-        }}>
+        <div style={{ padding: "10px 14px", fontSize: 13, color: C.gray400, background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 10 }}>
           {filtered.length} of {total} users
         </div>
       </div>
 
       {/* ── Table ───────────────────────────────────────────────── */}
-      <div style={{
-        background: C.white, border: `1px solid ${C.gray200}`,
-        borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-      }}>
-        <TableHeader />
+      <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
 
+        {/* Header */}
+        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "11px 20px", borderBottom: `1px solid ${C.gray100}`, background: C.gray50 }}>
+          {["#","User","CDS / Phone","Account","Role","Added","Actions"].map((h, i) => (
+            <div key={i} style={{ fontSize: 10, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</div>
+          ))}
+        </div>
+
+        {/* Rows */}
         {filtered.length === 0 ? (
           <div style={{ padding: "48px 20px", textAlign: "center", color: C.gray400 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
@@ -538,7 +571,7 @@ export default function UserManagementPage({ role, showToast }) {
         ) : filtered.map((user, idx) => (
           <div key={user.id} style={{
             display: "grid", gridTemplateColumns: GRID,
-            padding: "14px 20px", borderBottom: `1px solid ${C.gray100}`,
+            padding: "13px 20px", borderBottom: `1px solid ${C.gray100}`,
             alignItems: "center", transition: "background 0.15s",
             opacity: user.is_active ? 1 : 0.55,
           }}
@@ -548,7 +581,7 @@ export default function UserManagementPage({ role, showToast }) {
             {/* # */}
             <div style={{ fontSize: 12, color: C.gray400, fontWeight: 600 }}>{idx + 1}</div>
 
-            {/* User — avatar + name + status pill */}
+            {/* User */}
             <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
               <Avatar name={user.full_name} isActive={user.is_active} />
               <div style={{ minWidth: 0 }}>
@@ -565,73 +598,96 @@ export default function UserManagementPage({ role, showToast }) {
                     {user.is_active ? "Active" : "Inactive"}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: C.gray400, marginTop: 1 }}>
-                  {user.account_type || "Individual"}
-                </div>
+                <div style={{ fontSize: 11, color: C.gray400, marginTop: 1 }}>{user.account_type || "Individual"}</div>
               </div>
             </div>
 
-            {/* CDS + Phone stacked */}
+            {/* CDS + Phone */}
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>
-                {user.cds_number || <span style={{ color: C.gray400 }}>No CDS</span>}
-              </div>
-              <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>
-                {user.phone || "No Phone"}
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{user.cds_number || <span style={{ color: C.gray400 }}>No CDS</span>}</div>
+              <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{user.phone || "No Phone"}</div>
             </div>
 
-            {/* Account type */}
-            <div style={{ fontSize: 12, color: C.gray600 }}>
-              {user.account_type || "—"}
-            </div>
+            {/* Account */}
+            <div style={{ fontSize: 12, color: C.gray600 }}>{user.account_type || "—"}</div>
 
-            {/* Role + change dropdown (portal-based) */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <RoleBadge code={user.role_code} />
-              {user.is_active && (
-                <RoleDropdown user={user} roles={roles} onAssign={handleAssignRole} />
-              )}
-            </div>
+            {/* Role */}
+            <div><RoleBadge code={user.role_code} /></div>
 
-            {/* Date added — null-safe */}
+            {/* Added */}
             <div style={{ fontSize: 11, color: C.gray400 }}>
-              {user.assigned_at
-                ? new Date(user.assigned_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })
-                : "—"}
+              {user.assigned_at ? new Date(user.assigned_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
             </div>
 
-            {/* Action — deactivate / reactivate icon, guarded */}
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              {user.role_code ? (
+            {/* Actions — both open modals */}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {/* Change Role button */}
+              <button
+                onClick={() => setChangeRoleUser(user)}
+                style={{
+                  padding: "5px 11px", borderRadius: 8, border: `1px solid ${C.gray200}`,
+                  background: C.white, color: C.text, fontSize: 12, fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.green; e.currentTarget.style.color = C.green; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}
+              >
+                ✏️ Role
+              </button>
+
+              {/* Deactivate / Reactivate button — only if has a role */}
+              {user.role_code && (
                 <button
-                  onClick={() => handleToggleActive(user)}
-                  title={user.is_active ? "Deactivate user" : "Reactivate user"}
+                  onClick={() => setToggleUser(user)}
                   style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    fontSize: 18, padding: "6px 8px", borderRadius: 8,
-                    transition: "background 0.15s",
+                    padding: "5px 11px", borderRadius: 8, border: "none",
+                    background: user.is_active ? "#fef2f2" : "#f0fdf4",
+                    color: user.is_active ? "#dc2626" : "#16a34a",
+                    fontSize: 12, fontWeight: 600,
+                    cursor: "pointer", fontFamily: "inherit", transition: "opacity 0.15s",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = user.is_active ? "#fef2f2" : "#f0fdf4"}
-                  onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  onMouseEnter={e => e.currentTarget.style.opacity = "0.75"}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                 >
-                  {user.is_active ? "🚫" : "✅"}
+                  {user.is_active ? "🚫 Deactivate" : "✅ Reactivate"}
                 </button>
-              ) : (
-                <span style={{ fontSize: 12, color: C.gray400 }}>—</span>
               )}
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Invite modal ─────────────────────────────────────────── */}
-      {showInvite && (
+      {/* ── Modals ───────────────────────────────────────────────── */}
+      {inviteOpen && (
         <InviteModal
           roles={roles}
-          onClose={() => setShowInvite(false)}
+          onClose={() => setInviteOpen(false)}
           onSuccess={loadData}
           showToast={showToast}
+        />
+      )}
+
+      {changeRoleUser && (
+        <ChangeRoleModal
+          user={changeRoleUser}
+          roles={roles}
+          onClose={() => setChangeRoleUser(null)}
+          onSave={async (userId, roleId) => {
+            await handleAssignRole(userId, roleId);
+            setChangeRoleUser(null);
+          }}
+          showToast={showToast}
+        />
+      )}
+
+      {toggleUser && (
+        <ToggleStatusModal
+          user={toggleUser}
+          onClose={() => setToggleUser(null)}
+          onConfirm={async (user) => {
+            await handleToggleActive(user);
+            setToggleUser(null);
+          }}
         />
       )}
     </div>
