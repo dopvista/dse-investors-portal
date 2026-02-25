@@ -206,33 +206,18 @@ export async function sbGetRoles() {
 }
 
 export async function sbGetAllUsers() {
-  const profilesRes = await fetch(
-    `${BASE}/rest/v1/profiles?select=id,full_name,cds_number,phone,account_type`,
-    { headers: headers(token()) }
-  );
-  if (!profilesRes.ok) throw new Error(await profilesRes.text());
-  const profiles = await profilesRes.json();
-
-  const rolesRes = await fetch(
-    `${BASE}/rest/v1/user_roles?select=user_id,role_id,is_active,assigned_at,roles(code,name)&order=assigned_at.desc`,
-    { headers: headers(token()) }
-  );
-  if (!rolesRes.ok) throw new Error(await rolesRes.text());
-  const userRoles = await rolesRes.json();
-
-  return profiles.map(p => {
-    const active   = userRoles.find(r => r.user_id === p.id && r.is_active);
-    const fallback = userRoles.find(r => r.user_id === p.id);
-    const ur       = active || fallback;
-    return {
-      ...p,
-      role_id:     ur?.role_id         ?? null,
-      role_code:   active?.roles?.code ?? null,
-      role_name:   active?.roles?.name ?? "No Role",
-      assigned_at: ur?.assigned_at     ?? null,
-      is_active:   active ? true       : false,
-    };
+  // Calls get_all_users() SECURITY DEFINER function which reads auth.users
+  // directly — returns ALL users including those without profiles yet
+  const res = await fetch(`${BASE}/rest/v1/rpc/get_all_users`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify({}),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to fetch users");
+  }
+  return res.json();
 }
 
 /**
