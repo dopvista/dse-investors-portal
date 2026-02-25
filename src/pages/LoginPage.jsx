@@ -5,7 +5,6 @@ import { C } from "../components/ui";
 import logo from "../assets/logo.jpg";
 
 export default function LoginPage({ onLogin }) {
-  // view: "login" | "reset"
   const [view,     setView]     = useState("login");
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
@@ -13,7 +12,6 @@ export default function LoginPage({ onLogin }) {
   const [error,    setError]    = useState("");
   const [success,  setSuccess]  = useState("");
 
-  // ── Shared input style — mirrors ProfileSetupPage exactly ────────
   const inp = {
     width: "100%", padding: "11px 14px", borderRadius: 10, fontSize: 14,
     border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
@@ -27,7 +25,6 @@ export default function LoginPage({ onLogin }) {
     </label>
   );
 
-  // ── Sign in ──────────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(""); setSuccess("");
@@ -43,7 +40,6 @@ export default function LoginPage({ onLogin }) {
     }
   };
 
-  // ── Password reset ───────────────────────────────────────────────
   const handleReset = async (e) => {
     e.preventDefault();
     setError(""); setSuccess("");
@@ -77,7 +73,7 @@ export default function LoginPage({ onLogin }) {
         animation: "fadeIn 0.35s ease",
       }}>
 
-        {/* ── Header — identical structure to ProfileSetupPage ── */}
+        {/* ── Header ── */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <img
             src={logo} alt="DSE"
@@ -88,36 +84,27 @@ export default function LoginPage({ onLogin }) {
             {view === "login" ? "Sign in to your account" : "Reset your password"}
           </div>
 
-          {/* Gold accent info strip — matches ProfileSetupPage green info strip style */}
-          <div style={{
-            marginTop: 10,
-            background: `${C.gold}18`,
-            border: `1px solid ${C.gold}55`,
-            borderRadius: 8, padding: "8px 14px",
-            fontSize: 12, color: C.gold, fontWeight: 600,
-          }}>
-            {view === "login"
-              ? "Access is by invitation only — contact your administrator for an account"
-              : "Enter your email to receive a password reset link"}
-          </div>
+          {/* Gold strip — reset view only */}
+          {view === "reset" && (
+            <div style={{
+              marginTop: 10,
+              background: `${C.gold}18`, border: `1px solid ${C.gold}55`,
+              borderRadius: 8, padding: "8px 14px",
+              fontSize: 12, color: C.gold, fontWeight: 600,
+            }}>
+              Enter your email to receive a password reset link
+            </div>
+          )}
         </div>
 
-        {/* ── Error / Success banners ── */}
+        {/* ── Banners ── */}
         {error && (
-          <div style={{
-            background: "#fef2f2", border: `1px solid #fecaca`,
-            color: "#dc2626", borderRadius: 10,
-            padding: "10px 14px", fontSize: 13, marginBottom: 18,
-          }}>
+          <div style={{ background: "#fef2f2", border: `1px solid #fecaca`, color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 18 }}>
             {error}
           </div>
         )}
         {success && (
-          <div style={{
-            background: "#f0fdf4", border: `1px solid #bbf7d0`,
-            color: "#16a34a", borderRadius: 10,
-            padding: "10px 14px", fontSize: 13, marginBottom: 18,
-          }}>
+          <div style={{ background: "#f0fdf4", border: `1px solid #bbf7d0`, color: "#16a34a", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 18 }}>
             {success}
           </div>
         )}
@@ -125,7 +112,6 @@ export default function LoginPage({ onLogin }) {
         {/* ══ Login form ══════════════════════════════════════════ */}
         {view === "login" && (
           <form onSubmit={handleLogin}>
-            {/* Email */}
             <div style={{ marginBottom: 16 }}>
               {lbl("Email Address")}
               <input
@@ -136,17 +122,13 @@ export default function LoginPage({ onLogin }) {
               />
             </div>
 
-            {/* Password + forgot link */}
             <div style={{ marginBottom: 28 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Password</label>
                 <button
                   type="button"
                   onClick={() => { setView("reset"); setError(""); setSuccess(""); }}
-                  style={{
-                    fontSize: 12, color: C.green, background: "none", border: "none",
-                    cursor: "pointer", fontFamily: "inherit", fontWeight: 600, padding: 0,
-                  }}
+                  style={{ fontSize: 12, color: C.green, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, padding: 0 }}
                 >
                   Forgot password?
                 </button>
@@ -159,12 +141,10 @@ export default function LoginPage({ onLogin }) {
               />
             </div>
 
-            {/* Primary CTA — C.green, matches "Continue to Portal" in ProfileSetupPage */}
             <button type="submit" disabled={loading} style={{
               width: "100%", padding: "13px", borderRadius: 10, border: "none",
-              background: loading ? C.gray200 : C.green,
-              color: C.white, fontWeight: 700, fontSize: 15,
-              cursor: loading ? "not-allowed" : "pointer",
+              background: loading ? C.gray200 : C.green, color: C.white,
+              fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
               fontFamily: "inherit", transition: "background 0.2s",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             }}>
@@ -178,7 +158,7 @@ export default function LoginPage({ onLogin }) {
           </form>
         )}
 
-        {/* ══ Password reset form ══════════════════════════════════ */}
+        {/* ══ Reset form ═══════════════════════════════════════════ */}
         {view === "reset" && (
           <form onSubmit={handleReset}>
             <div style={{ marginBottom: 28 }}>
@@ -191,14 +171,11 @@ export default function LoginPage({ onLogin }) {
               />
             </div>
 
-            {/* Primary CTA */}
             <button type="submit" disabled={loading} style={{
               width: "100%", padding: "13px", borderRadius: 10, border: "none",
-              background: loading ? C.gray200 : C.green,
-              color: C.white, fontWeight: 700, fontSize: 15,
-              cursor: loading ? "not-allowed" : "pointer",
-              fontFamily: "inherit", transition: "background 0.2s",
-              marginBottom: 10,
+              background: loading ? C.gray200 : C.green, color: C.white,
+              fontWeight: 700, fontSize: 15, cursor: loading ? "not-allowed" : "pointer",
+              fontFamily: "inherit", transition: "background 0.2s", marginBottom: 10,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             }}>
               {loading ? (
@@ -209,7 +186,6 @@ export default function LoginPage({ onLogin }) {
               ) : "Send Reset Email"}
             </button>
 
-            {/* Secondary — matches ProfileSetupPage "Cancel & Sign Out" style */}
             <button
               type="button"
               onClick={() => { setView("login"); setError(""); setSuccess(""); }}
@@ -227,7 +203,7 @@ export default function LoginPage({ onLogin }) {
           </form>
         )}
 
-        {/* ── Footer branding — mirrors sidebar dot + label style ── */}
+        {/* ── Footer ── */}
         <div style={{
           marginTop: 28, paddingTop: 20,
           borderTop: `1px solid ${C.gray200}`,
@@ -235,7 +211,7 @@ export default function LoginPage({ onLogin }) {
         }}>
           <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>
-            Dar es Salaam Stock Exchange · Secure Portal
+            Manage Your Investments Digitally
           </span>
         </div>
       </div>
