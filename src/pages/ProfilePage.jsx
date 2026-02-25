@@ -581,7 +581,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           </Section>
 
           {/* Photo tip */}
-          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10,  }}>
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "20px 12px", display: "flex", alignItems: "center", gap: 10,  }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 11, color: C.text }}>Profile Picture</div>
