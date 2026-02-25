@@ -2,7 +2,15 @@
 import { useState, useRef, useEffect } from "react";
 import { C } from "./ui";
 
-export default function UserMenu({ profile, session, onSignOut, onOpenProfile }) {
+const ROLE_LABELS = {
+  SA: "Super Admin",
+  AD: "Admin",
+  DE: "Data Entrant",
+  VR: "Verifier",
+  RO: "Read Only",
+};
+
+export default function UserMenu({ profile, session, role, onSignOut, onOpenProfile }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -17,10 +25,11 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
   const fullName = profile?.full_name  || email.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   const cds      = profile?.cds_number || "—";
   const initials = fullName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const roleLabel = role ? ROLE_LABELS[role] : null;
 
   const MENU_ITEMS = [
     { icon: "👤", label: "My Profile",     sub: "View & edit your details",  soon: false, action: () => { onOpenProfile(); setOpen(false); } },
-    { icon: "🎨", label: "Themes & Preferences", sub: "Display & Notifications", soon: true },
+    { icon: "🎨", label: "Themes & Preferences", sub: "Theme, notifications & display", soon: true },
     { divider: true },
     { icon: "🚪", label: "Sign Out",       sub: "Exit your session",          soon: false, danger: true, action: onSignOut },
   ];
@@ -36,7 +45,7 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
           overflow: "hidden",
         }}>
 
-          {/* Header — tighter padding + smaller avatar to give text more room */}
+          {/* Header */}
           <div style={{ padding: "12px 14px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <div style={{
@@ -131,8 +140,19 @@ export default function UserMenu({ profile, session, onSignOut, onOpenProfile })
           <div style={{ color: C.white, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {fullName}
           </div>
-          <div style={{ color: C.gold, fontSize: 11, fontWeight: 600, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {cds}
+          {/* CDS + role on same line — no extra height */}
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1, minWidth: 0 }}>
+            <span style={{ color: C.gold, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 1 }}>
+              {cds}
+            </span>
+            {roleLabel && (
+              <>
+                <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 9, flexShrink: 0 }}>·</span>
+                <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flexShrink: 1 }}>
+                  {roleLabel}
+                </span>
+              </>
+            )}
           </div>
         </div>
         <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▲</span>
