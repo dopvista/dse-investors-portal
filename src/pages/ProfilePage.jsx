@@ -76,12 +76,12 @@ function calcCompletion(form, avatarPreview) {
 // ── Section card ──────────────────────────────────────────────────
 function Section({ title, icon, children }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
-      <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 8, background: C.gray50 }}>
+    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
+      <div style={{ padding: "8px 14px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 7, background: C.gray50 }}>
         <span style={{ fontSize: 16 }}>{icon}</span>
-        <span style={{ fontWeight: 700, fontSize: 13, color: C.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>{title}</span>
+        <span style={{ fontWeight: 700, fontSize: 11, color: C.text, textTransform: "uppercase", letterSpacing: "0.05em" }}>{title}</span>
       </div>
-      <div style={{ padding: "14px" }}>{children}</div>
+      <div style={{ padding: "10px 12px" }}>{children}</div>
     </div>
   );
 }
@@ -89,8 +89,8 @@ function Section({ title, icon, children }) {
 // ── Field wrapper ────────────────────────────────────────────────
 function Field({ label, required, children }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <label style={{ fontSize: 12, fontWeight: 700, color: C.gray400, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+    <div style={{ marginBottom: 8 }}>
+      <label style={{ fontSize: 10, fontWeight: 700, color: C.gray400, display: "block", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>
         {label}{required && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}
       </label>
       {children}
@@ -524,7 +524,7 @@ function ChangePasswordModal({ email, session, uid, onClose, showToast }) {
 
 // ── Shared input style ────────────────────────────────────────────
 const inp = (extra = {}) => ({
-  width: "100%", padding: "10px 13px", borderRadius: 9, fontSize: 14,
+  width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 13,
   border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
   background: C.white, color: C.text, transition: "border 0.2s",
   boxSizing: "border-box", ...extra,
@@ -689,7 +689,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
     <div style={{
       maxWidth: 1100,
       margin: "0 auto",
-      height: "calc(100vh - 140px)",
+      height: "calc(100vh - 110px)",
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
@@ -714,14 +714,14 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       )}
 
       {/* ── Page header ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexShrink: 0 }}>
         <div style={{ fontSize: 13, color: C.gray400 }}>
           Manage your personal information and security settings
           {lastSaved && <span style={{ marginLeft: 10 }}>· Last saved {lastSaved}</span>}
         </div>
         <button onClick={handleSave} disabled={saving} style={{
           display: "flex", alignItems: "center", gap: 8,
-          padding: "10px 20px", borderRadius: 10, border: "none",
+          padding: "8px 16px", borderRadius: 9, border: "none",
           background: saving ? C.gray200 : C.green, color: C.white,
           fontWeight: 700, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
           fontFamily: "inherit", transition: "all 0.2s",
@@ -737,7 +737,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       <div style={{
         display: "grid",
         gridTemplateColumns: "280px 1fr",
-        gap: 18,
+        gap: 12,
         flex: 1,
         overflow: "hidden",
         minHeight: 0,
@@ -747,18 +747,18 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         <div className="profile-column" style={{ overflowY: "auto", overflowX: "hidden", height: "100%", paddingRight: 6, paddingBottom: 20 }}>
 
           {/* Profile card */}
-          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 12 }}>
-            <div style={{ height: 60, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
-            <div style={{ padding: "0 16px 16px", marginTop: -32 }}>
+          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
+            <div style={{ height: 48, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
+            <div style={{ padding: "0 12px 12px", marginTop: -26 }}>
 
               {/* Avatar */}
               <div style={{ position: "relative", display: "inline-block", marginBottom: 10 }}>
                 <div style={{
-                  width: 68, height: 68, borderRadius: "50%",
+                  width: 56, height: 56, borderRadius: "50%",
                   border: `3px solid ${C.white}`, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   background: avatarPreview ? "transparent" : C.navy,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  overflow: "hidden", cursor: "pointer", fontSize: 22, fontWeight: 800, color: C.white,
+                  overflow: "hidden", cursor: "pointer", fontSize: 18, fontWeight: 800, color: C.white,
                   position: "relative",
                 }} onClick={() => !uploadingAvatar && fileRef.current.click()}>
                   {avatarPreview
@@ -766,32 +766,32 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                     : initials}
                   {uploadingAvatar && (
                     <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%" }}>
-                      <div style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                      <div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                     </div>
                   )}
                 </div>
                 <div onClick={() => fileRef.current.click()} style={{
-                  position: "absolute", bottom: 0, right: 0, width: 22, height: 22,
+                  position: "absolute", bottom: 0, right: 0, width: 18, height: 18,
                   borderRadius: "50%", background: C.green, border: `2px solid ${C.white}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 10,
+                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 9,
                 }}>📷</div>
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileSelect} />
               </div>
 
               {/* Name + email */}
-              <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>{form.full_name || "Your Name"}</div>
-              <div style={{ fontWeight: 700, fontSize: 11, color: C.gray400, marginTop: 2, marginBottom: 8 }}>{email}</div>
+              <div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>{form.full_name || "Your Name"}</div>
+              <div style={{ fontWeight: 600, fontSize: 10, color: C.gray400, marginTop: 1, marginBottom: 6 }}>{email}</div>
 
               {/* Role badge */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: roleMeta.color + "12", border: `1px solid ${roleMeta.color}22`, borderRadius: 20, padding: "3px 10px" }}>
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: roleMeta.color }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: roleMeta.color }}>{roleMeta.label}</span>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: roleMeta.color + "12", border: `1px solid ${roleMeta.color}22`, borderRadius: 20, padding: "2px 8px" }}>
+                  <div style={{ width: 4, height: 4, borderRadius: "50%", background: roleMeta.color }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: roleMeta.color }}>{roleMeta.label}</span>
                 </div>
               </div>
 
               {/* CDS pill */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 8, padding: "6px 10px", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 8, padding: "5px 8px", marginBottom: 8 }}>
                 <span style={{ fontSize: 12 }}>🔒</span>
                 <div>
                   <div style={{ fontSize: 9, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "0.05em" }}>CDS Number</div>
@@ -800,16 +800,16 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
               </div>
 
               {/* Completion bar */}
-              <div style={{ marginTop: 4 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em" }}>Profile complete</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: completionColor }}>{completion}%</span>
+              <div style={{ marginTop: 2 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em" }}>Profile complete</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: completionColor }}>{completion}%</span>
                 </div>
-                <div style={{ height: 5, background: C.gray100, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ height: 4, background: C.gray100, borderRadius: 10, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${completion}%`, background: completionColor, borderRadius: 10, transition: "width 0.5s ease" }} />
                 </div>
                 {completion < 100 && (
-                  <div style={{ fontSize: 10, color: C.gray400, marginTop: 4 }}>
+                  <div style={{ fontSize: 9, color: C.gray400, marginTop: 3 }}>
                     {completion < 50 ? "Fill in more details" : "Almost there — a few fields remaining"}
                   </div>
                 )}
@@ -819,10 +819,10 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
 
           {/* Account type */}
           <Section title="Account Type" icon="🏦">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: `${C.green}0d`, border: `1.5px solid ${C.green}22`, borderRadius: 9 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", background: `${C.green}0d`, border: `1.5px solid ${C.green}22`, borderRadius: 9 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: C.green }}>{accountType}</div>
-                <div style={{ fontSize: 10, color: C.gray400, marginTop: 2 }}>{cdsUserCount} user{cdsUserCount !== 1 ? "s" : ""} on this CDS</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.green }}>{accountType}</div>
+                <div style={{ fontSize: 9, color: C.gray400, marginTop: 1 }}>{cdsUserCount} user{cdsUserCount !== 1 ? "s" : ""} on this CDS</div>
               </div>
               <div style={{ fontSize: 20 }}>{accountType === "Corporate" ? "🏢" : "👤"}</div>
             </div>
@@ -860,7 +860,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         <div className="profile-column" style={{ overflowY: "auto", overflowX: "hidden", height: "100%", paddingRight: 6, paddingBottom: 20 }}>
 
           <Section title="Account Information" icon="👤">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <Field label="Full Name" required>
                 <input style={inp()} type="text" placeholder="e.g. Naomi Maguya"
                   value={form.full_name} onChange={e => set("full_name", e.target.value)}
@@ -891,7 +891,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           </Section>
 
           <Section title="Contact Details" icon="📍">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <Field label="Nationality">
                 <CountrySelect value={form.nationality} onChange={v => set("nationality", v)} />
               </Field>
@@ -904,11 +904,11 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           </Section>
 
           {/* Photo tip */}
-          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 10 }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>📷</span>
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 12, color: C.text, marginBottom: 2 }}>Profile Picture</div>
-              <div style={{ fontSize: 11, color: C.gray400, lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 700, fontSize: 11, color: C.text, marginBottom: 1 }}>Profile Picture</div>
+              <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.4 }}>
                 Click your avatar to upload. Use the crop tool to center your face. Stored permanently at 200×200px.
               </div>
             </div>
