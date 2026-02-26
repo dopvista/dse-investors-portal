@@ -157,10 +157,11 @@ export default function App() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* ── Sidebar ── */}
-      <div style={{ width: 240, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", overflowY: "auto", background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)", position: "relative" }}>
+      <div style={{ width: 240, display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", overflowY: "auto", position: "relative",
+        background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)" }}>
         {/* Dot grid overlay */}
         <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)", backgroundSize: "24px 24px", pointerEvents: "none", zIndex: 0 }} />
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflowY: "auto" }}>
         <div style={{ padding: "24px 20px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <img src={logo} alt="DI" style={{ width: 42, height: 42, borderRadius: 10, objectFit: "cover", flexShrink: 0, boxShadow: "0 4px 12px rgba(0,0,0,0.35)" }} />
@@ -251,7 +252,7 @@ export default function App() {
           {tab === "companies"       && <CompaniesPage      companies={companies}    setCompanies={setCompanies}    transactions={transactions} showToast={showToast} role={role} />}
           {tab === "transactions"    && <TransactionsPage   companies={companies}    transactions={transactions}     setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
           {tab === "profile"         && <ProfilePage profile={profile} setProfile={setProfile} session={session} role={role} email={session?.user?.email || session?.email || ""} showToast={showToast} />}
-          {tab === "user-management" && <UserManagementPage role={role}              showToast={showToast} />}
+          {tab === "user-management" && <UserManagementPage role={role} showToast={showToast} profile={profile} />}
         </div>
       </div>
 
