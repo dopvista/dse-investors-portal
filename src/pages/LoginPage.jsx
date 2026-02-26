@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { sbSignIn, sbResetPassword } from "../lib/supabase";
+import { sbSignIn } from "../lib/supabase";
 import { C } from "../components/ui";
 import logo from "../assets/logo.jpg";
 
@@ -54,17 +54,17 @@ export default function LoginPage({ onLogin }) {
 
   const inpStyle = {
     width: "100%",
-    padding: "14px 18px",
-    borderRadius: 14,
+    padding: "12px 16px",
+    borderRadius: 12,
     fontSize: 15,
     border: `1.5px solid ${C.gray200}`,
     outline: "none",
     fontFamily: "'Inter', sans-serif",
-    background: "#ffffff",
+    background: "#fff",
     color: C.text,
-    transition: "border 0.2s, box-shadow 0.2s",
+    transition: "border 0.2s",
     boxSizing: "border-box",
-    marginTop: 6
+    marginTop: 4
   };
 
   const handleLogin = async (e) => {
@@ -91,54 +91,50 @@ export default function LoginPage({ onLogin }) {
       justifyContent: "center",
       background: "linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)",
       fontFamily: "'Inter', sans-serif",
-      padding: 20,
+      padding: 16,
       boxSizing: "border-box"
     }}>
       <style>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(5px); }
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes kenBurns {
           0% { transform: scale(1); }
           100% { transform: scale(1.1); }
         }
-        .login-card {
-          animation: fadeIn 0.6s ease-out;
-        }
         .ad-bg {
           animation: kenBurns 8s ease-in-out infinite alternate;
         }
         .input-focus:focus {
-          border-color: ${C.gold} !important;
-          box-shadow: 0 0 0 3px ${C.gold}20;
+          border-color: ${C.gold};
         }
       `}</style>
 
       {/* Main card */}
-      <div className="login-card" style={{
-        maxWidth: 1000,
+      <div style={{
+        maxWidth: 900,
         width: "100%",
         background: "white",
-        borderRadius: 40,
-        boxShadow: "0 30px 60px -20px rgba(0,0,0,0.3), 0 20px 40px -20px rgba(0,43,91,0.4)",
+        borderRadius: 32,
+        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
         display: "grid",
         gridTemplateColumns: "1.2fr 0.9fr",
         overflow: "hidden"
       }}>
         
-        {/* LEFT SIDE: Photo slider */}
+        {/* LEFT: Photo slider */}
         <div style={{
           position: "relative",
           background: ADVERTS[activeAd].color,
           transition: "background 1s ease",
           overflow: "hidden",
-          padding: 50,
+          padding: 48,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center"
         }}>
-          {/* Background image with Ken Burns */}
+          {/* Background image */}
           {ADVERTS.map((ad, index) => (
             <div
               key={ad.id}
@@ -146,12 +142,11 @@ export default function LoginPage({ onLogin }) {
               style={{
                 position: "absolute",
                 inset: 0,
-                opacity: index === activeAd ? 0.3 : 0,
+                opacity: index === activeAd ? 0.25 : 0,
                 backgroundImage: `url(${ad.image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                transition: "opacity 1.2s ease",
-                filter: "brightness(0.9)"
+                transition: "opacity 1.2s ease"
               }}
             />
           ))}
@@ -159,10 +154,10 @@ export default function LoginPage({ onLogin }) {
           {/* Text content */}
           <div style={{ position: "relative", zIndex: 2 }}>
             <div style={{
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
               color: C.gold,
-              letterSpacing: 1.5,
+              letterSpacing: 1.2,
               marginBottom: 16,
               textTransform: "uppercase"
             }}>
@@ -178,20 +173,20 @@ export default function LoginPage({ onLogin }) {
                 }}
               >
                 <h2 style={{
-                  fontSize: "clamp(32px, 4vw, 48px)",
+                  fontSize: "clamp(28px, 4vw, 42px)",
                   fontWeight: 800,
                   color: "white",
-                  margin: "0 0 12px 0",
+                  margin: "0 0 8px 0",
                   lineHeight: 1.2,
-                  textShadow: "0 2px 10px rgba(0,0,0,0.2)"
+                  textShadow: "0 2px 8px rgba(0,0,0,0.2)"
                 }}>
                   {ad.title}
                 </h2>
                 <p style={{
-                  fontSize: 16,
+                  fontSize: 15,
                   color: "rgba(255,255,255,0.9)",
                   lineHeight: 1.5,
-                  maxWidth: 350,
+                  maxWidth: 320,
                   margin: 0
                 }}>
                   {ad.sub}
@@ -199,11 +194,11 @@ export default function LoginPage({ onLogin }) {
               </div>
             ))}
 
-            {/* Minimal navigation dots */}
+            {/* Minimal dots (barely visible) */}
             <div style={{
               display: "flex",
-              gap: 10,
-              marginTop: 40
+              gap: 8,
+              marginTop: 32
             }}>
               {ADVERTS.map((_, i) => (
                 <button
@@ -212,11 +207,11 @@ export default function LoginPage({ onLogin }) {
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
                   style={{
-                    width: i === activeAd ? 36 : 8,
-                    height: 6,
-                    borderRadius: 3,
+                    width: i === activeAd ? 28 : 6,
+                    height: 4,
+                    borderRadius: 2,
                     background: "white",
-                    opacity: i === activeAd ? 1 : 0.4,
+                    opacity: i === activeAd ? 0.8 : 0.3,
                     transition: "all 0.3s",
                     cursor: "pointer",
                     border: "none",
@@ -228,23 +223,21 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        {/* RIGHT SIDE: Login form */}
+        {/* RIGHT: Login form */}
         <div style={{
           background: "white",
-          padding: 50,
+          padding: 48,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center"
         }}>
-          <div style={{ maxWidth: 320, width: "100%", margin: "0 auto" }}>
-            {/* Header */}
-            <div style={{ marginBottom: 32 }}>
+          <div style={{ maxWidth: 300, width: "100%", margin: "0 auto" }}>
+            <div style={{ marginBottom: 28 }}>
               <h1 style={{
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: 800,
                 color: C.navy,
-                margin: "0 0 6px 0",
-                letterSpacing: "-0.01em"
+                margin: "0 0 4px 0"
               }}>
                 Welcome Back
               </h1>
@@ -259,11 +252,11 @@ export default function LoginPage({ onLogin }) {
 
             {error && (
               <div style={{
-                padding: "12px 16px",
-                borderRadius: 12,
+                padding: "10px 14px",
+                borderRadius: 10,
                 background: "#fef2f2",
                 color: "#dc2626",
-                fontSize: 14,
+                fontSize: 13,
                 marginBottom: 20,
                 border: "1px solid #fee2e2"
               }}>
@@ -272,7 +265,7 @@ export default function LoginPage({ onLogin }) {
             )}
 
             <form onSubmit={handleLogin}>
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ marginBottom: 18 }}>
                 <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
                   Email Address
                 </label>
@@ -286,7 +279,7 @@ export default function LoginPage({ onLogin }) {
                 />
               </div>
 
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
                   Password
                 </label>
@@ -303,20 +296,19 @@ export default function LoginPage({ onLogin }) {
               <div style={{
                 display: "flex",
                 justifyContent: "flex-end",
-                marginBottom: 28
+                marginBottom: 24
               }}>
                 <button
                   type="button"
-                  onClick={() => setView("reset")}
                   style={{
                     background: "none",
                     border: "none",
                     color: C.green,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 500,
                     cursor: "pointer",
                     textDecoration: "underline",
-                    textUnderlineOffset: 3
+                    textUnderlineOffset: 2
                   }}
                 >
                   Forgot password?
@@ -328,28 +320,25 @@ export default function LoginPage({ onLogin }) {
                 disabled={loading}
                 style={{
                   width: "100%",
-                  padding: "16px",
-                  borderRadius: 16,
+                  padding: "14px",
+                  borderRadius: 14,
                   border: "none",
                   background: loading ? C.gray200 : C.navy,
                   color: "white",
                   fontWeight: 700,
-                  fontSize: 16,
+                  fontSize: 15,
                   cursor: loading ? "not-allowed" : "pointer",
-                  transition: "background 0.2s, transform 0.1s",
-                  boxShadow: loading ? "none" : "0 8px 20px -8px rgba(0,43,91,0.3)"
+                  transition: "background 0.2s",
+                  boxShadow: loading ? "none" : "0 6px 16px -6px rgba(0,43,91,0.3)"
                 }}
-                onMouseDown={e => !loading && (e.currentTarget.style.transform = "scale(0.98)")}
-                onMouseUp={e => !loading && (e.currentTarget.style.transform = "scale(1)")}
-                onMouseLeave={e => !loading && (e.currentTarget.style.transform = "scale(1)")}
               >
                 {loading ? "Signing in..." : "Sign In →"}
               </button>
 
               <p style={{
-                marginTop: 24,
+                marginTop: 20,
                 textAlign: "center",
-                fontSize: 13,
+                fontSize: 12,
                 color: C.gray400
               }}>
                 Need help? <a href="#" style={{ color: C.green, textDecoration: "none" }}>Contact support</a>
@@ -357,12 +346,12 @@ export default function LoginPage({ onLogin }) {
             </form>
 
             <p style={{
-              marginTop: 28,
+              marginTop: 24,
               textAlign: "center",
               fontSize: 11,
               color: C.gray300,
               borderTop: `1px solid ${C.gray200}`,
-              paddingTop: 16
+              paddingTop: 14
             }}>
               © 2026 Dar es Salaam Stock Exchange. All rights reserved.
             </p>
