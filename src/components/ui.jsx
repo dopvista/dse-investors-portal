@@ -289,6 +289,7 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
 
   const handleConfirm = () => {
     if (!newPrice || isNaN(Number(newPrice)) || Number(newPrice) <= 0) { setError("Please enter a valid price greater than 0."); return; }
+    if (Number(company.price) !== 0 && Number(newPrice) === Number(company.price)) { setError("No change detected — the new price is the same as the current price."); return; }
     setError("");
     onConfirm({ newPrice: Number(newPrice), datetime, reason });
   };
@@ -348,9 +349,16 @@ export function PriceHistoryModal({ company, history, onClose }) {
 
   if (!company) return null;
 
+  // Remove zero-change noise (price set to same value) — keep initial entries
+  const meaningful = history.filter(h => {
+    const isInitial = !h.old_price || Number(h.old_price) === 0;
+    if (isInitial) return true;
+    return Number(h.change_amount) !== 0;
+  });
+
   // Filter to current month only
   const now       = new Date();
-  const thisMonth = history.filter(h => {
+  const thisMonth = meaningful.filter(h => {
     const d = new Date(h.created_at);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   });
@@ -390,7 +398,7 @@ export function PriceHistoryModal({ company, history, onClose }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
           <div style={{ fontSize: 12, color: C.gray400 }}>
             {thisMonth.length} update{thisMonth.length !== 1 ? "s" : ""} in {monthLabel}
-            {thisMonth.length !== history.length && <span style={{ marginLeft: 6, color: C.gray400 }}>· {history.length} total all-time</span>}
+            {thisMonth.length !== meaningful.length && <span style={{ marginLeft: 6, color: C.gray400 }}>· {meaningful.length} total all-time</span>}
           </div>
           <Btn variant="secondary" onClick={onClose}>Close</Btn>
         </div>
@@ -410,7 +418,7 @@ export function PriceHistoryModal({ company, history, onClose }) {
           <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
           <div style={{ fontWeight: 600 }}>No price changes in {monthLabel}</div>
           <div style={{ fontSize: 13, marginTop: 4 }}>
-            {history.length > 0 ? `${history.length} update${history.length !== 1 ? "s" : ""} exist in previous months` : "No price history recorded yet"}
+            {meaningful.length > 0 ? `${meaningful.length} update${meaningful.length !== 1 ? "s" : ""} exist in previous months` : "No price history recorded yet"}
           </div>
         </div>
       ) : (
