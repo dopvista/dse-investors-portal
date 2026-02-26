@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { sbGet, sbGetTransactions, getSession, sbSignOut, sbGetProfile, sbGetMyRole } from "./lib/supabase";
 import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
@@ -62,19 +62,15 @@ export default function App() {
     (async () => {
       try {
         const freshToken = session?.access_token;
-        
-        // Fetch identity-defining data first
-        const [p, r] = await Promise.all([
+        const [p, r, c] = await Promise.all([
           sbGetProfile(freshToken),
           sbGetMyRole(freshToken),
-        ]);
-
-        // Fetch transactional data scoped by role and CDS number
-        const [c, t] = await Promise.all([
           sbGet("companies"),
-          sbGetTransactions(r, p?.cds_number),
         ]);
-
+        
+        // UPDATED: Pass CDS Number to the initial fetch to scope data at the source
+        const t = await sbGetTransactions(r, p?.cds_number);
+        
         setProfile(p);
         setRole(r);
         setCompanies(c);
@@ -85,23 +81,6 @@ export default function App() {
       setLoading(false);
     })();
   }, [session]);
-
-  // ── UI Visibility Filtering ──────────────────────────────────────
-  const filteredTransactions = useMemo(() => {
-    const cds = profile?.cds_number;
-    if (!role || !cds || role === "SA" || role === "AD") return transactions;
-
-    if (role === "DE") {
-      return transactions.filter(t => t.cds_number === cds);
-    }
-    if (role === "VR") {
-      return transactions.filter(t => t.cds_number === cds && t.status === "confirmed");
-    }
-    if (role === "RO") {
-      return transactions.filter(t => t.cds_number === cds && t.status === "verified");
-    }
-    return transactions;
-  }, [transactions, role, profile]);
 
   const handleLogin    = (s) => setSession(s);
   const handleProfileDone = (p) => setProfile(p);
@@ -131,12 +110,19 @@ export default function App() {
         @keyframes pulse { 0%,100% { opacity:0.4; transform:scale(0.95); } 50% { opacity:1; transform:scale(1); } }
       `}</style>
       <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "relative", zIndex: 1, textAlign: "center", color: C.white }}>
         <div style={{ animation: "pulse 1.8s ease-in-out infinite", marginBottom: 20 }}>
           <img src={logo} alt="DSE" style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }} />
         </div>
         <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: "0.01em" }}>DSE Investors Portal</div>
         <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 6 }}>Checking your session...</div>
+        <div style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, opacity: 0.3, animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -150,15 +136,27 @@ export default function App() {
         @keyframes pulse { 0%,100% { opacity:0.4; transform:scale(0.95); } 50% { opacity:1; transform:scale(1); } }
         @keyframes bar   { 0% { width:"0%" } 100% { width:"100%" } }
       `}</style>
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "relative", zIndex: 1, textAlign: "center", color: C.white, minWidth: 240 }}>
         <div style={{ animation: "pulse 1.8s ease-in-out infinite", marginBottom: 22 }}>
           <img src={logo} alt="DSE" style={{ width: 72, height: 72, borderRadius: 18, objectFit: "cover", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", border: "3px solid rgba(255,255,255,0.15)" }} />
         </div>
         <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: "0.01em" }}>DSE Investors Portal</div>
+        <div style={{ color: C.gold, fontWeight: 600, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 4 }}>DAR ES SALAAM STOCK EXCHANGE</div>
         <div style={{ margin: "20px auto 0", width: 180, height: 3, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
           <div style={{ height: "100%", background: `linear-gradient(90deg, ${C.green}, ${C.gold})`, borderRadius: 4, animation: "bar 2s ease-in-out infinite" }} />
         </div>
-        <div style={{ marginTop: 14, fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Loading your portfolio...</div>
+        <div style={{ marginTop: 14, fontSize: 12, color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+          <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.15)", borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+          Loading your portfolio...
+        </div>
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, opacity: 0.3, animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -166,8 +164,9 @@ export default function App() {
   if (dbError) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.gray50, fontFamily: "system-ui" }}>
       <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 16, padding: 40, maxWidth: 440, textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
         <h3 style={{ color: C.red, margin: "0 0 8px", fontSize: 18 }}>Database Connection Error</h3>
-        <p style={{ color: C.gray600, fontSize: 14 }}>{dbError}</p>
+        <p style={{ color: C.gray600, fontSize: 14, lineHeight: 1.6 }}>{dbError}</p>
       </div>
     </div>
   );
@@ -175,6 +174,16 @@ export default function App() {
   if (!profile) return (
     <ProfileSetupPage session={session} onComplete={handleProfileDone} onCancel={handleSignOut} />
   );
+
+  // ── FILTERING LOGIC ONLY ──────────────────────────────────────────
+  const filteredTransactions = transactions.filter(t => {
+    const isOwner = t.cds_number === profile?.cds_number;
+    if (role === "SA" || role === "AD") return true;
+    if (role === "DE") return isOwner;
+    if (role === "VR") return isOwner && t.status === "confirmed";
+    if (role === "RO") return isOwner && t.status === "verified";
+    return false;
+  });
 
   const visibleNav = NAV.filter(item => !role || item.roles.includes(role));
   const counts = { companies: companies.length, transactions: filteredTransactions.length };
@@ -195,11 +204,27 @@ export default function App() {
             <div>
               <div style={{ color: C.white, fontWeight: 800, fontSize: 14, lineHeight: 1.2 }}>DSE Investors</div>
               <div style={{ color: C.gold, fontWeight: 700, fontSize: 15, marginTop: 1 }}>Portal</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
+                <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
+                <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, fontWeight: 500 }}>
+                  {now.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+                  {" | "}
+                  {now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
+        <div style={{ margin: "0 16px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 7, height: 7, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
+          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>Supabase connected</span>
+        </div>
+
+        <div style={{ height: 1, background: "rgba(255,255,255,0.08)", margin: "0 16px" }} />
+
         <nav style={{ padding: "16px 12px", flex: 1 }}>
+          <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", padding: "0 12px", marginBottom: 8 }}>Navigation</div>
           {visibleNav.map(item => {
             const active = tab === item.id;
             return (
@@ -240,6 +265,12 @@ export default function App() {
               {tab === "profile"         && "My Profile"}
               {tab === "user-management" && "User Management"}
               {tab !== "profile" && tab !== "user-management" && NAV.find(n => n.id === tab)?.label}
+            </div>
+            <div style={{ fontSize: 12, color: C.gray400, marginTop: 1 }}>
+              {tab === "companies"       && "Your CDS portfolio holdings"}
+              {tab === "transactions"    && "Record and view all buy/sell activity"}
+              {tab === "profile"         && "Manage your personal information"}
+              {tab === "user-management" && "Manage system users and assign roles"}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
