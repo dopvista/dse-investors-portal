@@ -69,7 +69,7 @@ export default function LoginPage({ onLogin }) {
 
   return (
     <div style={{ minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 16, boxSizing: "border-box", position: "relative", overflow: "hidden",
-        background: "radial-gradient(ellipse at 60% 40%, #0f3460 0%, #0B1F3A 45%, #060d1a 100%)"
+        background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)"
       }}>
       {/* Subtle dot grid overlay */}
       <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
