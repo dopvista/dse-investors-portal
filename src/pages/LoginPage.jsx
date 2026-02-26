@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { sbSignIn } from "../lib/supabase";
 import { C } from "../components/ui";
-import logo from "../assets/logo.jpg";
 
 const ADVERTS = [
   {
@@ -54,9 +53,9 @@ export default function LoginPage({ onLogin }) {
 
   const inpStyle = {
     width: "100%",
-    padding: "12px 16px",
-    borderRadius: 12,
-    fontSize: 15,
+    padding: "10px 14px",
+    borderRadius: 10,
+    fontSize: 14,
     border: `1.5px solid ${C.gray200}`,
     outline: "none",
     fontFamily: "'Inter', sans-serif",
@@ -91,7 +90,7 @@ export default function LoginPage({ onLogin }) {
       justifyContent: "center",
       background: "linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)",
       fontFamily: "'Inter', sans-serif",
-      padding: 16,
+      padding: 12,
       boxSizing: "border-box"
     }}>
       <style>{`
@@ -111,19 +110,19 @@ export default function LoginPage({ onLogin }) {
         }
       `}</style>
 
-      {/* Main card with 16:9 aspect ratio */}
+      {/* Main card – scaled for 150% display */}
       <div style={{
-        width: "min(1000px, 90vw)",
+        width: "min(680px, 85vw)",
         aspectRatio: "16/9",
         background: "white",
-        borderRadius: 32,
-        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+        borderRadius: 28,
+        boxShadow: "0 20px 40px -12px rgba(0,0,0,0.25)",
         display: "grid",
         gridTemplateColumns: "1.2fr 0.9fr",
         overflow: "hidden"
       }}>
         
-        {/* LEFT: Photo slider - vertically centered */}
+        {/* LEFT: Photo slider */}
         <div style={{
           position: "relative",
           background: ADVERTS[activeAd].color,
@@ -132,7 +131,7 @@ export default function LoginPage({ onLogin }) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "0 48px"
+          padding: "0 28px"
         }}>
           {/* Background image */}
           {ADVERTS.map((ad, index) => (
@@ -154,11 +153,11 @@ export default function LoginPage({ onLogin }) {
           {/* Text content */}
           <div style={{ position: "relative", zIndex: 2 }}>
             <div style={{
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 600,
               color: C.gold,
-              letterSpacing: 1.2,
-              marginBottom: 16,
+              letterSpacing: 1,
+              marginBottom: 14,
               textTransform: "uppercase"
             }}>
               DAR ES SALAAM STOCK EXCHANGE
@@ -173,20 +172,20 @@ export default function LoginPage({ onLogin }) {
                 }}
               >
                 <h2 style={{
-                  fontSize: "clamp(28px, 4vw, 42px)",
+                  fontSize: "clamp(22px, 4vw, 32px)",
                   fontWeight: 800,
                   color: "white",
-                  margin: "0 0 8px 0",
+                  margin: "0 0 6px 0",
                   lineHeight: 1.2,
-                  textShadow: "0 2px 8px rgba(0,0,0,0.2)"
+                  textShadow: "0 2px 6px rgba(0,0,0,0.2)"
                 }}>
                   {ad.title}
                 </h2>
                 <p style={{
-                  fontSize: 15,
+                  fontSize: 13,
                   color: "rgba(255,255,255,0.9)",
-                  lineHeight: 1.5,
-                  maxWidth: 320,
+                  lineHeight: 1.4,
+                  maxWidth: 260,
                   margin: 0
                 }}>
                   {ad.sub}
@@ -197,8 +196,8 @@ export default function LoginPage({ onLogin }) {
             {/* Minimal dots */}
             <div style={{
               display: "flex",
-              gap: 8,
-              marginTop: 32
+              gap: 6,
+              marginTop: 24
             }}>
               {ADVERTS.map((_, i) => (
                 <button
@@ -207,7 +206,7 @@ export default function LoginPage({ onLogin }) {
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
                   style={{
-                    width: i === activeAd ? 28 : 6,
+                    width: i === activeAd ? 22 : 5,
                     height: 4,
                     borderRadius: 2,
                     background: "white",
@@ -223,18 +222,18 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        {/* RIGHT: Login form - vertically centered */}
+        {/* RIGHT: Login form */}
         <div style={{
           background: "white",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "0 40px"
+          padding: "0 28px"
         }}>
           <div style={{ width: "100%" }}>
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 20 }}>
               <h1 style={{
-                fontSize: 28,
+                fontSize: 24,
                 fontWeight: 800,
                 color: C.navy,
                 margin: "0 0 4px 0"
@@ -242,7 +241,7 @@ export default function LoginPage({ onLogin }) {
                 Welcome Back
               </h1>
               <p style={{
-                fontSize: 14,
+                fontSize: 13,
                 color: C.gray400,
                 margin: 0
               }}>
@@ -252,12 +251,12 @@ export default function LoginPage({ onLogin }) {
 
             {error && (
               <div style={{
-                padding: "10px 14px",
-                borderRadius: 10,
+                padding: "8px 12px",
+                borderRadius: 8,
                 background: "#fef2f2",
                 color: "#dc2626",
-                fontSize: 13,
-                marginBottom: 18,
+                fontSize: 12,
+                marginBottom: 16,
                 border: "1px solid #fee2e2"
               }}>
                 ⚠️ {error}
@@ -265,8 +264,8 @@ export default function LoginPage({ onLogin }) {
             )}
 
             <form onSubmit={handleLogin}>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
                   Email Address
                 </label>
                 <input
@@ -279,8 +278,8 @@ export default function LoginPage({ onLogin }) {
                 />
               </div>
 
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
                   Password
                 </label>
                 <input
@@ -296,7 +295,7 @@ export default function LoginPage({ onLogin }) {
               <div style={{
                 display: "flex",
                 justifyContent: "flex-end",
-                marginBottom: 22
+                marginBottom: 18
               }}>
                 <button
                   type="button"
@@ -304,7 +303,7 @@ export default function LoginPage({ onLogin }) {
                     background: "none",
                     border: "none",
                     color: C.green,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 500,
                     cursor: "pointer",
                     textDecoration: "underline",
@@ -320,25 +319,25 @@ export default function LoginPage({ onLogin }) {
                 disabled={loading}
                 style={{
                   width: "100%",
-                  padding: "14px",
-                  borderRadius: 14,
+                  padding: "12px",
+                  borderRadius: 12,
                   border: "none",
                   background: loading ? C.gray200 : C.navy,
                   color: "white",
                   fontWeight: 700,
-                  fontSize: 15,
+                  fontSize: 14,
                   cursor: loading ? "not-allowed" : "pointer",
                   transition: "background 0.2s",
-                  boxShadow: loading ? "none" : "0 6px 16px -6px rgba(0,43,91,0.3)"
+                  boxShadow: loading ? "none" : "0 4px 12px -4px rgba(0,43,91,0.3)"
                 }}
               >
                 {loading ? "Signing in..." : "Sign In →"}
               </button>
 
               <p style={{
-                marginTop: 18,
+                marginTop: 16,
                 textAlign: "center",
-                fontSize: 12,
+                fontSize: 11,
                 color: C.gray400
               }}>
                 Need help? <a href="#" style={{ color: C.green, textDecoration: "none" }}>Contact support</a>
@@ -346,12 +345,12 @@ export default function LoginPage({ onLogin }) {
             </form>
 
             <p style={{
-              marginTop: 20,
+              marginTop: 18,
               textAlign: "center",
-              fontSize: 11,
+              fontSize: 10,
               color: C.gray300,
               borderTop: `1px solid ${C.gray200}`,
-              paddingTop: 14
+              paddingTop: 12
             }}>
               © 2026 Dar es Salaam Stock Exchange. All rights reserved.
             </p>
