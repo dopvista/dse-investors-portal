@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { sbGet, getSession, sbSignOut, sbGetProfile, sbGetMyRole } from "./lib/supabase";
+import { sbGet, sbGetTransactions, getSession, sbSignOut, sbGetProfile, sbGetMyRole } from "./lib/supabase";
 import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
 import TransactionsPage from "./pages/TransactionsPage";
@@ -69,7 +69,7 @@ export default function App() {
           sbGetProfile(freshToken),
           sbGetMyRole(freshToken),
           sbGet("companies"),
-          sbGet("transactions"),
+          sbGetTransactions(r),
         ]);
         setProfile(p);
         setRole(r);
