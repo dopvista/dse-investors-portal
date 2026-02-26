@@ -1,104 +1,106 @@
-import { useState, useMemo } from "react";
-import { sbInsert, sbUpdate, sbDelete, sbGet } from "../lib/supabase";
+// ── src/pages/CompaniesPage.jsx ───────────────────────────────────
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { sbInsert, sbUpdate, sbDelete, sbGetPortfolio, sbUpsertCdsPrice, sbGetCdsPriceHistory, sbGetAllCompanies } from "../lib/supabase";
 import { C, fmt, fmtSmart, Btn, StatCard, SectionCard, Modal, PriceHistoryModal, UpdatePriceModal, CompanyFormModal, ActionMenu } from "../components/ui";
 
-export default function CompaniesPage({ companies, setCompanies, transactions, showToast }) {
-  const [search, setSearch]                 = useState("");
-  const [deleting, setDeleting]             = useState(null);
-  const [updating, setUpdating]             = useState(null);
+export default function CompaniesPage({ companies: globalCompanies, setCompanies, transactions, showToast, role, profile }) {
+
+  // ── Role flags ─────────────────────────────────────────────────────
+  const isSA      = role === "SA";
+  const cdsNumber = profile?.cds_number || null;
+
+  // ── Tab (SA gets both tabs) ────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState("portfolio");
+
+  // ── Portfolio state ────────────────────────────────────────────────
+  const [portfolio,        setPortfolio]        = useState([]);
+  const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const [portfolioError,   setPortfolioError]   = useState(null);
+
+  // ── Master list state (SA only) ────────────────────────────────────
+  const [masterList,    setMasterList]    = useState([]);
+  const [masterLoading, setMasterLoading] = useState(false);
+
+  // ── UI state ──────────────────────────────────────────────────────
+  const [search,         setSearch]         = useState("");
+  const [deleting,       setDeleting]       = useState(null);
+  const [updating,       setUpdating]       = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(null);
-  const [modal, setModal]                   = useState({ open: false, type: "confirm", title: "", message: "", targetId: null });
-  const [historyModal, setHistoryModal]     = useState({ open: false, company: null, history: [] });
-  const [updateModal, setUpdateModal]       = useState({ open: false, company: null });
-  const [formModal, setFormModal]           = useState({ open: false, company: null });
+  const [deleteModal,    setDeleteModal]    = useState(null);
+  const [historyModal,   setHistoryModal]   = useState({ open: false, company: null, history: [] });
+  const [updateModal,    setUpdateModal]    = useState({ open: false, company: null });
+  const [formModal,      setFormModal]      = useState({ open: false, company: null });
 
-  // ── Stats (memoised) ──────────────────────────────────────────────
-  const { totalAvg, highestPrice } = useMemo(() => {
-    if (!companies.length) return { totalAvg: 0, highestPrice: 0 };
-    return {
-      totalAvg:     companies.reduce((s, c) => s + Number(c.price || 0), 0) / companies.length,
-      highestPrice: Math.max(...companies.map(c => Number(c.price || 0))),
-    };
-  }, [companies]);
+  // ── Load portfolio on mount ────────────────────────────────────────
+  const loadPortfolio = useCallback(async () => {
+    if (!cdsNumber) { setPortfolioLoading(false); return; }
+    setPortfolioLoading(true);
+    setPortfolioError(null);
+    try {
+      const data = await sbGetPortfolio(cdsNumber);
+      setPortfolio(data);
+    } catch (e) {
+      setPortfolioError(e.message);
+    } finally {
+      setPortfolioLoading(false);
+    }
+  }, [cdsNumber]);
 
-  // ── Search (memoised) ─────────────────────────────────────────────
+  useEffect(() => { loadPortfolio(); }, [loadPortfolio]);
+
+  // ── Load master list when SA switches to Manage tab ───────────────
+  useEffect(() => {
+    if (!isSA || activeTab !== "manage") return;
+    (async () => {
+      setMasterLoading(true);
+      try {
+        const data = await sbGetAllCompanies();
+        setMasterList(data);
+      } catch (e) {
+        showToast("Error loading companies: " + e.message, "error");
+      } finally {
+        setMasterLoading(false);
+      }
+    })();
+  }, [isSA, activeTab]);
+
+  // ── Portfolio stats ────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const priced   = portfolio.filter(c => c.cds_price != null);
+    const avgPrice = priced.length ? priced.reduce((s, c) => s + Number(c.cds_price), 0) / priced.length : 0;
+    const highest  = priced.length ? Math.max(...priced.map(c => Number(c.cds_price))) : 0;
+    return { total: portfolio.length, avgPrice, highest, unpriced: portfolio.length - priced.length };
+  }, [portfolio]);
+
+  // ── Search (portfolio) ────────────────────────────────────────────
   const filtered = useMemo(() =>
     search.trim()
-      ? companies.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
-      : companies,
-    [companies, search]);
+      ? portfolio.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+      : portfolio,
+    [portfolio, search]);
 
-  // ── Register / Edit ───────────────────────────────────────────────
-  const handleFormConfirm = async ({ name, price, remarks }) => {
-    const isEdit = !!formModal.company;
-    try {
-      if (isEdit) {
-        const rows = await sbUpdate("companies", formModal.company.id, { name, remarks });
-        setCompanies(p => p.map(c => c.id === formModal.company.id ? rows[0] : c));
-        showToast("Company updated!", "success");
-      } else {
-        const rows = await sbInsert("companies", { name, price, remarks });
-        setCompanies(p => [rows[0], ...p]);
-        showToast("Company registered!", "success");
-      }
-    } catch (e) {
-      showToast("Error: " + e.message, "error");
-    }
-  };
-
-  // ── Delete ────────────────────────────────────────────────────────
-  const del = (id) => {
-    const hasTx   = transactions.some(t => t.company_id === id);
-    const company = companies.find(c => c.id === id);
-    if (hasTx) {
-      setModal({ open: true, type: "warning", title: "Cannot Delete Company", message: `"${company.name}" has existing transactions. Delete all its transactions first before removing this company.`, targetId: null });
-    } else {
-      setModal({ open: true, type: "confirm", title: "Delete Company", message: `Are you sure you want to delete "${company.name}"? This action cannot be undone.`, targetId: id });
-    }
-  };
-
-  const confirmDelete = async () => {
-    const id = modal.targetId;
-    setModal({ ...modal, open: false });
-    setDeleting(id);
-    try {
-      await sbDelete("companies", id);
-      setCompanies(p => p.filter(c => c.id !== id));
-      showToast("Company deleted.", "success");
-    } catch (e) {
-      showToast("Error: " + e.message, "error");
-    } finally {
-      setDeleting(null);
-    }
-  };
-
-  // ── Update Price ──────────────────────────────────────────────────
+  // ── Update Price (CDS-scoped) ─────────────────────────────────────
   const confirmUpdatePrice = async ({ newPrice, datetime, reason }) => {
-    const company     = updateModal.company;
-    const oldPrice    = Number(company.price);
-    const changeAmount = newPrice - oldPrice;
-    const changePct   = oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : 0;
+    const company  = updateModal.company;
+    const oldPrice = company.cds_price != null ? Number(company.cds_price) : null;
     setUpdateModal({ open: false, company: null });
     setUpdating(company.id);
     try {
-      await sbInsert("price_history", {
-        company_id:     company.id,
-        company_name:   company.name,
-        old_price:      oldPrice,
-        new_price:      newPrice,
-        change_amount:  changeAmount,
-        change_percent: changePct,
-        notes:          reason || null,
-        updated_by:     "Admin",
-        created_at:     new Date(datetime).toISOString(),
+      await sbUpsertCdsPrice({
+        companyId:   company.id,
+        companyName: company.name,
+        cdsNumber,
+        newPrice,
+        oldPrice,
+        reason,
+        updatedBy: profile?.full_name || "Unknown",
+        datetime,
       });
-      const rows = await sbUpdate("companies", company.id, {
-        price:          newPrice,
-        previous_price: oldPrice,
-        updated_at:     new Date(datetime).toISOString(),
-      });
-      setCompanies(prev => prev.map(c => c.id === company.id ? rows[0] : c));
-      showToast("Price updated!", "success");
+      setPortfolio(prev => prev.map(c => c.id === company.id
+        ? { ...c, cds_price: newPrice, cds_previous_price: oldPrice, cds_updated_by: profile?.full_name, cds_updated_at: datetime ? new Date(datetime).toISOString() : new Date().toISOString() }
+        : c
+      ));
+      showToast("Price updated for your portfolio!", "success");
     } catch (e) {
       showToast("Error: " + e.message, "error");
     } finally {
@@ -106,11 +108,11 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
     }
   };
 
-  // ── Price History ─────────────────────────────────────────────────
+  // ── Price History (CDS-scoped) ────────────────────────────────────
   const viewHistory = async (company) => {
     setLoadingHistory(company.id);
     try {
-      const history = await sbGet("price_history", { "company_id": `eq.${company.id}`, "order": "created_at.desc" });
+      const history = await sbGetCdsPriceHistory(company.id, cdsNumber);
       setHistoryModal({ open: true, company, history });
     } catch (e) {
       showToast("Error loading history: " + e.message, "error");
@@ -119,19 +121,59 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
     }
   };
 
+  // ── SA: Register / Edit company ───────────────────────────────────
+  const handleFormConfirm = async ({ name, price, remarks }) => {
+    const isEdit = !!formModal.company;
+    try {
+      if (isEdit) {
+        const rows = await sbUpdate("companies", formModal.company.id, { name, remarks });
+        setMasterList(p => p.map(c => c.id === formModal.company.id ? rows[0] : c));
+        showToast("Company updated!", "success");
+      } else {
+        const rows = await sbInsert("companies", { name, price, remarks });
+        setMasterList(p => [rows[0], ...p]);
+        if (setCompanies) setCompanies(p => [rows[0], ...p]);
+        showToast("Company registered!", "success");
+      }
+      setFormModal({ open: false, company: null });
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    }
+  };
+
+  // ── SA: Delete company ────────────────────────────────────────────
+  const confirmDelete = async () => {
+    const { id } = deleteModal;
+    setDeleteModal(null);
+    setDeleting(id);
+    try {
+      await sbDelete("companies", id);
+      setMasterList(p => p.filter(c => c.id !== id));
+      if (setCompanies) setCompanies(p => p.filter(c => c.id !== id));
+      showToast("Company deleted.", "success");
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
   return (
     <div>
       {/* ── Modals ── */}
-      <Modal
-        type={modal.type}
-        title={modal.open ? modal.title : ""}
-        message={modal.message}
-        onConfirm={confirmDelete}
-        onClose={() => setModal({ ...modal, open: false })}
-      />
+      {deleteModal && (
+        <Modal
+          type="confirm"
+          title="Delete Company"
+          message={`Are you sure you want to delete "${deleteModal.name}"? This cannot be undone.`}
+          onConfirm={confirmDelete}
+          onClose={() => setDeleteModal(null)}
+        />
+      )}
       {historyModal.open && (
         <PriceHistoryModal
-          company={historyModal.company}
+          company={historyModal.company ? { ...historyModal.company, price: historyModal.company.cds_price } : null}
           history={historyModal.history}
           onClose={() => setHistoryModal({ open: false, company: null, history: [] })}
         />
@@ -139,7 +181,7 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
       {updateModal.open && (
         <UpdatePriceModal
           key={updateModal.company?.id}
-          company={updateModal.company}
+          company={updateModal.company ? { ...updateModal.company, price: updateModal.company.cds_price ?? 0 } : null}
           onConfirm={confirmUpdatePrice}
           onClose={() => setUpdateModal({ open: false, company: null })}
         />
@@ -153,131 +195,267 @@ export default function CompaniesPage({ companies, setCompanies, transactions, s
         />
       )}
 
-      {/* ── Stats ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
-        <StatCard label="Total Holdings"  value={companies.length}              sub="Registered companies"                                          icon="🏢" color={C.navy}  />
-        <StatCard label="Avg. Price"      value={`TZS ${fmtSmart(totalAvg)}`}   sub="Across all holdings"                                           icon="📊" color={C.green} />
-        <StatCard label="Highest Price"   value={`TZS ${fmtSmart(highestPrice)}`} sub="Top priced holding"                                          icon="🏆" color={C.gold}  />
-        <StatCard label="Search Results"  value={filtered.length}               sub={search ? `Matching "${search}"` : "Showing all"}               icon="🔍" color={C.navy}  />
-      </div>
-
-      {/* ── Toolbar ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: C.gray400 }}>🔍</span>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search companies..."
-            style={{ width: "100%", border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "9px 12px 9px 36px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, boxSizing: "border-box" }}
-            onFocus={e => e.target.style.borderColor = C.green}
-            onBlur={e  => e.target.style.borderColor = C.gray200}
-          />
+      {/* ── SA Tabs ── */}
+      {isSA && (
+        <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.gray100, borderRadius: 12, padding: 4, width: "fit-content" }}>
+          {[
+            { id: "portfolio", label: "📊 My Portfolio"    },
+            { id: "manage",    label: "🏢 Manage Companies" },
+          ].map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+              padding: "8px 20px", borderRadius: 9, border: "none", cursor: "pointer",
+              fontFamily: "inherit", transition: "all 0.2s",
+              background: activeTab === t.id ? C.navy : "transparent",
+              color:      activeTab === t.id ? C.white : C.gray600,
+              fontWeight: activeTab === t.id ? 700 : 500, fontSize: 13,
+              boxShadow:  activeTab === t.id ? "0 2px 8px rgba(11,31,58,0.25)" : "none",
+            }}>{t.label}</button>
+          ))}
         </div>
-        {search && <Btn variant="secondary" onClick={() => setSearch("")}>Clear</Btn>}
-        <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, company: null })}>Register Company</Btn>
-      </div>
+      )}
 
-      {/* ── Table ── */}
-      <SectionCard
-        title={`Holdings (${filtered.length}${search ? ` of ${companies.length}` : ""})`}
-        subtitle="Manage your DSE registered companies"
-      >
-        {companies.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>No companies yet</div>
-            <div style={{ fontSize: 13 }}>Click "Register Company" to add your first holding</div>
+      {/* ════════════════════════════════
+          PORTFOLIO VIEW (all roles)
+      ════════════════════════════════ */}
+      {activeTab === "portfolio" && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
+            <StatCard label="Holdings"      value={stats.total}     sub="Companies with transactions"   icon="🏢" color={C.navy}  />
+            <StatCard label="Avg. Price"    value={stats.avgPrice ? `TZS ${fmtSmart(stats.avgPrice)}` : "—"} sub="Across priced holdings" icon="📊" color={C.green} />
+            <StatCard label="Highest Price" value={stats.highest   ? `TZS ${fmtSmart(stats.highest)}`  : "—"} sub="Top priced holding"     icon="🏆" color={C.gold}  />
+            <StatCard label="Not Priced"    value={stats.unpriced}  sub="Tap ⋯ → Set Price to track"   icon="💰" color={stats.unpriced > 0 ? C.red : C.gray400} />
           </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "40px 20px", color: C.gray400 }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
-            <div style={{ fontWeight: 600 }}>No results for "{search}"</div>
-            <div style={{ fontSize: 13, marginTop: 4 }}>Try a different search term</div>
+
+          <div style={{ background: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: `1px solid #BBF7D0`, borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 18 }}>📊</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: C.green }}>Your Portfolio — CDS {cdsNumber || "—"}</div>
+              <div style={{ fontSize: 12, color: "#15803D" }}>
+                Only companies with your transactions appear here. Prices are private to your CDS group and used for your own portfolio analysis.
+              </div>
+            </div>
           </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-              <thead>
-                <tr style={{ background: C.gray50 }}>
-                  {[
-                    { label: "#",                    align: "left"  },
-                    { label: "Company Name",         align: "left"  },
-                    { label: "Current Price (TZS)",  align: "right" },
-                    { label: "Change",               align: "right" },
-                    { label: "Previous Price (TZS)", align: "right" },
-                    { label: "Last Price Update",    align: "left"  },
-                    { label: "Actions",              align: "right" },
-                  ].map(h => (
-                    <th key={h.label} style={{ padding: "10px 18px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c, i) => {
-                  const priceUp   = c.previous_price != null ? Number(c.price) >= Number(c.previous_price) : null;
-                  const changePct = c.previous_price != null && Number(c.previous_price) !== 0
-                    ? ((Number(c.price) - Number(c.previous_price)) / Number(c.previous_price)) * 100
-                    : null;
 
-                  return (
-                    <tr key={c.id} style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s" }}
-                      onMouseEnter={e => e.currentTarget.style.background = C.gray50}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <div style={{ flex: 1, position: "relative" }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: C.gray400 }}>🔍</span>
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search your holdings..."
+                style={{ width: "100%", border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "9px 12px 9px 36px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, boxSizing: "border-box" }}
+                onFocus={e => e.target.style.borderColor = C.green}
+                onBlur={e  => e.target.style.borderColor = C.gray200}
+              />
+            </div>
+            {search && <Btn variant="secondary" onClick={() => setSearch("")}>Clear</Btn>}
+            <Btn variant="secondary" icon="🔄" onClick={loadPortfolio}>Refresh</Btn>
+          </div>
 
-                      <td style={{ padding: "10px 18px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
-
-                      <td style={{ padding: "10px 18px", minWidth: 160 }}>
-                        <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
-                        {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{c.remarks}</div>}
-                      </td>
-
-                      <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        <span style={{ background: C.greenBg, color: C.green, padding: "3px 10px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
-                          {fmt(c.price)}
-                        </span>
-                      </td>
-
-                      <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        {priceUp !== null && changePct !== null
-                          ? <span style={{ background: priceUp ? C.greenBg : C.redBg, color: priceUp ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${priceUp ? "#BBF7D0" : "#FECACA"}` }}>
-                              {priceUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
-                            </span>
-                          : <span style={{ color: C.gray400 }}>—</span>}
-                      </td>
-
-                      <td style={{ padding: "10px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
-                        {c.previous_price != null
-                          ? <span style={{ color: C.gray500, fontSize: 13 }}>{fmt(c.previous_price)}</span>
-                          : <span style={{ color: C.gray400 }}>—</span>}
-                      </td>
-
-                      <td style={{ padding: "10px 18px", whiteSpace: "nowrap" }}>
-                        {c.updated_at
-                          ? <span style={{ fontSize: 13, color: C.gray600 }}>
-                              {new Date(c.updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                              <span style={{ color: C.gray400, margin: "0 6px" }}>|</span>
-                              {new Date(c.updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                          : <span style={{ color: C.gray400 }}>—</span>}
-                      </td>
-
-                      <td style={{ padding: "10px 18px", textAlign: "right" }}>
-                        <ActionMenu actions={[
-                          { icon: "💰", label: updating === c.id ? "Updating..." : "Update Price",         onClick: () => setUpdateModal({ open: true, company: c }) },
-                          { icon: "📈", label: loadingHistory === c.id ? "Loading..." : "Price History",   onClick: () => viewHistory(c) },
-                          { icon: "✏️", label: "Edit Details",                                             onClick: () => setFormModal({ open: true, company: c }) },
-                          { icon: "🗑️", label: "Delete", danger: true,                                    onClick: () => del(c.id) },
-                        ]} />
-                      </td>
+          <SectionCard
+            title={`Portfolio Holdings (${filtered.length}${search ? ` of ${portfolio.length}` : ""})`}
+            subtitle="Prices are your own CDS analysis prices — not shared with other users"
+          >
+            {portfolioLoading ? (
+              <div style={{ textAlign: "center", padding: "50px 20px", color: C.gray400 }}>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <div style={{ width: 28, height: 28, border: `3px solid ${C.gray200}`, borderTop: `3px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
+                <div style={{ fontSize: 13 }}>Loading your portfolio...</div>
+              </div>
+            ) : portfolioError ? (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: C.red }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
+                <div style={{ fontWeight: 600 }}>Failed to load portfolio</div>
+                <div style={{ fontSize: 13, marginTop: 4, color: C.gray400 }}>{portfolioError}</div>
+              </div>
+            ) : portfolio.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>No holdings yet</div>
+                <div style={{ fontSize: 13 }}>Record transactions to see companies appear here automatically</div>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 20px", color: C.gray400 }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
+                <div style={{ fontWeight: 600 }}>No results for "{search}"</div>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
+                      {[
+                        { label: "#",                    align: "left"  },
+                        { label: "Company",              align: "left"  },
+                        { label: "My Price (TZS)",       align: "right" },
+                        { label: "Change",               align: "right" },
+                        { label: "Previous Price (TZS)", align: "right" },
+                        { label: "Last Updated",         align: "left"  },
+                        { label: "Updated By",           align: "left"  },
+                        { label: "Actions",              align: "right" },
+                      ].map(h => (
+                        <th key={h.label} style={{ padding: "10px 16px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `2px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
+                      ))}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((c, i) => {
+                      const hasCdsPrice = c.cds_price != null;
+                      const priceUp     = hasCdsPrice && c.cds_previous_price != null ? Number(c.cds_price) >= Number(c.cds_previous_price) : null;
+                      const changePct   = hasCdsPrice && c.cds_previous_price != null && Number(c.cds_previous_price) !== 0
+                        ? ((Number(c.cds_price) - Number(c.cds_previous_price)) / Number(c.cds_previous_price)) * 100
+                        : null;
+
+                      return (
+                        <tr key={c.id}
+                          style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s", background: !hasCdsPrice ? "#FFFBEB" : "transparent" }}
+                          onMouseEnter={e => e.currentTarget.style.background = !hasCdsPrice ? "#FFF8DC" : C.gray50}
+                          onMouseLeave={e => e.currentTarget.style.background = !hasCdsPrice ? "#FFFBEB" : "transparent"}
+                        >
+                          <td style={{ padding: "10px 16px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
+
+                          <td style={{ padding: "10px 16px", minWidth: 140 }}>
+                            <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
+                            {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{c.remarks}</div>}
+                          </td>
+
+                          <td style={{ padding: "10px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                            {hasCdsPrice
+                              ? <span style={{ background: C.greenBg, color: C.green, padding: "3px 10px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>{fmt(c.cds_price)}</span>
+                              : <span style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>💰 Set price</span>
+                            }
+                          </td>
+
+                          <td style={{ padding: "10px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                            {priceUp !== null && changePct !== null
+                              ? <span style={{ background: priceUp ? C.greenBg : C.redBg, color: priceUp ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${priceUp ? "#BBF7D0" : "#FECACA"}` }}>
+                                  {priceUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
+                                </span>
+                              : <span style={{ color: C.gray400 }}>—</span>}
+                          </td>
+
+                          <td style={{ padding: "10px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
+                            {c.cds_previous_price != null
+                              ? <span style={{ color: C.gray500, fontSize: 13 }}>{fmt(c.cds_previous_price)}</span>
+                              : <span style={{ color: C.gray400 }}>—</span>}
+                          </td>
+
+                          <td style={{ padding: "10px 16px", whiteSpace: "nowrap" }}>
+                            {c.cds_updated_at
+                              ? <span style={{ fontSize: 12, color: C.gray600 }}>
+                                  {new Date(c.cds_updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                                  <span style={{ color: C.gray400, margin: "0 5px" }}>|</span>
+                                  {new Date(c.cds_updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              : <span style={{ color: C.gray400 }}>—</span>}
+                          </td>
+
+                          <td style={{ padding: "10px 16px" }}>
+                            {c.cds_updated_by
+                              ? <span style={{ fontSize: 11, color: C.gray600, background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 6, padding: "2px 8px" }}>{c.cds_updated_by}</span>
+                              : <span style={{ color: C.gray400 }}>—</span>}
+                          </td>
+
+                          <td style={{ padding: "10px 16px", textAlign: "right" }}>
+                            <ActionMenu actions={[
+                              { icon: "💰", label: updating === c.id ? "Updating..." : hasCdsPrice ? "Update Price" : "Set Price", onClick: () => setUpdateModal({ open: true, company: c }) },
+                              { icon: "📈", label: loadingHistory === c.id ? "Loading..." : "Price History", onClick: () => viewHistory(c) },
+                            ]} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionCard>
+        </>
+      )}
+
+      {/* ════════════════════════════════
+          MANAGE COMPANIES (SA only)
+      ════════════════════════════════ */}
+      {activeTab === "manage" && isSA && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+            <StatCard label="Total Companies" value={masterList.length} sub="In master registry" icon="🏢" color={C.navy}  />
+            <StatCard label="Registered Today" value={masterList.filter(c => c.created_at?.startsWith(new Date().toISOString().split("T")[0])).length} sub="Added today" icon="✅" color={C.green} />
+            <StatCard label="Visible To"       value="All Users"        sub="Based on their transactions" icon="👁️" color={C.gold} />
           </div>
-        )}
-      </SectionCard>
+
+          <div style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)", border: `1px solid #BFDBFE`, borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🔒</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#1D4ED8" }}>Super Admin — Master Registry</div>
+                <div style={{ fontSize: 12, color: "#3B82F6" }}>Only you can register or delete companies. Companies appear in users' Holdings automatically once they have a transaction for them.</div>
+              </div>
+            </div>
+            <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, company: null })}>Register Company</Btn>
+          </div>
+
+          <SectionCard title={`Master Company Registry (${masterList.length})`} subtitle="All DSE-listed companies available in the system">
+            {masterLoading ? (
+              <div style={{ textAlign: "center", padding: "50px 20px", color: C.gray400 }}>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <div style={{ width: 28, height: 28, border: `3px solid ${C.gray200}`, borderTop: `3px solid ${C.navy}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
+                <div style={{ fontSize: 13 }}>Loading master registry...</div>
+              </div>
+            ) : masterList.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>No companies registered yet</div>
+                <div style={{ fontSize: 13 }}>Click "Register Company" to add the first one</div>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
+                      {[
+                        { label: "#",            align: "left"  },
+                        { label: "Company Name", align: "left"  },
+                        { label: "Remarks",      align: "left"  },
+                        { label: "Registered",   align: "left"  },
+                        { label: "Actions",      align: "right" },
+                      ].map(h => (
+                        <th key={h.label} style={{ padding: "10px 18px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `2px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {masterList.map((c, i) => (
+                      <tr key={c.id}
+                        style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = C.gray50}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <td style={{ padding: "10px 18px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
+                        <td style={{ padding: "10px 18px", minWidth: 160 }}>
+                          <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
+                        </td>
+                        <td style={{ padding: "10px 18px", color: C.gray500, fontSize: 13 }}>
+                          {c.remarks || <span style={{ color: C.gray400 }}>—</span>}
+                        </td>
+                        <td style={{ padding: "10px 18px", color: C.gray500, fontSize: 13, whiteSpace: "nowrap" }}>
+                          {c.created_at
+                            ? new Date(c.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                            : "—"}
+                        </td>
+                        <td style={{ padding: "10px 18px", textAlign: "right" }}>
+                          <ActionMenu actions={[
+                            { icon: "✏️", label: "Edit Company", onClick: () => setFormModal({ open: true, company: c }) },
+                            { icon: "🗑️", label: deleting === c.id ? "Deleting..." : "Delete", danger: true, onClick: () => setDeleteModal({ id: c.id, name: c.name }) },
+                          ]} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </SectionCard>
+        </>
+      )}
     </div>
   );
 }
