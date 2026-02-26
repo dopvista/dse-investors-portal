@@ -279,12 +279,39 @@ export default function App() {
               {tab === "user-management" && "Manage system users and assign roles"}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{companies.length} Holdings</div>
-              <div style={{ fontSize: 12, color: C.gray400 }}>{transactions.length} Transactions</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Stats pills */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, background: C.navy + "0a", border: `1px solid ${C.navy}18`, borderRadius: 8, padding: "4px 10px" }}>
+                <span style={{ fontSize: 12 }}>🏢</span>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em", lineHeight: 1 }}>Holdings</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{companies.length}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, background: C.green + "0d", border: `1px solid ${C.green}20`, borderRadius: 8, padding: "4px 10px" }}>
+                <span style={{ fontSize: 12 }}>📋</span>
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em", lineHeight: 1 }}>Transactions</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.green, lineHeight: 1.2 }}>{transactions.length}</div>
+                </div>
+              </div>
             </div>
-            <img src={logo} alt="DI" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", flexShrink: 0 }} />
+
+            {/* Divider */}
+            <div style={{ width: 1, height: 36, background: C.gray200 }} />
+
+            {/* CDS badge */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: `linear-gradient(135deg, ${C.navy}, #1e3a5f)`, borderRadius: 12, padding: "6px 14px 6px 10px", boxShadow: "0 2px 10px rgba(11,31,58,0.25)" }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🔒</div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em", lineHeight: 1 }}>CDS Account</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.white, letterSpacing: "0.04em", lineHeight: 1.3 }}>{profile?.cds_number || "—"}</div>
+              </div>
+            </div>
+
+            {/* Logo */}
+            <img src={logo} alt="DI" style={{ width: 42, height: 42, borderRadius: 11, objectFit: "cover", boxShadow: "0 2px 10px rgba(0,0,0,0.18)", flexShrink: 0 }} />
           </div>
         </div>
 
