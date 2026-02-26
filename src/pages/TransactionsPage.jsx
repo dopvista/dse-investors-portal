@@ -144,7 +144,7 @@ function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) 
             Cancel
           </button>
           <button onClick={onConfirm} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: accentColor, color: C.white, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            {icon} {isVerify ? `Verify${count > 1 ? ` ${count}` : ""}` : "Confirm"}
+            {icon} {isVerify ? (count > 1 ? `Verify ${count}` : "Verify") : "Confirm"}
           </button>
         </div>
       </div>
