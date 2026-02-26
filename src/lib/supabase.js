@@ -338,13 +338,18 @@ export async function sbInsertTransaction(data) {
 
 /**
  * sbConfirmTransaction(id)
- * DE confirms a pending transaction → status becomes confirmed via RPC.
+ * DE confirms a pending transaction → status becomes confirmed.
  */
 export async function sbConfirmTransaction(id) {
-  const res = await fetch(`${BASE}/rest/v1/rpc/confirm_transaction`, {
-    method:  "POST",
+  const uid = getSession()?.user?.id;
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
+    method:  "PATCH",
     headers: headers(token()),
-    body:    JSON.stringify({ tx_id: id }),
+    body:    JSON.stringify({
+      status:       "confirmed",
+      confirmed_by: uid,
+      confirmed_at: new Date().toISOString(),
+    }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
