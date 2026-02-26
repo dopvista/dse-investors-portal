@@ -187,7 +187,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const isSAAD = role === "SA" || role === "AD";
 
   // Status filter defaults per role
-  const defaultStatus = isDE ? "pending" : isVR ? "confirmed" : "All";
+  const defaultStatus = "All";
 
   // Status options per role
   const statusOptions = [["All","All Statuses"],["pending","🕐 Pending"],["confirmed","✅ Confirmed"],["verified","✔️ Verified"],["rejected","✖ Rejected"]];
