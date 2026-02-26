@@ -341,11 +341,13 @@ export async function sbInsertTransaction(data) {
  * DE confirms a pending transaction → status becomes confirmed.
  */
 export async function sbConfirmTransaction(id) {
+  const uid = getSession()?.user?.id;
   const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
     method:  "PATCH",
     headers: headers(token()),
     body:    JSON.stringify({
       status:       "confirmed",
+      confirmed_by: uid,
       confirmed_at: new Date().toISOString(),
     }),
   });
