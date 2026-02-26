@@ -35,12 +35,10 @@ const ADVERTS = [
 ];
 
 export default function LoginPage({ onLogin }) {
-  const [view, setView] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [activeAd, setActiveAd] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
 
@@ -56,24 +54,22 @@ export default function LoginPage({ onLogin }) {
 
   const inpStyle = {
     width: "100%",
-    padding: "16px 20px",
-    borderRadius: 16,
+    padding: "14px 18px",
+    borderRadius: 14,
     fontSize: 15,
-    border: `2px solid ${C.gray200}`,
+    border: `1.5px solid ${C.gray200}`,
     outline: "none",
     fontFamily: "'Inter', sans-serif",
     background: "#ffffff",
     color: C.text,
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    transition: "border 0.2s, box-shadow 0.2s",
     boxSizing: "border-box",
-    marginTop: 8,
-    boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+    marginTop: 6
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
     if (!email.trim() || !password.trim()) return setError("All fields are required");
     setLoading(true);
     try {
@@ -99,170 +95,115 @@ export default function LoginPage({ onLogin }) {
       boxSizing: "border-box"
     }}>
       <style>{`
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0px); }
-        }
-        @keyframes shimmer {
-          0% { background-position: -1000px 0; }
-          100% { background-position: 1000px 0; }
-        }
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(30px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes scaleIn {
-          from { opacity: 0; transform: scale(0.9); }
-          to { opacity: 1; transform: scale(1); }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes kenBurns {
           0% { transform: scale(1); }
           100% { transform: scale(1.1); }
         }
-        .login-container {
-          animation: scaleIn 0.6s ease-out;
+        .login-card {
+          animation: fadeIn 0.6s ease-out;
         }
-        .ad-image {
+        .ad-bg {
           animation: kenBurns 8s ease-in-out infinite alternate;
         }
         .input-focus:focus {
           border-color: ${C.gold} !important;
-          box-shadow: 0 0 0 4px ${C.gold}20 !important;
-        }
-        .shimmer-button {
-          position: relative;
-          overflow: hidden;
-        }
-        .shimmer-button::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 200%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          animation: shimmer 2s infinite;
+          box-shadow: 0 0 0 3px ${C.gold}20;
         }
       `}</style>
 
-      {/* Main Container */}
-      <div className="login-container" style={{
-        maxWidth: 1100,
+      {/* Main card */}
+      <div className="login-card" style={{
+        maxWidth: 1000,
         width: "100%",
         background: "white",
-        borderRadius: 48,
-        boxShadow: "0 50px 100px -20px rgba(0,0,0,0.3), 0 30px 60px -30px rgba(0,43,91,0.5)",
+        borderRadius: 40,
+        boxShadow: "0 30px 60px -20px rgba(0,0,0,0.3), 0 20px 40px -20px rgba(0,43,91,0.4)",
         display: "grid",
         gridTemplateColumns: "1.2fr 0.9fr",
-        overflow: "hidden",
-        position: "relative"
+        overflow: "hidden"
       }}>
         
-        {/* Decorative Logo (top left) */}
-        <div style={{
-          position: "absolute",
-          top: 20,
-          left: 20,
-          zIndex: 20,
-          pointerEvents: "none"
-        }}>
-          <div style={{
-            width: 60,
-            height: 60,
-            background: `url(${logo}) center/cover`,
-            borderRadius: 20,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-            border: "3px solid white"
-          }} />
-        </div>
-
-        {/* LEFT SIDE: Photo Gallery */}
+        {/* LEFT SIDE: Photo slider */}
         <div style={{
           position: "relative",
           background: ADVERTS[activeAd].color,
           transition: "background 1s ease",
           overflow: "hidden",
-          padding: 60,
+          padding: 50,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center"
         }}>
-          {/* Background Images */}
+          {/* Background image with Ken Burns */}
           {ADVERTS.map((ad, index) => (
             <div
               key={ad.id}
-              className="ad-image"
+              className="ad-bg"
               style={{
                 position: "absolute",
                 inset: 0,
-                opacity: index === activeAd ? 0.4 : 0,
+                opacity: index === activeAd ? 0.3 : 0,
                 backgroundImage: `url(${ad.image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                transition: "opacity 1.5s ease",
-                filter: "brightness(0.8)"
+                transition: "opacity 1.2s ease",
+                filter: "brightness(0.9)"
               }}
             />
           ))}
 
-          {/* Content */}
-          <div style={{ position: "relative", zIndex: 10 }}>
+          {/* Text content */}
+          <div style={{ position: "relative", zIndex: 2 }}>
+            <div style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: C.gold,
+              letterSpacing: 1.5,
+              marginBottom: 16,
+              textTransform: "uppercase"
+            }}>
+              DAR ES SALAAM STOCK EXCHANGE
+            </div>
+
             {ADVERTS.map((ad, index) => (
               <div
                 key={ad.id}
                 style={{
                   display: index === activeAd ? "block" : "none",
-                  animation: "slideIn 0.8s ease-out"
+                  animation: "fadeIn 0.8s ease-out"
                 }}
               >
-                <div style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: C.gold,
-                  letterSpacing: 2,
-                  marginBottom: 16,
-                  textTransform: "uppercase"
-                }}>
-                  DAR ES SALAAM STOCK EXCHANGE
-                </div>
-                
                 <h2 style={{
-                  fontSize: "clamp(36px, 5vw, 56px)",
+                  fontSize: "clamp(32px, 4vw, 48px)",
                   fontWeight: 800,
                   color: "white",
-                  marginBottom: 16,
-                  lineHeight: 1.1,
-                  textShadow: "0 4px 20px rgba(0,0,0,0.2)"
+                  margin: "0 0 12px 0",
+                  lineHeight: 1.2,
+                  textShadow: "0 2px 10px rgba(0,0,0,0.2)"
                 }}>
                   {ad.title}
                 </h2>
-                
-                <div style={{
-                  width: 80,
-                  height: 3,
-                  background: C.gold,
-                  marginBottom: 24,
-                  borderRadius: 2
-                }} />
-                
                 <p style={{
-                  fontSize: 18,
+                  fontSize: 16,
                   color: "rgba(255,255,255,0.9)",
-                  lineHeight: 1.6,
-                  maxWidth: 400,
-                  fontWeight: 400
+                  lineHeight: 1.5,
+                  maxWidth: 350,
+                  margin: 0
                 }}>
                   {ad.sub}
                 </p>
               </div>
             ))}
 
-            {/* Navigation Dots */}
+            {/* Minimal navigation dots */}
             <div style={{
               display: "flex",
-              gap: 12,
-              marginTop: 60
+              gap: 10,
+              marginTop: 40
             }}>
               {ADVERTS.map((_, i) => (
                 <button
@@ -271,12 +212,12 @@ export default function LoginPage({ onLogin }) {
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
                   style={{
-                    width: i === activeAd ? 60 : 12,
+                    width: i === activeAd ? 36 : 8,
                     height: 6,
                     borderRadius: 3,
                     background: "white",
-                    opacity: i === activeAd ? 1 : 0.3,
-                    transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                    opacity: i === activeAd ? 1 : 0.4,
+                    transition: "all 0.3s",
                     cursor: "pointer",
                     border: "none",
                     padding: 0
@@ -287,23 +228,23 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        {/* RIGHT SIDE: Login Form */}
+        {/* RIGHT SIDE: Login form */}
         <div style={{
           background: "white",
-          padding: 60,
+          padding: 50,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center"
         }}>
-          <div style={{ maxWidth: 360, width: "100%", margin: "0 auto" }}>
+          <div style={{ maxWidth: 320, width: "100%", margin: "0 auto" }}>
             {/* Header */}
-            <div style={{ marginBottom: 40 }}>
+            <div style={{ marginBottom: 32 }}>
               <h1 style={{
-                fontSize: 36,
+                fontSize: 30,
                 fontWeight: 800,
                 color: C.navy,
-                margin: "0 0 8px 0",
-                letterSpacing: "-0.02em"
+                margin: "0 0 6px 0",
+                letterSpacing: "-0.01em"
               }}>
                 Welcome Back
               </h1>
@@ -316,37 +257,24 @@ export default function LoginPage({ onLogin }) {
               </p>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div style={{
-                padding: "14px 18px",
-                borderRadius: 16,
+                padding: "12px 16px",
+                borderRadius: 12,
                 background: "#fef2f2",
                 color: "#dc2626",
                 fontSize: 14,
-                marginBottom: 24,
-                border: "1px solid #fee2e2",
-                display: "flex",
-                alignItems: "center",
-                gap: 10
+                marginBottom: 20,
+                border: "1px solid #fee2e2"
               }}>
-                <span style={{ fontSize: 20 }}>⚠️</span>
-                {error}
+                ⚠️ {error}
               </div>
             )}
 
             <form onSubmit={handleLogin}>
-              {/* Email Field */}
-              <div style={{ marginBottom: 24 }}>
-                <label style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: C.text,
-                  display: "flex",
-                  justifyContent: "space-between"
-                }}>
-                  <span>Email Address</span>
-                  <span style={{ color: C.gray400, fontWeight: 400 }}>required</span>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                  Email Address
                 </label>
                 <input
                   className="input-focus"
@@ -358,17 +286,9 @@ export default function LoginPage({ onLogin }) {
                 />
               </div>
 
-              {/* Password Field */}
               <div style={{ marginBottom: 16 }}>
-                <label style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: C.text,
-                  display: "flex",
-                  justifyContent: "space-between"
-                }}>
-                  <span>Password</span>
-                  <span style={{ color: C.gray400, fontWeight: 400 }}>required</span>
+                <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
+                  Password
                 </label>
                 <input
                   className="input-focus"
@@ -380,11 +300,10 @@ export default function LoginPage({ onLogin }) {
                 />
               </div>
 
-              {/* Forgot Password */}
               <div style={{
                 display: "flex",
                 justifyContent: "flex-end",
-                marginBottom: 32
+                marginBottom: 28
               }}>
                 <button
                   type="button"
@@ -394,83 +313,56 @@ export default function LoginPage({ onLogin }) {
                     border: "none",
                     color: C.green,
                     fontSize: 14,
-                    fontWeight: 600,
+                    fontWeight: 500,
                     cursor: "pointer",
-                    padding: "4px 0",
-                    borderBottom: `2px solid transparent`,
-                    transition: "all 0.2s"
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3
                   }}
-                  onMouseEnter={e => e.target.style.borderBottomColor = C.green}
-                  onMouseLeave={e => e.target.style.borderBottomColor = "transparent"}
                 >
                   Forgot password?
                 </button>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="shimmer-button"
                 style={{
                   width: "100%",
-                  padding: "18px",
-                  borderRadius: 20,
+                  padding: "16px",
+                  borderRadius: 16,
                   border: "none",
-                  background: loading ? C.gray200 : `linear-gradient(135deg, ${C.navy} 0%, #002d61 100%)`,
+                  background: loading ? C.gray200 : C.navy,
                   color: "white",
                   fontWeight: 700,
                   fontSize: 16,
                   cursor: loading ? "not-allowed" : "pointer",
-                  transition: "all 0.3s",
-                  boxShadow: loading ? "none" : "0 10px 25px -5px rgba(0,43,91,0.3)",
-                  position: "relative",
-                  overflow: "hidden"
+                  transition: "background 0.2s, transform 0.1s",
+                  boxShadow: loading ? "none" : "0 8px 20px -8px rgba(0,43,91,0.3)"
                 }}
+                onMouseDown={e => !loading && (e.currentTarget.style.transform = "scale(0.98)")}
+                onMouseUp={e => !loading && (e.currentTarget.style.transform = "scale(1)")}
+                onMouseLeave={e => !loading && (e.currentTarget.style.transform = "scale(1)")}
               >
                 {loading ? "Signing in..." : "Sign In →"}
               </button>
 
-              {/* Support Link */}
-              <div style={{
-                marginTop: 30,
-                textAlign: "center"
-              }}>
-                <p style={{
-                  fontSize: 13,
-                  color: C.gray400,
-                  margin: 0
-                }}>
-                  Need help? <a href="#" style={{ color: C.green, textDecoration: "none", fontWeight: 600 }}>Contact support</a>
-                </p>
-              </div>
-
-              {/* Security Badge */}
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                marginTop: 30,
-                padding: "12px",
-                background: "#f8fafc",
-                borderRadius: 16,
-                fontSize: 12,
+              <p style={{
+                marginTop: 24,
+                textAlign: "center",
+                fontSize: 13,
                 color: C.gray400
               }}>
-                <span style={{ fontSize: 16 }}>🔒</span>
-                <span>256-bit SSL encrypted connection</span>
-              </div>
+                Need help? <a href="#" style={{ color: C.green, textDecoration: "none" }}>Contact support</a>
+              </p>
             </form>
 
-            {/* Footer */}
             <p style={{
-              marginTop: 30,
+              marginTop: 28,
               textAlign: "center",
-              fontSize: 12,
-              color: C.gray400,
+              fontSize: 11,
+              color: C.gray300,
               borderTop: `1px solid ${C.gray200}`,
-              paddingTop: 20
+              paddingTop: 16
             }}>
               © 2026 Dar es Salaam Stock Exchange. All rights reserved.
             </p>
