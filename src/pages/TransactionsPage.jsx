@@ -493,13 +493,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     { label: "Date",        align: "left"  },
                     { label: "Company",     align: "left"  },
                     { label: "Type",        align: "left"  },
-                    ...(showStatus ? [{ label: "Status", align: "left" }] : []),
                     { label: "Qty",         align: "right" },
                     { label: "Price/Share", align: "right" },
                     { label: "Total",       align: "right" },
                     { label: "Fees",        align: "right" },
                     { label: "Grand Total", align: "right" },
                     { label: "Remarks",     align: "left"  },
+                    ...(showStatus ? [{ label: "Status", align: "left" }] : []),
                     ...(showActions ? [{ label: "Actions", align: "right" }] : []),
                   ].map(h => (
                     <th key={h.label} style={{
@@ -571,19 +571,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         </span>
                       </td>
 
-                      {showStatus && (
-                        <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-                          <div>
-                            <StatusBadge status={t.status} />
-                            {isRejected && t.rejection_comment && (
-                              <div style={{ fontSize: 10, color: C.red, marginTop: 3, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.rejection_comment}>
-                                💬 {t.rejection_comment}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      )}
-
                       <td style={{ padding: "10px 12px", fontWeight: 600, textAlign: "right" }}>{fmtInt(t.qty)}</td>
 
                       <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
@@ -611,6 +598,19 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 130, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {t.remarks || <span style={{ color: C.gray400 }}>—</span>}
                       </td>
+
+                      {showStatus && (
+                        <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                          <div>
+                            <StatusBadge status={t.status} />
+                            {isRejected && t.rejection_comment && (
+                              <div style={{ fontSize: 10, color: C.red, marginTop: 3, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={t.rejection_comment}>
+                                💬 {t.rejection_comment}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      )}
 
                       {showActions && (
                         <td style={{ padding: "10px 12px", textAlign: "right" }}>
