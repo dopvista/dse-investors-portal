@@ -415,6 +415,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           onClose={() => setActionModal(null)}
         />
       )}
+      {rejectModal && (
         <RejectModal
           count={rejectModal.ids.length}
           onConfirm={handleReject}
