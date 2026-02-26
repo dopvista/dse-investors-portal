@@ -343,77 +343,137 @@ export function UpdatePriceModal({ company, onConfirm, onClose }) {
 
 // ─── Price History Modal ──────────────────────────────────────────
 export function PriceHistoryModal({ company, history, onClose }) {
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   if (!company) return null;
+
+  // Filter to current month only
+  const now       = new Date();
+  const thisMonth = history.filter(h => {
+    const d = new Date(h.created_at);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  const monthLabel  = now.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  const totalPages  = Math.ceil(thisMonth.length / PAGE_SIZE);
+  const pagedHistory = thisMonth.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const PaginationBar = () => totalPages <= 1 ? null : (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 0 2px" }}>
+      <button onClick={() => setPage(1)} disabled={page === 1}
+        style={{ padding: "4px 9px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: page === 1 ? C.gray400 : C.text, cursor: page === 1 ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>«</button>
+      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+        style={{ padding: "4px 10px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: page === 1 ? C.gray400 : C.text, cursor: page === 1 ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>‹ Prev</button>
+      {Array.from({ length: totalPages }, (_, i) => i + 1)
+        .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+        .reduce((acc, p, i, arr) => { if (i > 0 && arr[i-1] !== p - 1) acc.push("..."); acc.push(p); return acc; }, [])
+        .map((p, i) => p === "..." ? (
+          <span key={`d${i}`} style={{ fontSize: 12, color: C.gray400 }}>…</span>
+        ) : (
+          <button key={p} onClick={() => setPage(p)}
+            style={{ padding: "4px 10px", borderRadius: 7, border: `1.5px solid ${p === page ? C.navy : C.gray200}`, background: p === page ? C.navy : C.white, color: p === page ? C.white : C.text, cursor: "pointer", fontSize: 12, fontWeight: p === page ? 700 : 500, fontFamily: "inherit", minWidth: 30 }}>{p}</button>
+        ))}
+      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+        style={{ padding: "4px 10px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: page === totalPages ? C.gray400 : C.text, cursor: page === totalPages ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>Next ›</button>
+      <button onClick={() => setPage(totalPages)} disabled={page === totalPages}
+        style={{ padding: "4px 9px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: page === totalPages ? C.gray400 : C.text, cursor: page === totalPages ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>»</button>
+    </div>
+  );
+
   return (
     <ModalShell
       title="📈 Price History"
       subtitle={<span style={{ fontSize: 17, fontWeight: 800, color: C.text }}>{company.name}</span>}
       headerRight={<div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current Price</div><div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>TZS {fmt(company.price)}</div></div>}
       onClose={onClose} maxWidth={900}
-      footer={<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}><div style={{ fontSize: 12, color: C.gray400 }}>{history.length} price update{history.length !== 1 ? "s" : ""} recorded</div><Btn variant="secondary" onClick={onClose}>Close</Btn></div>}
+      footer={
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+          <div style={{ fontSize: 12, color: C.gray400 }}>
+            {thisMonth.length} update{thisMonth.length !== 1 ? "s" : ""} in {monthLabel}
+            {thisMonth.length !== history.length && <span style={{ marginLeft: 6, color: C.gray400 }}>· {history.length} total all-time</span>}
+          </div>
+          <Btn variant="secondary" onClick={onClose}>Close</Btn>
+        </div>
+      }
     >
-      {history.length === 0 ? (
+      {/* Month filter banner */}
+      <div style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)", border: `1px solid #BFDBFE`, borderRadius: 10, padding: "9px 14px", display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <span style={{ fontSize: 14 }}>📅</span>
+        <div style={{ fontSize: 12, color: "#1D4ED8", fontWeight: 600 }}>
+          Showing changes for <strong>{monthLabel}</strong>
+          {thisMonth.length === 0 && " — no changes this month"}
+        </div>
+      </div>
+
+      {thisMonth.length === 0 ? (
         <div style={{ textAlign: "center", padding: "30px 20px", color: C.gray400 }}>
           <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
-          <div style={{ fontWeight: 600 }}>No price history yet</div>
-          <div style={{ fontSize: 13, marginTop: 4 }}>Price changes will appear here after the first update</div>
+          <div style={{ fontWeight: 600 }}>No price changes in {monthLabel}</div>
+          <div style={{ fontSize: 13, marginTop: 4 }}>
+            {history.length > 0 ? `${history.length} update${history.length !== 1 ? "s" : ""} exist in previous months` : "No price history recorded yet"}
+          </div>
         </div>
       ) : (
         <div style={{ margin: "0 -28px", overflowX: "auto" }}>
-          <div style={{ maxHeight: 320, overflowY: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
-              <colgroup>
-                <col style={{ width: 36  }} />
-                <col style={{ width: 130 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 110 }} />
-                <col style={{ width: 100 }} />
-                <col style={{ width: 160 }} />
-                <col style={{ width: 130 }} />
-              </colgroup>
-              <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
-                <tr style={{ background: C.gray50 }}>
-                  {["#", "Date & Time", "Old Price", "New Price", "Change", "Change %", "Notes", "Updated By"].map(h => (
-                    <th key={h} style={{ padding: "11px 12px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, borderTop: `1px solid ${C.gray200}`, whiteSpace: "nowrap", background: C.gray50 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((h, i) => {
-                  const isFirstEntry = !h.old_price || Number(h.old_price) === 0;
-                  const up = !isFirstEntry && h.change_amount >= 0;
-                  return (
-                    <tr key={h.id} style={{ borderBottom: `1px solid ${C.gray100}` }}
-                      onMouseEnter={e => e.currentTarget.style.background = C.gray50}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                      <td style={{ padding: "10px 12px", color: C.gray400, fontWeight: 600 }}>{i + 1}</td>
-                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-                        <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                        <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", color: C.gray600 }}>
-                        {isFirstEntry ? <span style={{ color: C.gray400 }}>—</span> : fmt(h.old_price)}
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: isFirstEntry ? C.gray400 : up ? C.green : C.red }}>
-                        {isFirstEntry
-                          ? <span style={{ color: C.gray400 }}>Initial</span>
-                          : <>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</>}
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                        {isFirstEntry
-                          ? <span style={{ color: C.gray400, fontSize: 12 }}>—</span>
-                          : <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%</span>}
-                      </td>
-                      <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
-                      <td style={{ padding: "10px 12px" }}><span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {totalPages > 1 && (
+            <div style={{ padding: "0 28px", display: "flex", justifyContent: "flex-end" }}>
+              <div style={{ fontSize: 12, color: C.gray400, paddingBottom: 6 }}>
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, thisMonth.length)} of {thisMonth.length}
+              </div>
+            </div>
+          )}
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: 36  }} />
+              <col style={{ width: 130 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 160 }} />
+              <col style={{ width: 130 }} />
+            </colgroup>
+            <thead>
+              <tr style={{ background: C.gray50 }}>
+                {["#", "Date & Time", "Old Price", "New Price", "Change", "Change %", "Notes", "Updated By"].map(h => (
+                  <th key={h} style={{ padding: "11px 12px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, borderTop: `1px solid ${C.gray200}`, whiteSpace: "nowrap", background: C.gray50 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pagedHistory.map((h, i) => {
+                const globalIdx    = (page - 1) * PAGE_SIZE + i;
+                const isFirstEntry = !h.old_price || Number(h.old_price) === 0;
+                const up = !isFirstEntry && h.change_amount >= 0;
+                return (
+                  <tr key={h.id} style={{ borderBottom: `1px solid ${C.gray100}` }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.gray50}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <td style={{ padding: "10px 12px", color: C.gray400, fontWeight: 600 }}>{globalIdx + 1}</td>
+                    <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                      <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                      <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", color: C.gray600 }}>
+                      {isFirstEntry ? <span style={{ color: C.gray400 }}>—</span> : fmt(h.old_price)}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: isFirstEntry ? C.gray400 : up ? C.green : C.red }}>
+                      {isFirstEntry ? <span style={{ color: C.gray400 }}>Initial</span> : <>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</>}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right" }}>
+                      {isFirstEntry
+                        ? <span style={{ color: C.gray400, fontSize: 12 }}>—</span>
+                        : <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%</span>}
+                    </td>
+                    <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
+                    <td style={{ padding: "10px 12px" }}><span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div style={{ padding: "0 28px" }}><PaginationBar /></div>
         </div>
       )}
     </ModalShell>
