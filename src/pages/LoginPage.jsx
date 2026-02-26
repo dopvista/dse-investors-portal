@@ -117,7 +117,7 @@ export default function LoginPage({ onLogin }) {
 
             {/* Header */}
             <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <img src={logo} alt="DSE" style={{ width: 42, height: 42, borderRadius: 11, objectFit: "cover", marginBottom: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
+              <img src={logo} alt="DSE" style={{ width: 50, height: 50, borderRadius: 13, objectFit: "cover", marginBottom: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
               <div style={{ fontWeight: 800, fontSize: 16, color: C.text }}>DSE Investors Portal</div>
               <div style={{ fontSize: 12, color: C.gray400, marginTop: 3 }}>{view === "login" ? "Sign in to your account" : "Reset your password"}</div>
               {view === "reset" && (
@@ -172,9 +172,14 @@ export default function LoginPage({ onLogin }) {
             )}
 
             {/* Footer */}
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
-              <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>Manage Your Investments Digitally</span>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.gray200}` }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 6 }}>
+                <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>Manage Your Investments Digitally</span>
+              </div>
+              <div style={{ textAlign: "center", fontSize: 10, color: C.gray400, fontWeight: 500, letterSpacing: "0.03em" }}>
+                © 2026 <span style={{ color: C.navy, fontWeight: 700 }}>Dopvista Creative Hub</span>. All rights reserved.
+              </div>
             </div>
           </div>
         </div>
