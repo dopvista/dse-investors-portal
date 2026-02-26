@@ -228,15 +228,7 @@ export default function CompaniesPage({ companies: globalCompanies, setCompanies
             <StatCard label="Not Priced"    value={stats.unpriced}  sub="Tap ⋯ → Set Price to track"   icon="💰" color={stats.unpriced > 0 ? C.red : C.gray400} />
           </div>
 
-          <div style={{ background: "linear-gradient(135deg, #F0FDF4, #DCFCE7)", border: `1px solid #BBF7D0`, borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 18 }}>📊</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: C.green }}>Your Portfolio — CDS {cdsNumber || "—"}</div>
-              <div style={{ fontSize: 12, color: "#15803D" }}>
-                Only companies with your transactions appear here. Prices are private to your CDS group and used for your own portfolio analysis.
-              </div>
-            </div>
-          </div>
+
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
             <div style={{ flex: 1, position: "relative" }}>
