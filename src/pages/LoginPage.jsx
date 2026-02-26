@@ -68,7 +68,15 @@ export default function LoginPage({ onLogin }) {
   );
 
   return (
-    <div style={{ minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy, fontFamily: "'Inter', sans-serif", padding: 16, boxSizing: "border-box" }}>
+    <div style={{ minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 16, boxSizing: "border-box", position: "relative", overflow: "hidden",
+        background: "radial-gradient(ellipse at 60% 40%, #0f3460 0%, #0B1F3A 45%, #060d1a 100%)"
+      }}>
+      {/* Subtle dot grid overlay */}
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
+      {/* Glow orb — top right */}
+      <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+      {/* Glow orb — bottom left */}
+      <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
       <style>{`
         @keyframes fadeIn  { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
         @keyframes kenBurns { 0% { transform:scale(1); } 100% { transform:scale(1.1); } }
