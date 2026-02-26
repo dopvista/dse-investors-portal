@@ -267,7 +267,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     setActionModal({ action: "confirm", ids: [id], company });
   };
   const doConfirm = async () => {
-    const id = actionModal.ids[0];
+    const id = actionModal?.ids?.[0];
+    if (!id) return;
     setActionModal(null);
     setConfirming(id);
     try {
@@ -286,7 +287,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     setActionModal({ action: "verify", ids, company: company || null });
   };
   const doVerify = async () => {
-    const ids = actionModal.ids;
+    const ids = actionModal?.ids;
+    if (!ids?.length) return;
     setActionModal(null);
     setVerifying(true);
     try {
@@ -303,7 +305,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
   // ── Reject (VR/SA/AD) ────────────────────────────────────────────
   const handleReject = async (comment) => {
-    const ids = rejectModal.ids;
+    const ids = rejectModal?.ids;
+    if (!ids?.length) return;
     await sbRejectTransactions(ids, comment);
     setTransactions(p => p.map(t => ids.includes(t.id) ? { ...t, status: "rejected", rejection_comment: comment } : t));
     setSelected(new Set());
