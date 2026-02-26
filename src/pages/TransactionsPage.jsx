@@ -383,7 +383,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           <span style={{ fontSize: 18 }}>✏️</span>
           <div>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#C2410C" }}>Data Entry View</div>
-            <div style={{ fontSize: 12, color: "#EA580C" }}>Add transactions (saved as Pending). Confirm them to send for verification. You can only edit or delete Pending transactions.</div>
+            <div style={{ fontSize: 12, color: "#EA580C" }}>Add transactions (saved as Pending). Confirm them to send for verification. You can edit or delete Pending and Rejected transactions.</div>
           </div>
         </div>
       )}
@@ -437,7 +437,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
             Record Transaction
           </Btn>
         )}
-        {isSAAD && (
+        {(isDE || isSAAD) && (
           <Btn variant="primary" icon="⬆️" onClick={() => setImportModal(true)}>Import</Btn>
         )}
       </div>
@@ -520,8 +520,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                   const isConfirmed = t.status === "confirmed";
                   const isVerified  = t.status === "verified";
                   const isRejected  = t.status === "rejected";
-                  const canEdit   = isSAAD || (isDE && isPending);
-                  const canDelete = isSAAD || (isDE && isPending);
+                  const canEdit   = isSAAD || (isDE && (isPending || isRejected));
+                  const canDelete = isSAAD || (isDE && (isPending || isRejected));
                   const canConfirm = isDE && isPending;
                   const canVerify  = (isVR || isSAAD) && isConfirmed;
                   const canReject  = (isVR || isSAAD) && isConfirmed;
