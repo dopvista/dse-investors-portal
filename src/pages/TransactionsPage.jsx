@@ -152,6 +152,8 @@ function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) 
   );
 }
 
+// ── Main Page ──────────────────────────────────────────────────────
+export default function TransactionsPage({ companies, transactions, setTransactions, showToast, role, cdsNumber }) {
 
   const [search,      setSearch]      = useState("");
   const [typeFilter,  setTypeFilter]  = useState("All");
