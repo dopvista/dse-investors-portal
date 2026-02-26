@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { sbSignIn } from "../lib/supabase";
+import { sbSignIn, sbResetPassword } from "../lib/supabase";
 import { C } from "../components/ui";
+import logo from "../assets/logo.jpg";
 
 const ADVERTS = [
   {
@@ -34,10 +35,12 @@ const ADVERTS = [
 ];
 
 export default function LoginPage({ onLogin }) {
+  const [view, setView] = useState("login"); // "login" or "reset"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [activeAd, setActiveAd] = useState(0);
   const [isHovering, setIsHovering] = useState(false);
 
@@ -51,31 +54,54 @@ export default function LoginPage({ onLogin }) {
     return () => clearInterval(timer);
   }, [isHovering]);
 
+  // ── Exact input style from old pages ─────────────────────────
   const inpStyle = {
     width: "100%",
-    padding: "10px 14px",
+    padding: "11px 14px",
     borderRadius: 10,
     fontSize: 14,
     border: `1.5px solid ${C.gray200}`,
     outline: "none",
     fontFamily: "'Inter', sans-serif",
-    background: "#fff",
+    background: C.gray50,
     color: C.text,
     transition: "border 0.2s",
-    boxSizing: "border-box",
-    marginTop: 4
+    boxSizing: "border-box"
   };
+
+  const labelStyle = (text) => (
+    <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: "block", marginBottom: 6 }}>
+      {text}
+    </label>
+  );
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
-    if (!email.trim() || !password.trim()) return setError("All fields are required");
+    setSuccess("");
+    if (!email.trim() || !password.trim()) return setError("Email and password are required");
     setLoading(true);
     try {
       const data = await sbSignIn(email.trim(), password);
       onLogin(data);
     } catch (err) {
-      setError(err.message || "Invalid credentials");
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (!email.trim()) return setError("Enter your email address");
+    setLoading(true);
+    try {
+      await sbResetPassword(email.trim());
+      setSuccess("Password reset email sent. Check your inbox.");
+    } catch (err) {
+      setError(err.message || "Password reset failed");
     } finally {
       setLoading(false);
     }
@@ -88,9 +114,9 @@ export default function LoginPage({ onLogin }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%)",
+      background: C.navy, // old page background
       fontFamily: "'Inter', sans-serif",
-      padding: 12,
+      padding: 16,
       boxSizing: "border-box"
     }}>
       <style>{`
@@ -105,24 +131,27 @@ export default function LoginPage({ onLogin }) {
         .ad-bg {
           animation: kenBurns 8s ease-in-out infinite alternate;
         }
-        .input-focus:focus {
-          border-color: ${C.gold};
+        input:focus {
+          border-color: ${C.green} !important;
+        }
+        input::placeholder {
+          color: #9ca3af;
         }
       `}</style>
 
-      {/* Main card – wider for more prominent picture */}
+      {/* Main card – split with photo slider */}
       <div style={{
-        width: "min(800px, 90vw)",
+        width: "min(1000px, 90vw)",
         aspectRatio: "16/9",
         background: "white",
         borderRadius: 28,
-        boxShadow: "0 20px 40px -12px rgba(0,0,0,0.25)",
+        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)",
         display: "grid",
-        gridTemplateColumns: "1.4fr 0.9fr", // left side wider
+        gridTemplateColumns: "1.4fr 0.9fr",
         overflow: "hidden"
       }}>
         
-        {/* LEFT: Photo slider – extra width */}
+        {/* ── LEFT SIDE: Photo slider (unchanged) ── */}
         <div style={{
           position: "relative",
           background: ADVERTS[activeAd].color,
@@ -131,9 +160,8 @@ export default function LoginPage({ onLogin }) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "0 32px" // slightly more padding to use the space
+          padding: "0 36px"
         }}>
-          {/* Background image */}
           {ADVERTS.map((ad, index) => (
             <div
               key={ad.id}
@@ -150,14 +178,13 @@ export default function LoginPage({ onLogin }) {
             />
           ))}
 
-          {/* Text content */}
           <div style={{ position: "relative", zIndex: 2 }}>
             <div style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               color: C.gold,
               letterSpacing: 1,
-              marginBottom: 14,
+              marginBottom: 16,
               textTransform: "uppercase"
             }}>
               DAR ES SALAAM STOCK EXCHANGE
@@ -172,19 +199,19 @@ export default function LoginPage({ onLogin }) {
                 }}
               >
                 <h2 style={{
-                  fontSize: "clamp(24px, 4vw, 36px)",
+                  fontSize: "clamp(26px, 4vw, 38px)",
                   fontWeight: 800,
                   color: "white",
-                  margin: "0 0 6px 0",
+                  margin: "0 0 8px 0",
                   lineHeight: 1.2,
-                  textShadow: "0 2px 6px rgba(0,0,0,0.2)"
+                  textShadow: "0 2px 8px rgba(0,0,0,0.2)"
                 }}>
                   {ad.title}
                 </h2>
                 <p style={{
                   fontSize: 14,
                   color: "rgba(255,255,255,0.9)",
-                  lineHeight: 1.4,
+                  lineHeight: 1.5,
                   maxWidth: 300,
                   margin: 0
                 }}>
@@ -193,11 +220,10 @@ export default function LoginPage({ onLogin }) {
               </div>
             ))}
 
-            {/* Minimal dots */}
             <div style={{
               display: "flex",
-              gap: 6,
-              marginTop: 28
+              gap: 8,
+              marginTop: 32
             }}>
               {ADVERTS.map((_, i) => (
                 <button
@@ -206,7 +232,7 @@ export default function LoginPage({ onLogin }) {
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
                   style={{
-                    width: i === activeAd ? 24 : 5,
+                    width: i === activeAd ? 28 : 6,
                     height: 4,
                     borderRadius: 2,
                     background: "white",
@@ -222,141 +248,292 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        {/* RIGHT: Login form – slightly narrower but still comfortable */}
+        {/* ── RIGHT SIDE: Forms styled exactly like old pages ── */}
         <div style={{
           background: "white",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "0 24px"
+          padding: "0 32px"
         }}>
           <div style={{ width: "100%" }}>
-            <div style={{ marginBottom: 20 }}>
-              <h1 style={{
-                fontSize: 24,
-                fontWeight: 800,
-                color: C.navy,
-                margin: "0 0 4px 0"
-              }}>
-                Welcome Back
-              </h1>
-              <p style={{
-                fontSize: 13,
-                color: C.gray400,
-                margin: 0
-              }}>
-                Please sign in to your account
-              </p>
+            {/* Header with logo and title – exactly like old */}
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <img
+                src={logo}
+                alt="DSE"
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 14,
+                  objectFit: "cover",
+                  marginBottom: 12,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.2)"
+                }}
+              />
+              <div style={{ fontWeight: 800, fontSize: 20, color: C.text }}>
+                DSE Investors Portal
+              </div>
+              <div style={{ fontSize: 13, color: C.gray400, marginTop: 4 }}>
+                {view === "login" ? "Sign in to your account" : "Reset your password"}
+              </div>
+
+              {/* Gold hint strip for reset view */}
+              {view === "reset" && (
+                <div style={{
+                  marginTop: 12,
+                  background: `${C.gold}18`,
+                  border: `1px solid ${C.gold}55`,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  fontSize: 12,
+                  color: C.gold,
+                  fontWeight: 600
+                }}>
+                  Enter your email to receive a password reset link
+                </div>
+              )}
             </div>
 
+            {/* Error / Success banners – old style */}
             {error && (
               <div style={{
-                padding: "8px 12px",
-                borderRadius: 8,
                 background: "#fef2f2",
+                border: "1px solid #fecaca",
                 color: "#dc2626",
-                fontSize: 12,
-                marginBottom: 16,
-                border: "1px solid #fee2e2"
+                borderRadius: 10,
+                padding: "10px 14px",
+                fontSize: 13,
+                marginBottom: 18
               }}>
-                ⚠️ {error}
+                {error}
+              </div>
+            )}
+            {success && (
+              <div style={{
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                color: "#16a34a",
+                borderRadius: 10,
+                padding: "10px 14px",
+                fontSize: 13,
+                marginBottom: 18
+              }}>
+                {success}
               </div>
             )}
 
-            <form onSubmit={handleLogin}>
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
-                  Email Address
-                </label>
-                <input
-                  className="input-focus"
-                  style={inpStyle}
-                  type="email"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                />
-              </div>
+            {/* ── LOGIN FORM ── */}
+            {view === "login" && (
+              <form onSubmit={handleLogin}>
+                <div style={{ marginBottom: 16 }}>
+                  {labelStyle("Email Address")}
+                  <input
+                    style={inpStyle}
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
 
-              <div style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
-                  Password
-                </label>
-                <input
-                  className="input-focus"
-                  style={inpStyle}
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                />
-              </div>
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 6
+                  }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: C.text }}>
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setView("reset");
+                        setError("");
+                        setSuccess("");
+                      }}
+                      style={{
+                        fontSize: 12,
+                        color: C.green,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        fontWeight: 600,
+                        padding: 0
+                      }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <input
+                    style={inpStyle}
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
 
-              <div style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginBottom: 18
-              }}>
                 <button
-                  type="button"
+                  type="submit"
+                  disabled={loading}
                   style={{
-                    background: "none",
+                    width: "100%",
+                    padding: "13px",
+                    borderRadius: 10,
                     border: "none",
-                    color: C.green,
-                    fontSize: 12,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    textUnderlineOffset: 2
+                    background: loading ? C.gray200 : C.green,
+                    color: C.white,
+                    fontWeight: 700,
+                    fontSize: 15,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                    transition: "background 0.2s",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8
                   }}
                 >
-                  Forgot password?
+                  {loading ? (
+                    <>
+                      <div style={{
+                        width: 14,
+                        height: 14,
+                        border: "2px solid rgba(255,255,255,0.3)",
+                        borderTop: "2px solid #fff",
+                        borderRadius: "50%",
+                        animation: "spin 0.8s linear infinite"
+                      }} />
+                      Signing in...
+                    </>
+                  ) : "Sign In →"}
                 </button>
-              </div>
+              </form>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: loading ? C.gray200 : C.navy,
-                  color: "white",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  transition: "background 0.2s",
-                  boxShadow: loading ? "none" : "0 4px 12px -4px rgba(0,43,91,0.3)"
-                }}
-              >
-                {loading ? "Signing in..." : "Sign In →"}
-              </button>
+            {/* ── RESET FORM ── */}
+            {view === "reset" && (
+              <form onSubmit={handleReset}>
+                <div style={{ marginBottom: 28 }}>
+                  {labelStyle("Email Address")}
+                  <input
+                    style={inpStyle}
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
 
-              <p style={{
-                marginTop: 16,
-                textAlign: "center",
-                fontSize: 11,
-                color: C.gray400
-              }}>
-                Need help? <a href="#" style={{ color: C.green, textDecoration: "none" }}>Contact support</a>
-              </p>
-            </form>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: "100%",
+                    padding: "13px",
+                    borderRadius: 10,
+                    border: "none",
+                    background: loading ? C.gray200 : C.green,
+                    color: C.white,
+                    fontWeight: 700,
+                    fontSize: 15,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontFamily: "inherit",
+                    transition: "background 0.2s",
+                    marginBottom: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <div style={{
+                        width: 14,
+                        height: 14,
+                        border: "2px solid rgba(255,255,255,0.3)",
+                        borderTop: "2px solid #fff",
+                        borderRadius: "50%",
+                        animation: "spin 0.8s linear infinite"
+                      }} />
+                      Sending...
+                    </>
+                  ) : "Send Reset Email"}
+                </button>
 
-            <p style={{
-              marginTop: 18,
-              textAlign: "center",
-              fontSize: 10,
-              color: C.gray300,
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView("login");
+                    setError("");
+                    setSuccess("");
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "11px",
+                    borderRadius: 10,
+                    border: `1.5px solid ${C.gray200}`,
+                    background: C.white,
+                    color: C.gray400,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all 0.15s"
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = C.navy;
+                    e.currentTarget.style.color = C.navy;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = C.gray200;
+                    e.currentTarget.style.color = C.gray400;
+                  }}
+                >
+                  ← Back to Sign In
+                </button>
+              </form>
+            )}
+
+            {/* ── Footer with green dot (old style) ── */}
+            <div style={{
+              marginTop: 28,
+              paddingTop: 20,
               borderTop: `1px solid ${C.gray200}`,
-              paddingTop: 12
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6
             }}>
-              © 2026 Dar es Salaam Stock Exchange. All rights reserved.
-            </p>
+              <div style={{
+                width: 6,
+                height: 6,
+                background: C.green,
+                borderRadius: "50%",
+                flexShrink: 0
+              }} />
+              <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>
+                Manage Your Investments Digitally
+              </span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Spin animation keyframes (added dynamically) */}
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
