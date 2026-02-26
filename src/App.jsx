@@ -178,7 +178,9 @@ export default function App() {
   const filteredTransactions = transactions.filter(t => t.cds_number === profile?.cds_number);
 
   const visibleNav = NAV.filter(item => !role || item.roles.includes(role));
-  const counts = { companies: companies.length, transactions: filteredTransactions.length };
+  // Companies count = distinct companies this CDS has transacted (matches Portfolio page logic)
+  const cdsCompanyCount = new Set(filteredTransactions.map(t => t.company_id)).size;
+  const counts = { companies: cdsCompanyCount, transactions: filteredTransactions.length };
   const now = new Date();
 
   return (
@@ -271,7 +273,7 @@ export default function App() {
                 <span style={{ fontSize: 12 }}>🏢</span>
                 <div>
                   <div style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em", lineHeight: 1 }}>Holdings</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{companies.length}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{cdsCompanyCount}</div>
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 5, background: C.green + "0d", border: `1px solid ${C.green}20`, borderRadius: 8, padding: "4px 10px" }}>
