@@ -110,19 +110,19 @@ export default function LoginPage({ onLogin }) {
         }
       `}</style>
 
-      {/* Main card – scaled for 150% display */}
+      {/* Main card – wider for more prominent picture */}
       <div style={{
-        width: "min(680px, 85vw)",
+        width: "min(800px, 90vw)",
         aspectRatio: "16/9",
         background: "white",
         borderRadius: 28,
         boxShadow: "0 20px 40px -12px rgba(0,0,0,0.25)",
         display: "grid",
-        gridTemplateColumns: "1.2fr 0.9fr",
+        gridTemplateColumns: "1.4fr 0.9fr", // left side wider
         overflow: "hidden"
       }}>
         
-        {/* LEFT: Photo slider */}
+        {/* LEFT: Photo slider – extra width */}
         <div style={{
           position: "relative",
           background: ADVERTS[activeAd].color,
@@ -131,7 +131,7 @@ export default function LoginPage({ onLogin }) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "0 28px"
+          padding: "0 32px" // slightly more padding to use the space
         }}>
           {/* Background image */}
           {ADVERTS.map((ad, index) => (
@@ -172,7 +172,7 @@ export default function LoginPage({ onLogin }) {
                 }}
               >
                 <h2 style={{
-                  fontSize: "clamp(22px, 4vw, 32px)",
+                  fontSize: "clamp(24px, 4vw, 36px)",
                   fontWeight: 800,
                   color: "white",
                   margin: "0 0 6px 0",
@@ -182,10 +182,10 @@ export default function LoginPage({ onLogin }) {
                   {ad.title}
                 </h2>
                 <p style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   color: "rgba(255,255,255,0.9)",
                   lineHeight: 1.4,
-                  maxWidth: 260,
+                  maxWidth: 300,
                   margin: 0
                 }}>
                   {ad.sub}
@@ -197,7 +197,7 @@ export default function LoginPage({ onLogin }) {
             <div style={{
               display: "flex",
               gap: 6,
-              marginTop: 24
+              marginTop: 28
             }}>
               {ADVERTS.map((_, i) => (
                 <button
@@ -206,7 +206,7 @@ export default function LoginPage({ onLogin }) {
                   onMouseEnter={() => setIsHovering(true)}
                   onMouseLeave={() => setIsHovering(false)}
                   style={{
-                    width: i === activeAd ? 22 : 5,
+                    width: i === activeAd ? 24 : 5,
                     height: 4,
                     borderRadius: 2,
                     background: "white",
@@ -222,13 +222,13 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        {/* RIGHT: Login form */}
+        {/* RIGHT: Login form – slightly narrower but still comfortable */}
         <div style={{
           background: "white",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          padding: "0 28px"
+          padding: "0 24px"
         }}>
           <div style={{ width: "100%" }}>
             <div style={{ marginBottom: 20 }}>
