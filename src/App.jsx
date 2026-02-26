@@ -144,7 +144,6 @@ export default function App() {
           <img src={logo} alt="DSE" style={{ width: 72, height: 72, borderRadius: 18, objectFit: "cover", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", border: "3px solid rgba(255,255,255,0.15)" }} />
         </div>
         <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: "0.01em" }}>DSE Investors Portal</div>
-        <div style={{ color: C.gold, fontWeight: 600, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 4 }}>DAR ES SALAAM STOCK EXCHANGE</div>
         <div style={{ margin: "20px auto 0", width: 180, height: 3, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
           <div style={{ height: "100%", background: `linear-gradient(90deg, ${C.green}, ${C.gold})`, borderRadius: 4, animation: "bar 2s ease-in-out infinite" }} />
         </div>
