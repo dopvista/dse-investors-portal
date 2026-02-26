@@ -27,7 +27,7 @@ export default function LoginPage({ onLogin }) {
   }, [isHovering]);
 
   const inpStyle = {
-    width: "100%", padding: "5px 9px", borderRadius: 8, fontSize: 11,
+    width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
     border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "'Inter', sans-serif",
     background: C.gray50, color: C.text, transition: "border 0.2s", boxSizing: "border-box",
   };
@@ -58,7 +58,7 @@ export default function LoginPage({ onLogin }) {
 
   const SubmitBtn = ({ label, loadingLabel }) => (
     <button type="submit" disabled={loading} style={{
-      width: "100%", padding: "6px", borderRadius: 8, border: "none",
+      width: "100%", padding: "10px", borderRadius: 9, border: "none",
       background: loading ? C.gray200 : C.green, color: C.white,
       fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer",
       fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -80,7 +80,7 @@ export default function LoginPage({ onLogin }) {
 
       <div style={{
         width: "min(960px, 90vw)",
-        height: "min(400px, 80vh)",      /* ← fixed height instead of aspect ratio */
+        height: "min(460px, 82vh)",      /* ← fixed height instead of aspect ratio */
         background: "white",
         borderRadius: 28,
         boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)",
@@ -98,7 +98,7 @@ export default function LoginPage({ onLogin }) {
             <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>DAR ES SALAAM STOCK EXCHANGE</div>
             {ADVERTS.map((ad, i) => (
               <div key={ad.id} style={{ display: i === activeAd ? "block" : "none", animation: "fadeIn 0.8s ease-out" }}>
-                <h2 style={{ fontSize: "clamp(18px, 2.8vw, 26px)", fontWeight: 800, color: "white", margin: "0 0 6px 0", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>{ad.title}</h2>
+                <h2 style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 800, color: "white", margin: "0 0 6px 0", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>{ad.title}</h2>
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", lineHeight: 1.5, maxWidth: 280, margin: 0 }}>{ad.sub}</p>
               </div>
             ))}
@@ -112,24 +112,24 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         {/* ── RIGHT: Form ── */}
-        <div style={{ background: "white", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 18px" }}>
+        <div style={{ background: "white", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
           <div style={{ width: "100%" }}>
 
             {/* Header */}
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <img src={logo} alt="DSE" style={{ width: 30, height: 30, borderRadius: 8, objectFit: "cover", marginBottom: 5, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
-              <div style={{ fontWeight: 800, fontSize: 13, color: C.text }}>DSE Investors Portal</div>
-              <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{view === "login" ? "Sign in to your account" : "Reset your password"}</div>
+            <div style={{ textAlign: "center", marginBottom: 22 }}>
+              <img src={logo} alt="DSE" style={{ width: 42, height: 42, borderRadius: 11, objectFit: "cover", marginBottom: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
+              <div style={{ fontWeight: 800, fontSize: 16, color: C.text }}>DSE Investors Portal</div>
+              <div style={{ fontSize: 12, color: C.gray400, marginTop: 3 }}>{view === "login" ? "Sign in to your account" : "Reset your password"}</div>
               {view === "reset" && (
-                <div style={{ marginTop: 4, background: `${C.gold}18`, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: "5px 8px", fontSize: 10, color: C.gold, fontWeight: 600 }}>
+                <div style={{ marginTop: 8, background: `${C.gold}18`, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: "8px 10px", fontSize: 11, color: C.gold, fontWeight: 600 }}>
                   Enter your email to receive a password reset link
                 </div>
               )}
             </div>
 
             {/* Banners */}
-            {error   && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "5px 8px", fontSize: 10, marginBottom: 8 }}>{error}</div>}
-            {success && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", borderRadius: 10, padding: "5px 8px", fontSize: 10, marginBottom: 8 }}>{success}</div>}
+            {error   && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{error}</div>}
+            {success && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", borderRadius: 10, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{success}</div>}
 
             {/* Login form */}
             {view === "login" && (
@@ -163,7 +163,7 @@ export default function LoginPage({ onLogin }) {
                   <SubmitBtn label="Send Reset Email" loadingLabel="Sending..." />
                 </div>
                 <button type="button" onClick={() => { setView("login"); setError(""); setSuccess(""); }}
-                  style={{ width: "100%", padding: "5px", borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                  style={{ width: "100%", padding: "9px", borderRadius: 9, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
                   ← Back to Sign In
@@ -172,7 +172,7 @@ export default function LoginPage({ onLogin }) {
             )}
 
             {/* Footer */}
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
               <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>Manage Your Investments Digitally</span>
             </div>
