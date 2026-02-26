@@ -1,6 +1,6 @@
 // ── src/pages/ProfileSetupPage.jsx ────────────────────────────────
 import { useState, useEffect } from "react";
-import { sbSignOut, sbGetProfile } from "../lib/supabase";
+import { sbSignOut } from "../lib/supabase";
 import { C } from "../components/ui";
 import logo from "../assets/logo.jpg";
 
@@ -8,12 +8,7 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
   const email = session?.user?.email || session?.email || "";
   const uid   = session?.user?.id    || session?.id    || "";
 
-  const [form, setForm] = useState({
-    full_name:  "",
-    cds_number: "",
-    phone:      "",
-  });
-  const [cdsLocked,  setCdsLocked]  = useState(false);
+  const [form, setForm]         = useState({ full_name: "", cds_number: "", phone: "" });
   const [saving,     setSaving]     = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [checking,   setChecking]   = useState(true);
@@ -23,7 +18,6 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
   const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
   const tok  = session?.access_token || KEY;
 
-  // ── On mount: fetch any pre-seeded profile row ───────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -34,13 +28,11 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
           const rows = await res.json();
           const p    = rows[0];
           if (p) {
-            setForm(prev => ({
-              ...prev,
-              cds_number: p.cds_number || "",
+            setForm({
               full_name:  p.full_name  || "",
+              cds_number: p.cds_number || "",
               phone:      p.phone      || "",
-            }));
-            if (p.cds_number) setCdsLocked(true);
+            });
           }
         }
       } catch (_) {}
@@ -62,7 +54,7 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
         full_name:    form.full_name.trim(),
         cds_number:   form.cds_number.trim().toUpperCase(),
         phone:        form.phone.trim(),
-        account_type: "Individual", // auto-computed later by system
+        account_type: "Individual",
       };
 
       const patchRes = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
@@ -117,7 +109,6 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
     </label>
   );
 
-  // ── Loading ──────────────────────────────────────────────────────
   if (checking) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -127,13 +118,14 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
 
   return (
     <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      minHeight: "100vh", width: "100%",
+      display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: "'Inter', system-ui, sans-serif", padding: 20,
-      position: "relative", overflow: "hidden",
+      position: "relative", overflow: "hidden", boxSizing: "border-box",
       background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)",
     }}>
       <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
         @keyframes spin   { to { transform: rotate(360deg); } }
         input::placeholder { color: #9ca3af; }
       `}</style>
@@ -145,33 +137,27 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
       {/* Gold glow — bottom left */}
       <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
 
+      {/* Card */}
       <div style={{
         background: C.white, borderRadius: 20, padding: "36px 32px",
-        width: "100%", maxWidth: 460, position: "relative", zIndex: 1,
+        width: "100%", maxWidth: 440, position: "relative", zIndex: 1,
         boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
         animation: "fadeIn 0.35s ease",
       }}>
 
-        {/* ── Header ── */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <img src={logo} alt="DSE" style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover", marginBottom: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
-          <div style={{ fontWeight: 800, fontSize: 20, color: C.text }}>Complete Your Profile</div>
-          <div style={{ fontSize: 13, color: C.gray400, marginTop: 4 }}>Signed in as {email}</div>
-
-          {cdsLocked ? (
-            <div style={{ marginTop: 10, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 8, padding: "8px 14px", fontSize: 12, color: "#16a34a", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              🔒 CDS {form.cds_number} has been assigned to your account
-            </div>
-          ) : (
-            <div style={{ marginTop: 10, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 8, padding: "8px 14px", fontSize: 12, color: "#16a34a" }}>
-              Please fill in your details to continue
-            </div>
-          )}
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <img src={logo} alt="DSE" style={{ width: 52, height: 52, borderRadius: 13, objectFit: "cover", marginBottom: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
+          <div style={{ fontWeight: 800, fontSize: 18, color: C.text }}>DSE Investors Portal</div>
+          <div style={{ fontWeight: 600, fontSize: 13, color: C.gray400, marginTop: 2 }}>Complete Your Profile</div>
+          <div style={{ fontSize: 12, color: C.gray400, marginTop: 6, background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 8, padding: "6px 12px" }}>
+            {email}
+          </div>
         </div>
 
-        {/* ── Error ── */}
+        {/* Error */}
         {error && (
-          <div style={{ background: "#fef2f2", border: `1px solid #fecaca`, color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 18 }}>
+          <div style={{ background: "#fef2f2", border: `1px solid #fecaca`, color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>
             {error}
           </div>
         )}
@@ -179,7 +165,7 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
         <form onSubmit={handleSubmit}>
 
           {/* Full Name */}
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 14 }}>
             {lbl("Full Name", true)}
             <input style={inp} type="text" placeholder="e.g. Naomi Maguya"
               value={form.full_name} onChange={e => set("full_name", e.target.value)}
@@ -187,38 +173,22 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
               onBlur={e  => e.target.style.borderColor = C.gray200} />
           </div>
 
-          {/* CDS Number */}
-          <div style={{ marginBottom: 16 }}>
+          {/* CDS Number — always pre-assigned, never editable */}
+          <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               {lbl("CDS Number", true)}
-              {cdsLocked && (
-                <span style={{ fontSize: 11, color: C.green, fontWeight: 700, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 6, padding: "2px 8px" }}>
-                  🔒 Pre-assigned
-                </span>
-              )}
+              <span style={{ fontSize: 11, color: C.green, fontWeight: 700, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 6, padding: "2px 8px" }}>
+                🔒 Pre-assigned
+              </span>
             </div>
-            <input
-              style={cdsLocked ? inpLocked : inp}
-              type="text" placeholder="e.g. CDS-647305"
-              value={form.cds_number}
-              onChange={e => { if (!cdsLocked) set("cds_number", e.target.value); }}
-              readOnly={cdsLocked}
-              onFocus={e => { if (!cdsLocked) e.target.style.borderColor = C.green; }}
-              onBlur={e  => { if (!cdsLocked) e.target.style.borderColor = C.gray200; }}
-            />
-            {cdsLocked ? (
-              <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
-                This CDS number was assigned by your administrator and cannot be changed.
-              </div>
-            ) : (
-              <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
-                Your account type will be determined automatically based on your CDS.
-              </div>
-            )}
+            <input style={inpLocked} type="text" value={form.cds_number} readOnly />
+            <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
+              Assigned by your administrator. Contact them to change it.
+            </div>
           </div>
 
           {/* Phone */}
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 24 }}>
             {lbl("Phone Number", true)}
             <input style={inp} type="tel" placeholder="e.g. +255713262087"
               value={form.phone} onChange={e => set("phone", e.target.value)}
@@ -228,22 +198,22 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
 
           {/* Submit */}
           <button type="submit" disabled={saving || cancelling} style={{
-            width: "100%", padding: "13px", borderRadius: 10, border: "none",
+            width: "100%", padding: "12px", borderRadius: 10, border: "none",
             background: saving ? C.gray200 : C.green, color: C.white,
-            fontWeight: 700, fontSize: 15, cursor: saving ? "not-allowed" : "pointer",
-            fontFamily: "inherit", marginBottom: 10,
+            fontWeight: 700, fontSize: 14, cursor: saving ? "not-allowed" : "pointer",
+            fontFamily: "inherit", marginBottom: 8,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}>
-            {saving ? (
-              <><div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Saving...</>
-            ) : "Continue to Portal →"}
+            {saving
+              ? <><div style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Saving...</>
+              : "Continue to Portal →"}
           </button>
 
           {/* Cancel */}
           <button type="button" onClick={handleCancel} disabled={saving || cancelling} style={{
-            width: "100%", padding: "11px", borderRadius: 10,
+            width: "100%", padding: "10px", borderRadius: 10,
             border: `1.5px solid ${C.gray200}`, background: C.white,
-            color: C.gray400, fontWeight: 600, fontSize: 14,
+            color: C.gray400, fontWeight: 600, fontSize: 13,
             cursor: cancelling ? "not-allowed" : "pointer", fontFamily: "inherit",
           }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "#dc2626"; e.currentTarget.style.color = "#dc2626"; }}
@@ -252,14 +222,14 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
             {cancelling ? "Signing out..." : "Cancel & Sign Out"}
           </button>
 
-          <div style={{ fontSize: 12, color: C.gray400, textAlign: "center", marginTop: 12 }}>
-            You can update your details later in My Profile
+          <div style={{ fontSize: 11, color: C.gray400, textAlign: "center", marginTop: 10 }}>
+            These details can be updated later in My Profile
           </div>
         </form>
 
-        {/* ── Footer ── */}
-        <div style={{ marginTop: 24, paddingTop: 18, borderTop: `1px solid ${C.gray200}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 6 }}>
+        {/* Footer */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.gray200}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 5 }}>
             <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
             <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>Manage Your Investments Digitally</span>
           </div>
