@@ -613,20 +613,25 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               {/* Totals Footer */}
               <tfoot>
                 <tr style={{ background: `${C.navy}08`, borderTop: `2px solid ${C.gray200}` }}>
-                  <td colSpan={showCheckbox ? (showStatus ? 6 : 5) : (showStatus ? 5 : 4)}
+                  {/* Label spans: checkbox(opt) + # + Date + Company + Type + Qty + Price/Share = 6 or 7 */}
+                  <td colSpan={showCheckbox ? 7 : 6}
                     style={{ padding: "8px 10px", fontWeight: 700, color: C.gray600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     TOTALS ({filtered.length} rows)
                   </td>
+                  {/* Total column */}
                   <td style={{ padding: "8px 10px", textAlign: "right" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.green, display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end" }}><span style={{fontSize:10}}>▲</span>{fmt(totals.buyAmount)}</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.red,   display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end", marginTop: 3 }}><span style={{fontSize:10}}>▼</span>{fmt(totals.sellAmount)}</div>
                   </td>
+                  {/* Fees column */}
                   <td style={{ padding: "8px 10px", fontWeight: 700, color: C.text, textAlign: "right", fontSize: 13 }}>{fmt(totals.fees)}</td>
+                  {/* Grand Total column */}
                   <td style={{ padding: "8px 10px", textAlign: "right" }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: C.green, display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end" }}><span style={{fontSize:10}}>▲</span>{fmt(totals.buyGrand)}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: C.red,   display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end", marginTop: 3 }}><span style={{fontSize:10}}>▼</span>{fmt(totals.sellGrand)}</div>
                   </td>
-                  <td colSpan={showActions ? 2 : 1} />
+                  {/* Remarks + Status(opt) + Actions(opt) */}
+                  <td colSpan={1 + (showStatus ? 1 : 0) + (showActions ? 1 : 0)} />
                 </tr>
               </tfoot>
             </table>
