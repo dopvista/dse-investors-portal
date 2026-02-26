@@ -9,6 +9,7 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
   const uid   = session?.user?.id    || session?.id    || "";
 
   const [form, setForm]         = useState({ full_name: "", cds_number: "", phone: "" });
+  const [cdsLocked, setCdsLocked] = useState(false);
   const [saving,     setSaving]     = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [checking,   setChecking]   = useState(true);
@@ -150,7 +151,7 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
           <img src={logo} alt="DSE" style={{ width: 52, height: 52, borderRadius: 13, objectFit: "cover", marginBottom: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
           <div style={{ fontWeight: 800, fontSize: 18, color: C.text }}>DSE Investors Portal</div>
           <div style={{ fontWeight: 600, fontSize: 13, color: C.gray400, marginTop: 2 }}>Complete Your Profile</div>
-          <div style={{ fontSize: 12, color: C.gray400, marginTop: 6, background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 8, padding: "6px 12px" }}>
+          <div style={{ fontSize: 12, color: C.navy, fontWeight: 700, marginTop: 6, background: C.gray100, border: `1px solid ${C.gray200}`, borderRadius: 8, padding: "7px 14px", letterSpacing: "0.01em" }}>
             {email}
           </div>
         </div>
@@ -173,17 +174,28 @@ export default function ProfileSetupPage({ session, onComplete, onCancel }) {
               onBlur={e  => e.target.style.borderColor = C.gray200} />
           </div>
 
-          {/* CDS Number — always pre-assigned, never editable */}
+          {/* CDS Number — locked if pre-assigned, editable if not */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               {lbl("CDS Number", true)}
-              <span style={{ fontSize: 11, color: C.green, fontWeight: 700, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 6, padding: "2px 8px" }}>
-                🔒 Pre-assigned
-              </span>
+              {cdsLocked && (
+                <span style={{ fontSize: 11, color: C.green, fontWeight: 700, background: "#f0fdf4", border: `1px solid #bbf7d0`, borderRadius: 6, padding: "2px 8px" }}>
+                  🔒 Pre-assigned
+                </span>
+              )}
             </div>
-            <input style={inpLocked} type="text" value={form.cds_number} readOnly />
+            <input
+              style={cdsLocked ? inpLocked : inp}
+              type="text"
+              placeholder="e.g. CDS-647305"
+              value={form.cds_number}
+              readOnly={cdsLocked}
+              onChange={e => { if (!cdsLocked) set("cds_number", e.target.value); }}
+              onFocus={e => { if (!cdsLocked) e.target.style.borderColor = C.green; }}
+              onBlur={e  => { if (!cdsLocked) e.target.style.borderColor = C.gray200; }}
+            />
             <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
-              Assigned by your administrator. Contact them to change it.
+              {cdsLocked ? "Assigned by your administrator. Contact them to change it." : "Enter your CDS account number."}
             </div>
           </div>
 
