@@ -101,8 +101,58 @@ function RejectModal({ count, onConfirm, onClose }) {
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────────
-export default function TransactionsPage({ companies, transactions, setTransactions, showToast, role, cdsNumber }) {
+// ── Confirm Action Modal ───────────────────────────────────────────
+function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) {
+  const isVerify  = action === "verify";
+  const isConfirm = action === "confirm";
+  const accentColor = isVerify ? C.green : "#1D4ED8";
+  const accentBg    = isVerify ? C.greenBg : "#EFF6FF";
+  const accentBdr   = isVerify ? "#BBF7D0" : "#BFDBFE";
+  const icon        = isVerify ? "✔" : "✅";
+  const title       = isVerify
+    ? `Verify Transaction${count > 1 ? "s" : ""}`
+    : "Confirm Transaction";
+  const subtitle    = count > 1
+    ? `${count} transactions selected`
+    : company ? `${company}` : "1 transaction selected";
+  const description = isVerify
+    ? `Verifying will mark ${count > 1 ? "these transactions" : "this transaction"} as verified and finalize them.`
+    : "Confirming will send this transaction to the Verifier for review.";
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(10,31,58,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20, backdropFilter: "blur(2px)" }}>
+      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflow: "hidden", animation: "fadeInUp 0.2s ease" }}>
+        {/* Header */}
+        <div style={{ background: `linear-gradient(135deg, ${C.navy}, #1e3a5f)`, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 15 }}>{icon} {title}</div>
+            <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, marginTop: 2 }}>{subtitle}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 28, height: 28, borderRadius: "50%", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        {/* Body */}
+        <div style={{ padding: "20px" }}>
+          <div style={{ background: accentBg, border: `1px solid ${accentBdr}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 16 }}>
+            <span style={{ fontSize: 18, marginTop: 1 }}>{isVerify ? "🔍" : "📋"}</span>
+            <div style={{ fontSize: 13, color: accentColor, lineHeight: 1.5 }}>{description}</div>
+          </div>
+          <div style={{ fontSize: 13, color: C.gray600 }}>Are you sure you want to proceed?</div>
+        </div>
+        {/* Footer */}
+        <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            Cancel
+          </button>
+          <button onClick={onConfirm} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: accentColor, color: C.white, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            {icon} {isVerify ? `Verify${count > 1 ? ` ${count}` : ""}` : "Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
   const [search,      setSearch]      = useState("");
   const [typeFilter,  setTypeFilter]  = useState("All");
   const [statusFilter,setStatusFilter]= useState("All");
@@ -112,6 +162,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const [verifying,   setVerifying]   = useState(false);
   const [rejectModal, setRejectModal] = useState(null); // null | { ids: [] }
   const [deleteModal, setDeleteModal] = useState(null);
+  const [actionModal, setActionModal] = useState(null); // null | { action, ids, company }
   const [formModal,   setFormModal]   = useState({ open: false, transaction: null });
   const [importModal, setImportModal] = useState(false);
 
@@ -210,7 +261,12 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   };
 
   // ── Confirm (DE: pending → confirmed) ────────────────────────────
-  const handleConfirm = async (id) => {
+  const handleConfirm = async (id, company) => {
+    setActionModal({ action: "confirm", ids: [id], company });
+  };
+  const doConfirm = async () => {
+    const id = actionModal.ids[0];
+    setActionModal(null);
     setConfirming(id);
     try {
       const rows = await sbConfirmTransaction(id);
@@ -224,7 +280,12 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   };
 
   // ── Verify (VR/SA/AD) ────────────────────────────────────────────
-  const handleVerify = async (ids) => {
+  const handleVerify = async (ids, company) => {
+    setActionModal({ action: "verify", ids, company: company || null });
+  };
+  const doVerify = async () => {
+    const ids = actionModal.ids;
+    setActionModal(null);
     setVerifying(true);
     try {
       await sbVerifyTransactions(ids);
@@ -340,7 +401,15 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           onClose={() => setImportModal(false)}
         />
       )}
-      {rejectModal && (
+      {actionModal && (
+        <ConfirmActionModal
+          action={actionModal.action}
+          count={actionModal.ids.length}
+          company={actionModal.company}
+          onConfirm={actionModal.action === "confirm" ? doConfirm : doVerify}
+          onClose={() => setActionModal(null)}
+        />
+      )}
         <RejectModal
           count={rejectModal.ids.length}
           onConfirm={handleReject}
@@ -511,7 +580,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
                   const rowActions = [
                     ...(canEdit   ? [{ icon: "✏️", label: "Edit",   onClick: () => setFormModal({ open: true, transaction: t }) }] : []),
-                    ...(canVerify ? [{ icon: "✔️", label: "Verify", onClick: () => handleVerify([t.id]) }] : []),
+                    ...(canVerify ? [{ icon: "✔️", label: "Verify", onClick: () => handleVerify([t.id], t.company_name) }] : []),
                     ...(canReject ? [{ icon: "✖",  label: "Reject", danger: true, onClick: () => setRejectModal({ ids: [t.id] }) }] : []),
                     ...(canDelete ? [{ icon: "🗑️", label: deleting === t.id ? "Deleting..." : "Delete", danger: true, onClick: () => setDeleteModal({ id: t.id, type: t.type, company: t.company_name }) }] : []),
                   ];
@@ -597,7 +666,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       {showActions && (
                         <td style={{ padding: "10px 12px", textAlign: "right" }}>
                           {canConfirm && (
-                            <button onClick={() => handleConfirm(t.id)} disabled={confirming === t.id}
+                            <button onClick={() => handleConfirm(t.id, t.company_name)} disabled={confirming === t.id}
                               style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: "#EFF6FF", color: "#1D4ED8", fontWeight: 700, fontSize: 11, cursor: confirming === t.id ? "not-allowed" : "pointer", fontFamily: "inherit", marginRight: rowActions.length ? 6 : 0 }}>
                               {confirming === t.id ? "..." : "✅ Confirm"}
                             </button>
