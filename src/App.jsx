@@ -310,8 +310,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Logo */}
-            <img src={logo} alt="DI" style={{ width: 42, height: 42, borderRadius: 11, objectFit: "cover", boxShadow: "0 2px 10px rgba(0,0,0,0.18)", flexShrink: 0 }} />
+
           </div>
         </div>
 
