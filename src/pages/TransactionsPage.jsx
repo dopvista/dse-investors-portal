@@ -498,11 +498,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <SectionCard
           title={`Transaction History (${filtered.length}${filtered.length !== stats.total ? ` of ${stats.total}` : ""})`}
-          subtitle={
-            statusFilter !== "All"
-              ? `Filtered: ${statusOptions.find(o => o[0] === statusFilter)?.[1]?.replace(/[^\w\s]/g,"").trim() || statusFilter} transactions`
-              : isDE ? "Your submitted transactions" : isVR ? "Transactions for your review" : isRO ? "Your full transaction history" : "All transactions"
-          }
         >
           {stats.total === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
@@ -524,7 +519,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
             <>
               <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0 }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
+                  <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
                     <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
                       {showCheckbox && (
                         <th style={{ padding: "7px 10px", borderBottom: `2px solid ${C.gray200}`, width: 36 }}>
@@ -551,7 +546,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         { label: "Status",      align: "left"  },
                         ...(showActions ? [{ label: "Actions", align: "right" }] : []),
                       ].map(h => (
-                        <th key={h.label} style={{ padding: "7px 10px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: `2px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
+                        <th key={h.label} style={{ padding: "7px 10px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: `2px solid ${C.gray200}`, whiteSpace: "nowrap", background: "#f5f6fa" }}>{h.label}</th>
                       ))}
                     </tr>
                   </thead>
