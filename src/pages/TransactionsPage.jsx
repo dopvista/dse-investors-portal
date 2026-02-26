@@ -229,7 +229,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     };
   }, [myTransactions]);
 
-  // ── Filtered list ─────────────────────────────────────────────────
+  // ── Filtered + sorted list ────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = myTransactions;
     if (typeFilter !== "All")   list = list.filter(t => t.type === typeFilter);
@@ -244,6 +244,14 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         t.status?.toLowerCase().includes(q)
       );
     }
+    // Sort: Pending / Confirmed / Rejected first (date desc), then Verified (date desc)
+    const isActive = s => s === "pending" || s === "confirmed" || s === "rejected";
+    list = [...list].sort((a, b) => {
+      const aActive = isActive(a.status);
+      const bActive = isActive(b.status);
+      if (aActive !== bActive) return aActive ? -1 : 1;           // active group first
+      return (b.date || "").localeCompare(a.date || "");           // date desc within group
+    });
     return list;
   }, [myTransactions, typeFilter, statusFilter, search]);
 
