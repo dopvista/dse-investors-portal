@@ -477,11 +477,12 @@ export async function sbGetPortfolio(cdsNumber) {
 
   return companies.map(c => ({
     ...c,
-    cds_price:          priceMap[c.id]?.price          ?? null,
-    cds_previous_price: priceMap[c.id]?.previous_price ?? null,
-    cds_updated_by:     priceMap[c.id]?.updated_by     ?? null,
-    cds_updated_at:     priceMap[c.id]?.updated_at     ?? null,
-    cds_price_id:       priceMap[c.id]?.id             ?? null,
+    cds_price:              priceMap[c.id]?.price             ?? null,
+    cds_previous_price:     priceMap[c.id]?.previous_price    ?? null,
+    cds_updated_by:         priceMap[c.id]?.updated_by        ?? null,
+    cds_updated_at:         priceMap[c.id]?.updated_at        ?? null,
+    cds_price_id:           priceMap[c.id]?.id                ?? null,
+    cds_price_created_by_id:priceMap[c.id]?.created_by_id     ?? null,
   }));
 }
 
@@ -495,18 +496,22 @@ export async function sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newP
   const changePct     = oldPrice != null && oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : null;
   const ts            = datetime ? new Date(datetime).toISOString() : new Date().toISOString();
 
+  const currentUserId = getSession()?.user?.id;
+
   // Upsert into cds_prices (insert or update by company_id + cds_number)
+  // created_by_id is set only on first insert — never overwritten on update
   const upsertRes = await fetch(`${BASE}/rest/v1/cds_prices`, {
     method:  "POST",
     headers: { ...headers(token()), "Prefer": "return=representation,resolution=merge-duplicates" },
     body: JSON.stringify({
-      company_id:     companyId,
-      cds_number:     cdsNumber,
-      price:          newPrice,
-      previous_price: oldPrice ?? null,
-      updated_by:     updatedBy,
-      notes:          reason || null,
-      updated_at:     ts,
+      company_id:      companyId,
+      cds_number:      cdsNumber,
+      price:           newPrice,
+      previous_price:  oldPrice ?? null,
+      updated_by:      updatedBy,
+      notes:           reason || null,
+      updated_at:      ts,
+      created_by_id:   currentUserId,  // ignored on update by RLS/trigger
     }),
   });
   if (!upsertRes.ok) throw new Error(await upsertRes.text());
