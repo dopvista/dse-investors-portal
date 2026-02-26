@@ -459,8 +459,11 @@ export function PriceHistoryModal({ company, history, onClose }) {
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                     <td style={{ padding: "10px 12px", color: C.gray400, fontWeight: 600 }}>{globalIdx + 1}</td>
                     <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-                      <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                      <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
+                      <div style={{ fontWeight: 600, color: C.text }}>
+                        {new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                        <span style={{ color: C.gray400, margin: "0 5px" }}>|</span>
+                        {new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", color: C.gray600 }}>
                       {isFirstEntry ? <span style={{ color: C.gray400 }}>—</span> : fmt(h.old_price)}
