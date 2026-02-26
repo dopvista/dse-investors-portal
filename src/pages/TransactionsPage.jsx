@@ -636,13 +636,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     TOTALS ({filtered.length} rows)
                   </td>
                   <td style={{ padding: "12px 12px", textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.green }}>▲ {fmt(totals.buyAmount)}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.red   }}>▼ {fmt(totals.sellAmount)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.green, display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end" }}><span style={{fontSize:10}}>▲</span>{fmt(totals.buyAmount)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.red,   display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end", marginTop: 3 }}><span style={{fontSize:10}}>▼</span>{fmt(totals.sellAmount)}</div>
                   </td>
                   <td style={{ padding: "12px 12px", fontWeight: 700, color: C.text, textAlign: "right", fontSize: 13 }}>{fmt(totals.fees)}</td>
                   <td style={{ padding: "12px 12px", textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: C.green }}>▲ {fmt(totals.buyGrand)}</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: C.red   }}>▼ {fmt(totals.sellGrand)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: C.green, display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end" }}><span style={{fontSize:10}}>▲</span>{fmt(totals.buyGrand)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: C.red,   display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end", marginTop: 3 }}><span style={{fontSize:10}}>▼</span>{fmt(totals.sellGrand)}</div>
                   </td>
                   <td colSpan={showActions ? 2 : 1} />
                 </tr>
