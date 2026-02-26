@@ -4,39 +4,31 @@ import { C } from "../components/ui";
 import logo from "../assets/logo.jpg";
 
 const ADVERTS = [
-  { 
-    id: 1, 
-    title: "市场洞察", 
-    titleEn: "Market Insights",
-    sub: "实时数据，触手可及", 
-    subEn: "Real-time data at your fingertips",
+  {
+    id: 1,
+    title: "Market Insights",
+    sub: "Real-time data at your fingertips.",
     color: C.navy,
     image: "https://images.unsplash.com/photo-1611974717482-480928224732?auto=format&fit=crop&q=80"
   },
-  { 
-    id: 2, 
-    title: "安全投资", 
-    titleEn: "Secure Investing",
-    sub: "您的资产，DSE守护", 
-    subEn: "Your assets are protected with DSE",
+  {
+    id: 2,
+    title: "Secure Investing",
+    sub: "Your assets are protected with DSE.",
     color: "#064e3b",
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80"
   },
-  { 
-    id: 3, 
-    title: "数字未来", 
-    titleEn: "Digital Future",
-    sub: "投资管理，前所未有的便捷", 
-    subEn: "Managing investments has never been easier",
+  {
+    id: 3,
+    title: "Digital Future",
+    sub: "Managing investments has never been easier.",
     color: "#78350f",
     image: "https://images.unsplash.com/photo-1551288049-bbda38a5f9a2?auto=format&fit=crop&q=80"
   },
   {
     id: 4,
-    title: "财富传承",
-    titleEn: "Wealth Legacy",
-    sub: "智慧投资，代代相传",
-    subEn: "Smart investing for generations",
+    title: "Wealth Legacy",
+    sub: "Smart investing for generations.",
     color: "#1e3a5f",
     image: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?auto=format&fit=crop&q=80"
   }
@@ -82,13 +74,13 @@ export default function LoginPage({ onLogin }) {
     e.preventDefault();
     setError("");
     setSuccess("");
-    if (!email.trim() || !password.trim()) return setError("请填写所有字段 / All fields required");
+    if (!email.trim() || !password.trim()) return setError("All fields are required");
     setLoading(true);
     try {
       const data = await sbSignIn(email.trim(), password);
       onLogin(data);
     } catch (err) {
-      setError(err.message || "登录失败 / Invalid credentials");
+      setError(err.message || "Invalid credentials");
     } finally {
       setLoading(false);
     }
@@ -156,7 +148,7 @@ export default function LoginPage({ onLogin }) {
 
       {/* Main Container */}
       <div className="login-container" style={{
-        maxWidth: 1200,
+        maxWidth: 1100,
         width: "100%",
         background: "white",
         borderRadius: 48,
@@ -167,14 +159,11 @@ export default function LoginPage({ onLogin }) {
         position: "relative"
       }}>
         
-        {/* Decorative Elements */}
+        {/* Decorative Logo (top left) */}
         <div style={{
           position: "absolute",
           top: 20,
           left: 20,
-          right: 20,
-          display: "flex",
-          justifyContent: "space-between",
           zIndex: 20,
           pointerEvents: "none"
         }}>
@@ -186,31 +175,6 @@ export default function LoginPage({ onLogin }) {
             boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
             border: "3px solid white"
           }} />
-          <div style={{
-            display: "flex",
-            gap: 8
-          }}>
-            {["中", "EN"].map(lang => (
-              <div key={lang} style={{
-                width: 40,
-                height: 40,
-                background: "rgba(255,255,255,0.2)",
-                backdropFilter: "blur(10px)",
-                borderRadius: 12,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: "pointer",
-                pointerEvents: "auto",
-                border: "1px solid rgba(255,255,255,0.3)"
-              }}>
-                {lang}
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* LEFT SIDE: Photo Gallery */}
@@ -252,7 +216,6 @@ export default function LoginPage({ onLogin }) {
                   animation: "slideIn 0.8s ease-out"
                 }}
               >
-                {/* Chinese Title */}
                 <div style={{
                   fontSize: 14,
                   fontWeight: 600,
@@ -261,29 +224,19 @@ export default function LoginPage({ onLogin }) {
                   marginBottom: 16,
                   textTransform: "uppercase"
                 }}>
-                  达累斯萨拉姆证券交易所
+                  DAR ES SALAAM STOCK EXCHANGE
                 </div>
                 
                 <h2 style={{
                   fontSize: "clamp(36px, 5vw, 56px)",
                   fontWeight: 800,
                   color: "white",
-                  marginBottom: 8,
+                  marginBottom: 16,
                   lineHeight: 1.1,
                   textShadow: "0 4px 20px rgba(0,0,0,0.2)"
                 }}>
                   {ad.title}
                 </h2>
-                
-                <h3 style={{
-                  fontSize: "clamp(20px, 3vw, 28px)",
-                  fontWeight: 500,
-                  color: "rgba(255,255,255,0.9)",
-                  marginBottom: 16,
-                  fontFamily: "'Inter', sans-serif"
-                }}>
-                  {ad.titleEn}
-                </h3>
                 
                 <div style={{
                   width: 80,
@@ -294,22 +247,13 @@ export default function LoginPage({ onLogin }) {
                 }} />
                 
                 <p style={{
-                  fontSize: 16,
-                  color: "rgba(255,255,255,0.8)",
-                  lineHeight: 1.8,
+                  fontSize: 18,
+                  color: "rgba(255,255,255,0.9)",
+                  lineHeight: 1.6,
                   maxWidth: 400,
-                  marginBottom: 8,
                   fontWeight: 400
                 }}>
                   {ad.sub}
-                </p>
-                
-                <p style={{
-                  fontSize: 14,
-                  color: "rgba(255,255,255,0.6)",
-                  fontStyle: "italic"
-                }}>
-                  {ad.subEn}
                 </p>
               </div>
             ))}
@@ -340,36 +284,6 @@ export default function LoginPage({ onLogin }) {
                 />
               ))}
             </div>
-
-            {/* Scroll Indicator */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginTop: 40,
-              opacity: 0.6
-            }}>
-              <div style={{
-                width: 30,
-                height: 30,
-                borderRadius: "50%",
-                border: "2px solid rgba(255,255,255,0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                color: "white"
-              }}>
-                ↓
-              </div>
-              <span style={{
-                fontSize: 12,
-                color: "rgba(255,255,255,0.6)",
-                letterSpacing: 1
-              }}>
-                滑动浏览 / SWIPE TO EXPLORE
-              </span>
-            </div>
           </div>
         </div>
 
@@ -391,18 +305,18 @@ export default function LoginPage({ onLogin }) {
                 margin: "0 0 8px 0",
                 letterSpacing: "-0.02em"
               }}>
-                欢迎回来
+                Welcome Back
               </h1>
               <p style={{
                 fontSize: 14,
                 color: C.gray400,
                 margin: 0
               }}>
-                Welcome back · 请登录您的账户
+                Please sign in to your account
               </p>
             </div>
 
-            {/* Error/Success Messages */}
+            {/* Error Message */}
             {error && (
               <div style={{
                 padding: "14px 18px",
@@ -431,14 +345,14 @@ export default function LoginPage({ onLogin }) {
                   display: "flex",
                   justifyContent: "space-between"
                 }}>
-                  <span>电子邮箱 / Email</span>
-                  <span style={{ color: C.gray400, fontWeight: 400 }}>必填</span>
+                  <span>Email Address</span>
+                  <span style={{ color: C.gray400, fontWeight: 400 }}>required</span>
                 </label>
                 <input
                   className="input-focus"
                   style={inpStyle}
                   type="email"
-                  placeholder="your@email.com"
+                  placeholder="name@company.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                 />
@@ -453,8 +367,8 @@ export default function LoginPage({ onLogin }) {
                   display: "flex",
                   justifyContent: "space-between"
                 }}>
-                  <span>密码 / Password</span>
-                  <span style={{ color: C.gray400, fontWeight: 400 }}>必填</span>
+                  <span>Password</span>
+                  <span style={{ color: C.gray400, fontWeight: 400 }}>required</span>
                 </label>
                 <input
                   className="input-focus"
@@ -489,7 +403,7 @@ export default function LoginPage({ onLogin }) {
                   onMouseEnter={e => e.target.style.borderBottomColor = C.green}
                   onMouseLeave={e => e.target.style.borderBottomColor = "transparent"}
                 >
-                  忘记密码? / Forgot password?
+                  Forgot password?
                 </button>
               </div>
 
@@ -514,10 +428,10 @@ export default function LoginPage({ onLogin }) {
                   overflow: "hidden"
                 }}
               >
-                {loading ? "登录中..." : "登录系统 · SIGN IN"}
+                {loading ? "Signing in..." : "Sign In →"}
               </button>
 
-              {/* Additional Links */}
+              {/* Support Link */}
               <div style={{
                 marginTop: 30,
                 textAlign: "center"
@@ -527,7 +441,7 @@ export default function LoginPage({ onLogin }) {
                   color: C.gray400,
                   margin: 0
                 }}>
-                  需要帮助? 联系支持 / Need help? Contact support
+                  Need help? <a href="#" style={{ color: C.green, textDecoration: "none", fontWeight: 600 }}>Contact support</a>
                 </p>
               </div>
 
@@ -545,7 +459,7 @@ export default function LoginPage({ onLogin }) {
                 color: C.gray400
               }}>
                 <span style={{ fontSize: 16 }}>🔒</span>
-                <span>256-bit SSL 加密安全连接</span>
+                <span>256-bit SSL encrypted connection</span>
               </div>
             </form>
 
@@ -558,11 +472,7 @@ export default function LoginPage({ onLogin }) {
               borderTop: `1px solid ${C.gray200}`,
               paddingTop: 20
             }}>
-              © 2026 达累斯萨拉姆证券交易所 · 保留所有权利
-              <br />
-              <span style={{ fontSize: 11 }}>
-                Dar es Salaam Stock Exchange. All rights reserved.
-              </span>
+              © 2026 Dar es Salaam Stock Exchange. All rights reserved.
             </p>
           </div>
         </div>
