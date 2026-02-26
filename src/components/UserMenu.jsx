@@ -50,10 +50,12 @@ export default function UserMenu({ profile, session, role, onSignOut, onOpenProf
           <div style={{ padding: "12px 14px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <div style={{
-                width: 38, height: 38, borderRadius: 10, flexShrink: 0, overflow: "hidden",
+                width: 42, height: 42, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
                 background: avatarUrl ? "transparent" : `linear-gradient(135deg, ${C.gold}, #f97316)`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: 800, fontSize: 14, color: C.navy,
+                fontWeight: 800, fontSize: 15, color: C.navy,
+                border: `3px solid ${C.white}`,
+                boxShadow: "0 3px 10px rgba(0,0,0,0.25)",
               }}>
                 {avatarUrl ? <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
               </div>
@@ -129,11 +131,12 @@ export default function UserMenu({ profile, session, role, onSignOut, onOpenProf
         onMouseLeave={e => { if (!open) e.currentTarget.style.background = "transparent"; }}
       >
         <div style={{
-          width: 36, height: 36, borderRadius: 10, flexShrink: 0, overflow: "hidden",
+          width: 36, height: 36, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
           background: avatarUrl ? "transparent" : `linear-gradient(135deg, ${C.gold}, #f97316)`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontWeight: 800, fontSize: 13, color: C.navy,
-          boxShadow: "0 2px 8px rgba(245,158,11,0.35)",
+          border: `3px solid ${C.white}`,
+          boxShadow: "0 3px 10px rgba(0,0,0,0.25)",
         }}>
           {avatarUrl ? <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
         </div>
