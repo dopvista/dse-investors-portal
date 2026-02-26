@@ -58,12 +58,12 @@ export function Toast({ msg, type }) {
 // ─── StatCard ─────────────────────────────────────────────────────
 export function StatCard({ label, value, sub, color = C.green, icon }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, padding: "18px 20px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", minWidth: 0 }}>
-      <div style={{ width: 44, height: 44, background: color + "18", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{icon}</div>
+    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 1px 4px rgba(0,0,0,0.05)", minWidth: 0 }}>
+      <div style={{ width: 36, height: 36, background: color + "18", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{icon}</div>
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>{label}</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: C.text, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
-        {sub && <div style={{ fontSize: 11, color: C.gray600, marginTop: 3 }}>{sub}</div>}
+        <div style={{ fontSize: 10, color: C.gray400, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{label}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.text, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
+        {sub && <div style={{ fontSize: 10, color: C.gray600, marginTop: 2 }}>{sub}</div>}
       </div>
     </div>
   );
@@ -72,14 +72,14 @@ export function StatCard({ label, value, sub, color = C.green, icon }) {
 // ─── SectionCard ──────────────────────────────────────────────────
 export function SectionCard({ title, subtitle, children }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 24 }}>
+    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       {title && (
-        <div style={{ padding: "16px 22px", borderBottom: `1px solid ${C.gray100}`, background: C.gray50 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{title}</div>
-          {subtitle && <div style={{ fontSize: 12, color: C.gray400, marginTop: 2 }}>{subtitle}</div>}
+        <div style={{ padding: "10px 16px", borderBottom: `1px solid ${C.gray100}`, background: C.gray50, flexShrink: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 11, color: C.gray400, marginTop: 1 }}>{subtitle}</div>}
         </div>
       )}
-      <div>{children}</div>
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>{children}</div>
     </div>
   );
 }
