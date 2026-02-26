@@ -111,10 +111,10 @@ export default function LoginPage({ onLogin }) {
         }
       `}</style>
 
-      {/* Main card */}
+      {/* Main card with 16:9 aspect ratio */}
       <div style={{
-        maxWidth: 900,
-        width: "100%",
+        width: "min(1000px, 90vw)",
+        aspectRatio: "16/9",
         background: "white",
         borderRadius: 32,
         boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
@@ -123,16 +123,16 @@ export default function LoginPage({ onLogin }) {
         overflow: "hidden"
       }}>
         
-        {/* LEFT: Photo slider */}
+        {/* LEFT: Photo slider - vertically centered */}
         <div style={{
           position: "relative",
           background: ADVERTS[activeAd].color,
           transition: "background 1s ease",
           overflow: "hidden",
-          padding: 48,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center"
+          justifyContent: "center",
+          padding: "0 48px"
         }}>
           {/* Background image */}
           {ADVERTS.map((ad, index) => (
@@ -194,7 +194,7 @@ export default function LoginPage({ onLogin }) {
               </div>
             ))}
 
-            {/* Minimal dots (barely visible) */}
+            {/* Minimal dots */}
             <div style={{
               display: "flex",
               gap: 8,
@@ -223,16 +223,16 @@ export default function LoginPage({ onLogin }) {
           </div>
         </div>
 
-        {/* RIGHT: Login form */}
+        {/* RIGHT: Login form - vertically centered */}
         <div style={{
           background: "white",
-          padding: 48,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center"
+          justifyContent: "center",
+          padding: "0 40px"
         }}>
-          <div style={{ maxWidth: 300, width: "100%", margin: "0 auto" }}>
-            <div style={{ marginBottom: 28 }}>
+          <div style={{ width: "100%" }}>
+            <div style={{ marginBottom: 24 }}>
               <h1 style={{
                 fontSize: 28,
                 fontWeight: 800,
@@ -257,7 +257,7 @@ export default function LoginPage({ onLogin }) {
                 background: "#fef2f2",
                 color: "#dc2626",
                 fontSize: 13,
-                marginBottom: 20,
+                marginBottom: 18,
                 border: "1px solid #fee2e2"
               }}>
                 ⚠️ {error}
@@ -265,7 +265,7 @@ export default function LoginPage({ onLogin }) {
             )}
 
             <form onSubmit={handleLogin}>
-              <div style={{ marginBottom: 18 }}>
+              <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
                   Email Address
                 </label>
@@ -279,7 +279,7 @@ export default function LoginPage({ onLogin }) {
                 />
               </div>
 
-              <div style={{ marginBottom: 14 }}>
+              <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 14, fontWeight: 600, color: C.text }}>
                   Password
                 </label>
@@ -296,7 +296,7 @@ export default function LoginPage({ onLogin }) {
               <div style={{
                 display: "flex",
                 justifyContent: "flex-end",
-                marginBottom: 24
+                marginBottom: 22
               }}>
                 <button
                   type="button"
@@ -336,7 +336,7 @@ export default function LoginPage({ onLogin }) {
               </button>
 
               <p style={{
-                marginTop: 20,
+                marginTop: 18,
                 textAlign: "center",
                 fontSize: 12,
                 color: C.gray400
@@ -346,7 +346,7 @@ export default function LoginPage({ onLogin }) {
             </form>
 
             <p style={{
-              marginTop: 24,
+              marginTop: 20,
               textAlign: "center",
               fontSize: 11,
               color: C.gray300,
