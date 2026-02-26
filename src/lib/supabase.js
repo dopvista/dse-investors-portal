@@ -295,3 +295,132 @@ export async function sbAdminCreateUser(email, password, cdsNumber) {
   const data = await parseResponse(res, "Failed to create user");
   return data;
 }
+
+// ── TRANSACTIONS (workflow) ────────────────────────────────────────
+
+/**
+ * sbGetTransactions()
+ * Fetches transactions filtered by the caller's role:
+ *   SA/AD  → all transactions
+ *   DE     → only their own (created_by = me), all statuses
+ *   VR     → only confirmed (ready to review)
+ *   RO     → only verified (final approved)
+ */
+export async function sbGetTransactions(role) {
+  let url = `${BASE}/rest/v1/transactions?order=date.desc,created_at.desc`;
+  if (role === "VR") url += "&status=eq.confirmed";
+  if (role === "RO") url += "&status=eq.verified";
+  // DE filter is enforced by RLS (created_by = auth.uid())
+
+  const res = await fetch(url, { headers: headers(token()) });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbInsertTransaction(data)
+ * Creates a new transaction with status=pending and created_by=current user.
+ */
+export async function sbInsertTransaction(data) {
+  const uid = getSession()?.user?.id;
+  const res = await fetch(`${BASE}/rest/v1/transactions`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify({
+      ...data,
+      status:     "pending",
+      created_by: uid,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbConfirmTransaction(id)
+ * DE confirms a pending transaction → status becomes confirmed.
+ */
+export async function sbConfirmTransaction(id) {
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify({
+      status:       "confirmed",
+      confirmed_at: new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbVerifyTransactions(ids)
+ * VR verifies one or more confirmed transactions → status becomes verified.
+ * ids: array of transaction UUIDs
+ */
+export async function sbVerifyTransactions(ids) {
+  const uid = getSession()?.user?.id;
+  const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=in.${idList}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify({
+      status:      "verified",
+      verified_by: uid,
+      verified_at: new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbRejectTransactions(ids, comment)
+ * VR rejects one or more confirmed transactions → status becomes rejected.
+ * ids:     array of transaction UUIDs
+ * comment: required rejection reason
+ */
+export async function sbRejectTransactions(ids, comment) {
+  const uid = getSession()?.user?.id;
+  const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=in.${idList}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify({
+      status:             "rejected",
+      rejection_comment:  comment,
+      rejected_by:        uid,
+      rejected_at:        new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbUpdateTransaction(id, data)
+ * DE edits a pending transaction. Only allowed when status = pending.
+ */
+export async function sbUpdateTransaction(id, data) {
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbDeleteTransaction(id)
+ * Only allowed for SA/AD (any status) or DE (pending only).
+ * RLS enforces this server-side.
+ */
+export async function sbDeleteTransaction(id) {
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
+    method:  "DELETE",
+    headers: { ...headers(token()), "Prefer": "return=minimal" },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return true;
+}
