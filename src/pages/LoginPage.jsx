@@ -80,7 +80,7 @@ export default function LoginPage({ onLogin }) {
 
       <div style={{
         width: "min(960px, 90vw)",
-        height: "min(332px, 75vh)",      /* ← fixed height instead of aspect ratio */
+        height: "min(400px, 80vh)",      /* ← fixed height instead of aspect ratio */
         background: "white",
         borderRadius: 28,
         boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)",
