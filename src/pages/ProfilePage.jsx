@@ -66,7 +66,7 @@ function calcCompletion(form, avatarPreview) {
 
 // ── Shared input styles ───────────────────────────────────────────
 const inp = (extra = {}) => ({
-  width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12,
+  width: "100%", padding: "8px 11px", borderRadius: 8, fontSize: 13,
   border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
   background: C.white, color: C.text, transition: "border 0.2s",
   boxSizing: "border-box", ...extra,
@@ -77,12 +77,12 @@ const blurGray   = (e) => e.target.style.borderColor = C.gray200;
 // ── Section card ──────────────────────────────────────────────────
 function Section({ title, icon, children }) {
   return (
-    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, marginBottom: 8 }}>
-      <div style={{ padding: "7px 12px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 6, background: C.gray50, borderRadius: "12px 12px 0 0" }}>
+    <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, marginBottom: 6 }}>
+      <div style={{ padding: "6px 12px", borderBottom: `1px solid ${C.gray100}`, display: "flex", alignItems: "center", gap: 6, background: C.gray50, borderRadius: "12px 12px 0 0" }}>
         <span style={{ fontSize: 13 }}>{icon}</span>
         <span style={{ fontWeight: 700, fontSize: 10, color: C.text, textTransform: "uppercase", letterSpacing: "0.06em" }}>{title}</span>
       </div>
-      <div style={{ padding: "10px 12px" }}>{children}</div>
+      <div style={{ padding: "8px 12px" }}>{children}</div>
     </div>
   );
 }
@@ -90,7 +90,7 @@ function Section({ title, icon, children }) {
 // ── Field wrapper ─────────────────────────────────────────────────
 function Field({ label, required, children }) {
   return (
-    <div style={{ marginBottom: 8 }}>
+    <div style={{ marginBottom: 6 }}>
       <label style={{ fontSize: 10, fontWeight: 700, color: C.gray400, display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>
         {label}{required && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}
       </label>
@@ -428,7 +428,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       {showPwModal && <ChangePasswordModal email={email} session={session} uid={uid} onClose={() => setShowPwModal(false)} showToast={showToast} />}
 
       {/* Header */}
-      <div style={{ marginBottom: 10, flexShrink: 0 }}>
+      <div style={{ marginBottom: 6, flexShrink: 0 }}>
         <div style={{ fontSize: 12, color: C.gray400 }}>
           Manage your personal information and security settings
           {lastSaved && <span style={{ marginLeft: 8 }}>· Last saved {lastSaved}</span>}
@@ -436,20 +436,20 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       </div>
 
       {/* Two-column grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 12, flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 10, flex: 1, minHeight: 0, overflow: "hidden" }}>
 
         {/* ── LEFT COLUMN ── */}
         <div className="pcol" style={{ overflowY: "auto", overflowX: "hidden", paddingRight: 3, paddingBottom: 8 }}>
 
           {/* Profile card */}
           <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 12, marginBottom: 8, overflow: "hidden" }}>
-            <div style={{ height: 44, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
+            <div style={{ height: 40, background: `linear-gradient(135deg, ${C.navy} 0%, #1e3a5f 100%)` }} />
             <div style={{ padding: "0 12px 12px", marginTop: -24 }}>
 
               {/* Avatar */}
               <div style={{ position: "relative", display: "inline-block", marginBottom: 6 }}>
                 <div style={{
-                  width: 52, height: 52, borderRadius: "50%", border: `3px solid ${C.white}`,
+                  width: 56, height: 56, borderRadius: "50%", border: `3px solid ${C.white}`,
                   boxShadow: "0 3px 10px rgba(0,0,0,0.15)", background: avatarPreview ? "transparent" : C.navy,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   overflow: "hidden", cursor: "pointer", fontSize: 16, fontWeight: 800, color: C.white, position: "relative",
@@ -465,10 +465,10 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileSelect} />
               </div>
 
-              <div style={{ fontWeight: 800, fontSize: 13, color: C.text, lineHeight: 1.2 }}>{form.full_name || "Your Name"}</div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: C.text, lineHeight: 1.2 }}>{form.full_name || "Your Name"}</div>
               <div style={{ fontSize: 10, color: C.gray400, marginTop: 2, marginBottom: 6, fontWeight: 500 }}>{email}</div>
 
-              <div style={{ marginBottom: 8 }}>
+              <div style={{ marginBottom: 6 }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: roleMeta.color + "15", border: `1px solid ${roleMeta.color}25`, borderRadius: 20, padding: "2px 8px" }}>
                   <span style={{ width: 4, height: 4, borderRadius: "50%", background: roleMeta.color, display: "inline-block" }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: roleMeta.color }}>{roleMeta.label}</span>
@@ -539,7 +539,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
         <div className="pcol" style={{ overflowY: "auto", overflowX: "clip", paddingRight: 3, paddingBottom: 8, height: "100%", display: "flex", flexDirection: "column" }}>
 
           <Section title="Account Information" icon="👤">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="Full Name" required>
                 <input style={inp()} type="text" placeholder="e.g. Michael Luzigah"
                   value={form.full_name} onChange={e => set("full_name", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
@@ -567,7 +567,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           </Section>
 
           <Section title="Contact Details" icon="📍">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="Nationality">
                 <CountrySelect value={form.nationality} onChange={v => set("nationality", v)} />
               </Field>
@@ -581,7 +581,7 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           </Section>
 
           {/* Photo tip */}
-          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "20px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 11, color: C.text }}>Profile Picture</div>
