@@ -13,7 +13,7 @@ import logo from "./assets/logo.jpg";
 
 // ── Role-based nav visibility ──────────────────────────────────────
 const NAV = [
-  { id: "companies",       label: "Holdings",        icon: "🏢", roles: ["SA","AD","DE","VR","RO"] },
+  { id: "companies",       label: "Portfolio",       icon: "📊", roles: ["SA","AD","DE","VR","RO"] },
   { id: "transactions",    label: "Transactions",    icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
   { id: "user-management", label: "User Management", icon: "👥", roles: ["SA","AD"] },
 ];
@@ -273,7 +273,7 @@ export default function App() {
               {tab !== "profile" && tab !== "user-management" && NAV.find(n => n.id === tab)?.label}
             </div>
             <div style={{ fontSize: 12, color: C.gray400, marginTop: 1 }}>
-              {tab === "companies"       && "Manage your DSE registered companies"}
+              {tab === "companies"       && "Your CDS portfolio holdings"}
               {tab === "transactions"    && "Record and view all buy/sell activity"}
               {tab === "profile"         && "Manage your personal information"}
               {tab === "user-management" && "Manage system users and assign roles"}
@@ -289,7 +289,7 @@ export default function App() {
         </div>
 
         <div style={{ flex: 1, padding: "28px 32px", overflowY: "auto" }}>
-          {tab === "companies"       && <CompaniesPage      companies={companies}    setCompanies={setCompanies}    transactions={transactions} showToast={showToast} role={role} />}
+          {tab === "companies"       && <CompaniesPage      companies={companies}    setCompanies={setCompanies}    transactions={transactions} showToast={showToast} role={role} profile={profile} />}
           {tab === "transactions"    && <TransactionsPage   companies={companies}    transactions={transactions}     setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
           {tab === "profile"         && <ProfilePage profile={profile} setProfile={setProfile} session={session} role={role} email={session?.user?.email || session?.email || ""} showToast={showToast} />}
           {tab === "user-management" && <UserManagementPage role={role} showToast={showToast} profile={profile} />}
