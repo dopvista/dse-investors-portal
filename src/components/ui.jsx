@@ -601,6 +601,11 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     </div>
   );
 
+  const PAGE_SIZE = 10;
+  const [previewPage, setPreviewPage] = useState(1);
+  const totalPages   = Math.ceil(rows.length / PAGE_SIZE);
+  const pagedRows    = rows.slice((previewPage - 1) * PAGE_SIZE, previewPage * PAGE_SIZE);
+
   const PreviewStep = () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
@@ -609,15 +614,27 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         <div style={{ background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}><div style={{ fontSize: 22, fontWeight: 800, color: C.navy }}>{rows.length + errors.length}</div><div style={{ fontSize: 11, color: C.gray400, fontWeight: 600, marginTop: 2 }}>Total Rows Found</div></div>
       </div>
       {errors.length > 0 && (
-        <div style={{ background: C.redBg, border: `1px solid ${C.red}33`, borderRadius: 10, padding: "12px 16px", maxHeight: 160, overflowY: "auto" }}>
+        <div style={{ background: C.redBg, border: `1px solid ${C.red}33`, borderRadius: 10, padding: "12px 16px", maxHeight: 120, overflowY: "auto" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.red, marginBottom: 8 }}>⚠️ {errors.length} row(s) will be skipped:</div>
           {errors.map((e, i) => <div key={i} style={{ fontSize: 12, color: C.red, marginBottom: 4 }}><strong>Row {e.row}:</strong> {e.errors.join(" · ")}</div>)}
         </div>
       )}
       {rows.length > 0 && (
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 8 }}>✅ Preview — {rows.length} rows ready to import:</div>
-          <div style={{ maxHeight: 260, overflowY: "auto", border: `1px solid ${C.gray200}`, borderRadius: 10, overflow: "hidden" }}>
+          {/* Header row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+              ✅ Preview — {rows.length} rows ready to import
+            </div>
+            {totalPages > 1 && (
+              <div style={{ fontSize: 12, color: C.gray400 }}>
+                Showing {(previewPage - 1) * PAGE_SIZE + 1}–{Math.min(previewPage * PAGE_SIZE, rows.length)} of {rows.length}
+              </div>
+            )}
+          </div>
+
+          {/* Table */}
+          <div style={{ border: `1px solid ${C.gray200}`, borderRadius: 10, overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
               <thead>
                 <tr style={{ background: C.navy }}>
@@ -627,24 +644,63 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => {
-                  const displayDate = r.date && r.date.includes("-") ? r.date.split("-").reverse().join("/") : r.date;
+                {pagedRows.map((r, i) => {
+                  const globalIdx    = (previewPage - 1) * PAGE_SIZE + i;
+                  const displayDate  = r.date && r.date.includes("-") ? r.date.split("-").reverse().join("/") : r.date;
                   return (
                     <tr key={i} style={{ borderBottom: `1px solid ${C.gray100}`, background: i % 2 === 0 ? C.white : C.gray50 }}>
-                      <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{i + 1}</td>
+                      <td style={{ padding: "7px 10px", color: C.gray400, textAlign: "center" }}>{globalIdx + 1}</td>
                       <td style={{ padding: "7px 10px", color: C.text, whiteSpace: "nowrap" }}>{displayDate}</td>
                       <td style={{ padding: "7px 10px", fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.company_name}</td>
                       <td style={{ padding: "7px 10px" }}><span style={{ background: r.type === "Buy" ? C.greenBg : C.redBg, color: r.type === "Buy" ? C.green : C.red, padding: "2px 8px", borderRadius: 12, fontWeight: 700, fontSize: 11 }}>{r.type}</span></td>
                       <td style={{ padding: "7px 10px", color: C.text, textAlign: "right" }}>{fmtInt(r.qty)}</td>
                       <td style={{ padding: "7px 10px", color: C.green, fontWeight: 600, textAlign: "right" }}>{fmtInt(r.price)}</td>
                       <td style={{ padding: "7px 10px", color: C.gray600, textAlign: "right" }}>{r.fees ? fmtInt(r.fees) : "—"}</td>
-                      <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : C.red, textAlign: "right" }}>{fmtInt(r.total)}</td>
+                      <td style={{ padding: "7px 10px", fontWeight: 700, color: r.type === "Buy" ? C.green : r.type === "Sell" ? C.red : C.text, textAlign: "right" }}>{fmtInt(r.total)}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10 }}>
+              <button onClick={() => setPreviewPage(1)} disabled={previewPage === 1}
+                style={{ padding: "5px 10px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: previewPage === 1 ? C.gray400 : C.text, cursor: previewPage === 1 ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>
+                «
+              </button>
+              <button onClick={() => setPreviewPage(p => Math.max(1, p - 1))} disabled={previewPage === 1}
+                style={{ padding: "5px 12px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: previewPage === 1 ? C.gray400 : C.text, cursor: previewPage === 1 ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>
+                ‹ Prev
+              </button>
+              {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - previewPage) <= 1)
+                .reduce((acc, p, i, arr) => {
+                  if (i > 0 && arr[i - 1] !== p - 1) acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, i) => p === "..." ? (
+                  <span key={`dots-${i}`} style={{ fontSize: 12, color: C.gray400, padding: "0 2px" }}>…</span>
+                ) : (
+                  <button key={p} onClick={() => setPreviewPage(p)}
+                    style={{ padding: "5px 10px", borderRadius: 7, border: `1.5px solid ${p === previewPage ? C.navy : C.gray200}`, background: p === previewPage ? C.navy : C.white, color: p === previewPage ? C.white : C.text, cursor: "pointer", fontSize: 12, fontWeight: p === previewPage ? 700 : 500, fontFamily: "inherit", minWidth: 32 }}>
+                    {p}
+                  </button>
+                ))
+              }
+              <button onClick={() => setPreviewPage(p => Math.min(totalPages, p + 1))} disabled={previewPage === totalPages}
+                style={{ padding: "5px 12px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: previewPage === totalPages ? C.gray400 : C.text, cursor: previewPage === totalPages ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>
+                Next ›
+              </button>
+              <button onClick={() => setPreviewPage(totalPages)} disabled={previewPage === totalPages}
+                style={{ padding: "5px 10px", borderRadius: 7, border: `1.5px solid ${C.gray200}`, background: C.white, color: previewPage === totalPages ? C.gray400 : C.text, cursor: previewPage === totalPages ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit" }}>
+                »
+              </button>
+            </div>
+          )}
         </div>
       )}
       {rows.length === 0 && (
