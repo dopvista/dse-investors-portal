@@ -428,21 +428,11 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
       {showPwModal && <ChangePasswordModal email={email} session={session} uid={uid} onClose={() => setShowPwModal(false)} showToast={showToast} />}
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexShrink: 0 }}>
+      <div style={{ marginBottom: 10, flexShrink: 0 }}>
         <div style={{ fontSize: 12, color: C.gray400 }}>
           Manage your personal information and security settings
           {lastSaved && <span style={{ marginLeft: 8 }}>· Last saved {lastSaved}</span>}
         </div>
-        <button onClick={handleSave} disabled={saving} style={{
-          display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 9,
-          border: "none", background: saving ? C.gray200 : C.green, color: C.white,
-          fontWeight: 700, fontSize: 13, cursor: saving ? "not-allowed" : "pointer",
-          fontFamily: "inherit", boxShadow: saving ? "none" : `0 4px 12px ${C.green}44`,
-        }}>
-          {saving
-            ? <><div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Saving...</>
-            : <>💾 Save Changes</>}
-        </button>
       </div>
 
       {/* Two-column grid */}
@@ -514,13 +504,13 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
               <span style={{ fontSize: 18 }}>{accountType === "Corporate" ? "🏢" : "👤"}</span>
             </div>
             <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.5 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 4 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginBottom: 3 }}>
                 <span>👤</span>
-                <span><strong style={{ color: C.text }}>Individual</strong> — only one user is registered under this CDS number.</span>
+                <span><strong style={{ color: C.text }}>Individual</strong> — sole user on this CDS.</span>
               </div>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
                 <span>🏢</span>
-                <span><strong style={{ color: C.text }}>Corporate</strong> — two or more users share this CDS number, indicating a joint or company account.</span>
+                <span><strong style={{ color: C.text }}>Corporate</strong> — multiple users share this CDS.</span>
               </div>
             </div>
           </Section>
@@ -591,12 +581,27 @@ export default function ProfilePage({ profile, setProfile, showToast, session, r
           </Section>
 
           {/* Photo tip */}
-          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "20px 12px", display: "flex", alignItems: "center", gap: 10,  }}>
+          <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}30`, borderRadius: 12, padding: "20px 12px", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>📷</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 11, color: C.text }}>Profile Picture</div>
               <div style={{ fontSize: 10, color: C.gray400, lineHeight: 1.4 }}>Click your avatar to upload. Use the crop tool to center your face. Stored permanently at 200×200px.</div>
             </div>
+          </div>
+
+          {/* Save Changes — bottom of right column */}
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, flexShrink: 0 }}>
+            {lastSaved && <span style={{ fontSize: 11, color: C.gray400 }}>Last saved {lastSaved}</span>}
+            <button onClick={handleSave} disabled={saving} style={{
+              display: "flex", alignItems: "center", gap: 7, padding: "9px 20px", borderRadius: 9,
+              border: "none", background: saving ? C.gray200 : C.green, color: C.white,
+              fontWeight: 700, fontSize: 13, cursor: saving ? "not-allowed" : "pointer",
+              fontFamily: "inherit", boxShadow: saving ? "none" : `0 4px 12px ${C.green}44`,
+            }}>
+              {saving
+                ? <><div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />Saving...</>
+                : <>💾 Save Changes</>}
+            </button>
           </div>
         </div>
       </div>
