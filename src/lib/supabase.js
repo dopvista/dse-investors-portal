@@ -500,7 +500,7 @@ export async function sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newP
 
   // Upsert into cds_prices (insert or update by company_id + cds_number)
   // created_by_id is set only on first insert — never overwritten on update
-  const upsertRes = await fetch(`${BASE}/rest/v1/cds_prices`, {
+  const upsertRes = await fetch(`${BASE}/rest/v1/cds_prices?on_conflict=company_id,cds_number`, {
     method:  "POST",
     headers: { ...headers(token()), "Prefer": "return=representation,resolution=merge-duplicates" },
     body: JSON.stringify({
