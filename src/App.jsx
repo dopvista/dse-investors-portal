@@ -106,9 +106,26 @@ export default function App() {
 
   // ── Checking session ─────────────────────────────────────────────
   if (session === undefined) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+    <div style={{ minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif", background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)" }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity:0.4; transform:scale(0.95); } 50% { opacity:1; transform:scale(1); } }
+      `}</style>
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "relative", zIndex: 1, textAlign: "center", color: C.white }}>
+        <div style={{ animation: "pulse 1.8s ease-in-out infinite", marginBottom: 20 }}>
+          <img src={logo} alt="DSE" style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }} />
+        </div>
+        <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: "0.01em" }}>DSE Investors Portal</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 6 }}>Checking your session...</div>
+        <div style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, opacity: 0.3, animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 
@@ -117,14 +134,36 @@ export default function App() {
 
   // ── Loading data ─────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.navy, fontFamily: "system-ui" }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ textAlign: "center", color: C.white }}>
-        <img src={logo} alt="DSE" style={{ width: 72, height: 72, borderRadius: 16, marginBottom: 20, objectFit: "cover", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }} />
-        <div style={{ fontWeight: 600, fontSize: 16 }}>DSE Investors Portal</div>
-        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <div style={{ width: 14, height: 14, border: `2px solid rgba(255,255,255,0.2)`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+    <div style={{ minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif", background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)" }}>
+      <style>{`
+        @keyframes spin  { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity:0.4; transform:scale(0.95); } 50% { opacity:1; transform:scale(1); } }
+        @keyframes bar   { 0% { width:"0%" } 100% { width:"100%" } }
+      `}</style>
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "relative", zIndex: 1, textAlign: "center", color: C.white, minWidth: 240 }}>
+        <div style={{ animation: "pulse 1.8s ease-in-out infinite", marginBottom: 22 }}>
+          <img src={logo} alt="DSE" style={{ width: 72, height: 72, borderRadius: 18, objectFit: "cover", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", border: "3px solid rgba(255,255,255,0.15)" }} />
+        </div>
+        <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: "0.01em" }}>DSE Investors Portal</div>
+        <div style={{ color: C.gold, fontWeight: 600, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 4 }}>DAR ES SALAAM STOCK EXCHANGE</div>
+
+        {/* Progress bar */}
+        <div style={{ margin: "20px auto 0", width: 180, height: 3, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ height: "100%", background: `linear-gradient(90deg, ${C.green}, ${C.gold})`, borderRadius: 4, animation: "bar 2s ease-in-out infinite" }} />
+        </div>
+
+        <div style={{ marginTop: 14, fontSize: 12, color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+          <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.15)", borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
           Loading your portfolio...
+        </div>
+
+        <div style={{ marginTop: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, opacity: 0.3, animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          ))}
         </div>
       </div>
     </div>
