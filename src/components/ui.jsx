@@ -359,20 +359,26 @@ export function PriceHistoryModal({ company, history, onClose }) {
           <div style={{ fontSize: 13, marginTop: 4 }}>Price changes will appear here after the first update</div>
         </div>
       ) : (
-        <div style={{ margin: "0 -28px" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
+        <div style={{ margin: "0 -28px", overflowX: "auto" }}>
+          <div style={{ maxHeight: 320, overflowY: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: 36  }} />
+                <col style={{ width: 130 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 110 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 160 }} />
+                <col style={{ width: 130 }} />
+              </colgroup>
+              <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
                 <tr style={{ background: C.gray50 }}>
                   {["#", "Date & Time", "Old Price", "New Price", "Change", "Change %", "Notes", "Updated By"].map(h => (
-                    <th key={h} style={{ padding: "11px 12px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, borderTop: `1px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h}</th>
+                    <th key={h} style={{ padding: "11px 12px", textAlign: ["Old Price", "New Price", "Change", "Change %"].includes(h) ? "right" : "left", color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `1px solid ${C.gray200}`, borderTop: `1px solid ${C.gray200}`, whiteSpace: "nowrap", background: C.gray50 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
-            </table>
-          </div>
-          <div style={{ maxHeight: 285, overflowY: "auto", overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <tbody>
                 {history.map((h, i) => {
                   const isFirstEntry = !h.old_price || Number(h.old_price) === 0;
