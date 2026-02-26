@@ -54,7 +54,7 @@ export default function UserMenu({ profile, session, role, onSignOut, onOpenProf
                 background: avatarUrl ? "transparent" : `linear-gradient(135deg, ${C.gold}, #f97316)`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: 800, fontSize: 15, color: C.navy,
-                border: `3px solid ${C.white}`,
+                border: `2px solid ${C.white}`,
                 boxShadow: "0 3px 10px rgba(0,0,0,0.25)",
               }}>
                 {avatarUrl ? <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
@@ -135,7 +135,7 @@ export default function UserMenu({ profile, session, role, onSignOut, onOpenProf
           background: avatarUrl ? "transparent" : `linear-gradient(135deg, ${C.gold}, #f97316)`,
           display: "flex", alignItems: "center", justifyContent: "center",
           fontWeight: 800, fontSize: 13, color: C.navy,
-          border: `3px solid ${C.white}`,
+          border: `2px solid ${C.white}`,
           boxShadow: "0 3px 10px rgba(0,0,0,0.25)",
         }}>
           {avatarUrl ? <img src={avatarUrl} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
