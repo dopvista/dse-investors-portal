@@ -375,7 +375,8 @@ export function PriceHistoryModal({ company, history, onClose }) {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <tbody>
                 {history.map((h, i) => {
-                  const up = h.change_amount >= 0;
+                  const isFirstEntry = !h.old_price || Number(h.old_price) === 0;
+                  const up = !isFirstEntry && h.change_amount >= 0;
                   return (
                     <tr key={h.id} style={{ borderBottom: `1px solid ${C.gray100}` }}
                       onMouseEnter={e => e.currentTarget.style.background = C.gray50}
@@ -385,11 +386,19 @@ export function PriceHistoryModal({ company, history, onClose }) {
                         <div style={{ fontWeight: 600, color: C.text }}>{new Date(h.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</div>
                         <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{new Date(h.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</div>
                       </td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", color: C.gray600 }}>{fmt(h.old_price)}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", color: C.gray600 }}>
+                        {isFirstEntry ? <span style={{ color: C.gray400 }}>—</span> : fmt(h.old_price)}
+                      </td>
                       <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: C.text }}>{fmt(h.new_price)}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: up ? C.green : C.red }}>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: isFirstEntry ? C.gray400 : up ? C.green : C.red }}>
+                        {isFirstEntry
+                          ? <span style={{ color: C.gray400 }}>Initial</span>
+                          : <>{up ? "▲" : "▼"} {fmt(Math.abs(h.change_amount))}</>}
+                      </td>
                       <td style={{ padding: "10px 12px", textAlign: "right" }}>
-                        <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%</span>
+                        {isFirstEntry
+                          ? <span style={{ color: C.gray400, fontSize: 12 }}>—</span>
+                          : <span style={{ background: up ? C.greenBg : C.redBg, color: up ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{up ? "+" : ""}{Number(h.change_percent).toFixed(2)}%</span>}
                       </td>
                       <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 160 }}>{h.notes || <span style={{ color: C.gray400 }}>—</span>}</td>
                       <td style={{ padding: "10px 12px" }}><span style={{ background: C.navy + "12", color: C.navy, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{h.updated_by}</span></td>
