@@ -300,18 +300,12 @@ export async function sbAdminCreateUser(email, password, cdsNumber) {
 
 /**
  * sbGetTransactions()
- * Fetches transactions filtered by the caller's role:
- *   SA/AD  → all transactions
- *   DE     → only their own (created_by = me), all statuses
- *   VR     → only confirmed (ready to review)
- *   RO     → only verified (final approved)
+ * Fetches all transactions — all roles see all statuses.
+ * Visibility filtering is handled client-side per role.
+ * DE scope is enforced by RLS (created_by = auth.uid()).
  */
-export async function sbGetTransactions(role) {
-  let url = `${BASE}/rest/v1/transactions?order=date.desc,created_at.desc`;
-  if (role === "VR") url += "&status=eq.confirmed";
-  if (role === "RO") url += "&status=eq.verified";
-  // DE filter is enforced by RLS (created_by = auth.uid())
-
+export async function sbGetTransactions() {
+  const url = `${BASE}/rest/v1/transactions?order=date.desc,created_at.desc`;
   const res = await fetch(url, { headers: headers(token()) });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
