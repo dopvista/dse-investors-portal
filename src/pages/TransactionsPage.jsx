@@ -313,7 +313,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
   // ─────────────────────────────────────────────────────────────────
   return (
-    <div>
+    <div style={{ height: "calc(100vh - 118px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* ── Modals ── */}
       {deleteModal && (
         <Modal
@@ -349,13 +349,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       )}
 
       {/* ── Stat Cards ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 8, flexShrink: 0 }}>
         {statCards.map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
       {/* ── Role Banner ── */}
       {isVR && (
-        <div style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)", border: "1px solid #BFDBFE", borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)", border: "1px solid #BFDBFE", borderRadius: 10, padding: "7px 14px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>🔍</span>
             <div>
@@ -379,7 +379,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       )}
 
       {isDE && (
-        <div style={{ background: "linear-gradient(135deg, #FFF7ED, #FFEDD5)", border: "1px solid #FED7AA", borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ background: "linear-gradient(135deg, #FFF7ED, #FFEDD5)", border: "1px solid #FED7AA", borderRadius: 10, padding: "7px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <span style={{ fontSize: 18 }}>✏️</span>
           <div>
             <div style={{ fontWeight: 700, fontSize: 13, color: "#C2410C" }}>Data Entry View</div>
@@ -389,14 +389,14 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       )}
 
       {/* ── Toolbar ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap", flexShrink: 0 }}>
 
         {/* Search */}
         <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: C.gray400 }}>🔍</span>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search company, type, date, remarks..."
-            style={{ width: "100%", border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "8px 12px 8px 34px", fontSize: 13, outline: "none", fontFamily: "inherit", color: C.text, boxSizing: "border-box" }}
+            style={{ width: "100%", border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "6px 10px 6px 32px", fontSize: 12, outline: "none", fontFamily: "inherit", color: C.text, boxSizing: "border-box" }}
             onFocus={e => e.target.style.borderColor = C.navy}
             onBlur={e  => e.target.style.borderColor = C.gray200}
           />
@@ -405,7 +405,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         {/* Type filter */}
         {["All","Buy","Sell"].map(t => (
           <button key={t} onClick={() => setTypeFilter(t)} style={{
-            padding: "7px 14px", borderRadius: 8, border: `1.5px solid ${typeFilter === t ? C.navy : C.gray200}`,
+            padding: "5px 12px", borderRadius: 8, border: `1.5px solid ${typeFilter === t ? C.navy : C.gray200}`,
             background: typeFilter === t ? C.navy : C.white,
             color: typeFilter === t ? C.white : C.gray600,
             fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
@@ -415,7 +415,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         {/* Status filter — only for SA/AD */}
         {isSAAD && (
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{
-            padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.gray200}`,
+            padding: "5px 10px", borderRadius: 8, border: `1.5px solid ${C.gray200}`,
             fontSize: 12, fontFamily: "inherit", color: C.gray600, outline: "none", background: C.white, cursor: "pointer",
           }}
             onFocus={e => e.target.style.borderColor = C.navy}
@@ -443,6 +443,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       </div>
 
       {/* ── Table ── */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <SectionCard
         title={`Transaction History (${filtered.length}${search ? ` of ${transactions.length}` : ""})`}
         subtitle={
@@ -472,7 +473,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
             <div style={{ fontSize: 13, marginTop: 4 }}>Try adjusting your search or filters</div>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
@@ -503,7 +504,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     ...(showActions ? [{ label: "Actions", align: "right" }] : []),
                   ].map(h => (
                     <th key={h.label} style={{
-                      padding: "10px 12px", textAlign: h.align,
+                      padding: "7px 10px", textAlign: h.align,
                       color: C.gray400, fontWeight: 700, fontSize: 10,
                       textTransform: "uppercase", letterSpacing: "0.07em",
                       borderBottom: `2px solid ${C.gray200}`, whiteSpace: "nowrap",
@@ -541,7 +542,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       onMouseLeave={e => e.currentTarget.style.background = isRejected ? "#FFF5F5" : isVerified ? "#F9FFFB" : "transparent"}
                     >
                       {showCheckbox && (
-                        <td style={{ padding: "10px 12px" }}>
+                        <td style={{ padding: "7px 10px" }}>
                           {isVR && isConfirmed && (
                             <input type="checkbox" checked={isChecked} onChange={() => toggleOne(t.id)}
                               style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
@@ -550,17 +551,17 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         </td>
                       )}
 
-                      <td style={{ padding: "10px 12px", color: C.gray400, fontWeight: 600, fontSize: 12 }}>{i + 1}</td>
+                      <td style={{ padding: "7px 10px", color: C.gray400, fontWeight: 600, fontSize: 12 }}>{i + 1}</td>
 
-                      <td style={{ padding: "10px 12px", color: C.gray600, whiteSpace: "nowrap", fontSize: 12 }}>
+                      <td style={{ padding: "7px 10px", color: C.gray600, whiteSpace: "nowrap", fontSize: 12 }}>
                         {fmtDate(t.date)}
                       </td>
 
-                      <td style={{ padding: "10px 12px", minWidth: 110 }}>
+                      <td style={{ padding: "7px 10px", minWidth: 100 }}>
                         <div style={{ fontWeight: 700, color: C.text, fontSize: 13 }}>{t.company_name}</div>
                       </td>
 
-                      <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
                         <span style={{
                           background: isBuy ? C.greenBg : C.redBg,
                           color: isBuy ? C.green : C.red,
@@ -571,21 +572,21 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         </span>
                       </td>
 
-                      <td style={{ padding: "10px 12px", fontWeight: 600, textAlign: "right" }}>{fmtInt(t.qty)}</td>
+                      <td style={{ padding: "7px 10px", fontWeight: 600, textAlign: "right" }}>{fmtInt(t.qty)}</td>
 
-                      <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "7px 10px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <span style={{ background: C.greenBg, color: C.green, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
                           {fmt(t.price)}
                         </span>
                       </td>
 
-                      <td style={{ padding: "10px 12px", fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(t.total)}</td>
+                      <td style={{ padding: "7px 10px", fontWeight: 600, textAlign: "right", whiteSpace: "nowrap" }}>{fmt(t.total)}</td>
 
                       <td style={{ padding: "10px 12px", color: C.gray600, textAlign: "right", whiteSpace: "nowrap" }}>
                         {t.fees ? fmt(t.fees) : <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
-                      <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "7px 10px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <span style={{
                           background: isBuy ? C.greenBg : C.redBg, color: isBuy ? C.green : C.red,
                           padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 800,
@@ -595,12 +596,12 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         </span>
                       </td>
 
-                      <td style={{ padding: "10px 12px", color: C.gray600, maxWidth: 130, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "7px 10px", color: C.gray600, maxWidth: 130, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {t.remarks || <span style={{ color: C.gray400 }}>—</span>}
                       </td>
 
                       {showStatus && (
-                        <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
                           <div>
                             <StatusBadge status={t.status} />
                             {isRejected && t.rejection_comment && (
@@ -632,15 +633,15 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               <tfoot>
                 <tr style={{ background: `${C.navy}08`, borderTop: `2px solid ${C.gray200}` }}>
                   <td colSpan={showCheckbox ? (showStatus ? 6 : 5) : (showStatus ? 5 : 4)}
-                    style={{ padding: "12px 12px", fontWeight: 700, color: C.gray600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    style={{ padding: "8px 10px", fontWeight: 700, color: C.gray600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     TOTALS ({filtered.length} rows)
                   </td>
-                  <td style={{ padding: "12px 12px", textAlign: "right" }}>
+                  <td style={{ padding: "8px 10px", textAlign: "right" }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.green, display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end" }}><span style={{fontSize:10}}>▲</span>{fmt(totals.buyAmount)}</div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: C.red,   display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end", marginTop: 3 }}><span style={{fontSize:10}}>▼</span>{fmt(totals.sellAmount)}</div>
                   </td>
-                  <td style={{ padding: "12px 12px", fontWeight: 700, color: C.text, textAlign: "right", fontSize: 13 }}>{fmt(totals.fees)}</td>
-                  <td style={{ padding: "12px 12px", textAlign: "right" }}>
+                  <td style={{ padding: "8px 10px", fontWeight: 700, color: C.text, textAlign: "right", fontSize: 13 }}>{fmt(totals.fees)}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right" }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: C.green, display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end" }}><span style={{fontSize:10}}>▲</span>{fmt(totals.buyGrand)}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: C.red,   display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end", marginTop: 3 }}><span style={{fontSize:10}}>▼</span>{fmt(totals.sellGrand)}</div>
                   </td>
@@ -651,6 +652,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           </div>
         )}
       </SectionCard>
+      </div>
     </div>
   );
 }
