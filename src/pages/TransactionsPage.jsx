@@ -353,40 +353,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         {statCards.map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
-      {/* ── Role Banner ── */}
-      {isVR && (
-        <div style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)", border: "1px solid #BFDBFE", borderRadius: 10, padding: "7px 14px", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 18 }}>🔍</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: "#1D4ED8" }}>Verifier View</div>
-              <div style={{ fontSize: 12, color: "#3B82F6" }}>You are seeing confirmed transactions ready for review. Select one or more to verify or reject.</div>
-            </div>
-          </div>
-          {selectedConfirmed.length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <button onClick={() => handleVerify(selectedConfirmed)} disabled={verifying}
-                style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: verifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                {verifying ? "Verifying..." : `✔ Verify ${selectedConfirmed.length}`}
-              </button>
-              <button onClick={() => setRejectModal({ ids: selectedConfirmed })}
-                style={{ padding: "8px 16px", borderRadius: 8, border: `1.5px solid #FECACA`, background: C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                ✖ Reject {selectedConfirmed.length}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
-      {isDE && (
-        <div style={{ background: "linear-gradient(135deg, #FFF7ED, #FFEDD5)", border: "1px solid #FED7AA", borderRadius: 10, padding: "7px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <span style={{ fontSize: 18 }}>✏️</span>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 13, color: "#C2410C" }}>Data Entry View</div>
-            <div style={{ fontSize: 12, color: "#EA580C" }}>Add transactions (saved as Pending). Confirm them to send for verification. You can edit or delete Pending and Rejected transactions.</div>
-          </div>
-        </div>
-      )}
+
+
 
       {/* ── Toolbar ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap", flexShrink: 0 }}>
@@ -429,6 +398,18 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           </select>
         )}
 
+        {isVR && selectedConfirmed.length > 0 && (
+          <>
+            <button onClick={() => handleVerify(selectedConfirmed)} disabled={verifying}
+              style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: verifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+              {verifying ? "Verifying..." : `✔ Verify ${selectedConfirmed.length}`}
+            </button>
+            <button onClick={() => setRejectModal({ ids: selectedConfirmed })}
+              style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
+              ✖ Reject {selectedConfirmed.length}
+            </button>
+          </>
+        )}
         {search && <Btn variant="secondary" onClick={() => setSearch("")}>Clear</Btn>}
 
         {/* Action buttons by role */}
