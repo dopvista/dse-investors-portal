@@ -192,22 +192,45 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   }, [transactions]);
 
   // ── Filter ────────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let list = transactions;
-    if (typeFilter !== "All")   list = list.filter(t => t.type === typeFilter);
-    if (statusFilter !== "All") list = list.filter(t => t.status === statusFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(t =>
-        t.company_name?.toLowerCase().includes(q) ||
-        t.type?.toLowerCase().includes(q) ||
-        t.date?.includes(q) ||
-        t.remarks?.toLowerCase().includes(q) ||
-        t.status?.toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [transactions, search, typeFilter, statusFilter]);
+const filtered = useMemo(() => {
+  let list = transactions;
+
+  // 1. Role & CDS Number Visibility Logic
+  if (isDE) {
+    // Data Entrant: Only see their own CDS transactions
+    list = list.filter(t => t.cds_number === cdsNumber);
+  } 
+  else if (isVR) {
+    // Verifier: Only see confirmed transactions for their specific CDS
+    list = list.filter(t => t.cds_number === cdsNumber && t.status === "confirmed");
+  } 
+  else if (isRO) {
+    // Read Only: Only see verified transactions for their specific CDS
+    list = list.filter(t => t.cds_number === cdsNumber && t.status === "verified");
+  }
+  else if (isSAAD && cdsNumber) {
+    // Optional: If Admin has a specific CDS assigned, filter by it
+    list = list.filter(t => t.cds_number === cdsNumber);
+  }
+
+  // 2. Toolbar Filters (Applied on top of visibility logic)
+  if (typeFilter !== "All")   list = list.filter(t => t.type === typeFilter);
+  if (statusFilter !== "All") list = list.filter(t => t.status === statusFilter);
+  
+  // 3. Search Filter
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    list = list.filter(t =>
+      t.company_name?.toLowerCase().includes(q) ||
+      t.type?.toLowerCase().includes(q) ||
+      t.date?.includes(q) ||
+      t.remarks?.toLowerCase().includes(q) ||
+      t.status?.toLowerCase().includes(q)
+    );
+  }
+  
+  return list;
+}, [transactions, search, typeFilter, statusFilter, role, cdsNumber, isDE, isVR, isRO, isSAAD]);
 
   // ── Totals ────────────────────────────────────────────────────────
   const totals = useMemo(() => ({
