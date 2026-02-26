@@ -104,7 +104,7 @@ function RejectModal({ count, onConfirm, onClose }) {
 // ── Confirm Action Modal ───────────────────────────────────────────
 function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) {
   const isVerify  = action === "verify";
-  const isConfirm = action === "confirm";
+  const isConfirm = action === "confirm" || action === "confirm-rejected";
   const accentColor = isVerify ? C.green : "#1D4ED8";
   const accentBg    = isVerify ? C.greenBg : "#EFF6FF";
   const accentBdr   = isVerify ? "#BBF7D0" : "#BFDBFE";
@@ -117,6 +117,8 @@ function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) 
     : company ? `${company}` : "1 transaction selected";
   const description = isVerify
     ? `Verifying will mark ${count > 1 ? "these transactions" : "this transaction"} as verified and finalize them.`
+    : action === "confirm-rejected"
+    ? "This transaction was previously rejected. Confirming will resubmit it to the Verifier for review."
     : "Confirming will send this transaction to the Verifier for review.";
 
   return (
@@ -263,8 +265,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   };
 
   // ── Confirm (DE: pending → confirmed) ────────────────────────────
-  const handleConfirm = async (id, company) => {
-    setActionModal({ action: "confirm", ids: [id], company });
+  const handleConfirm = async (id, company, status) => {
+    setActionModal({ action: status === "rejected" ? "confirm-rejected" : "confirm", ids: [id], company });
   };
   const doConfirm = async () => {
     const id = actionModal?.ids?.[0];
@@ -411,7 +413,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           action={actionModal.action}
           count={actionModal.ids.length}
           company={actionModal.company}
-          onConfirm={actionModal.action === "confirm" ? doConfirm : doVerify}
+          onConfirm={actionModal.action === "verify" ? doVerify : doConfirm}
           onClose={() => setActionModal(null)}
         />
       )}
@@ -579,7 +581,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                   const isRejected  = t.status === "rejected";
                   const canEdit   = isSAAD || (isDE && (isPending || isRejected));
                   const canDelete = isSAAD || (isDE && (isPending || isRejected));
-                  const canConfirm = isDE && isPending;
+                  const canConfirm = isDE && (isPending || isRejected);
                   const canVerify  = (isVR || isSAAD) && isConfirmed;
                   const canReject  = (isVR || isSAAD) && isConfirmed;
                   const isChecked  = selected.has(t.id);
@@ -672,7 +674,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       {showActions && (
                         <td style={{ padding: "10px 12px", textAlign: "right" }}>
                           {canConfirm && (
-                            <button onClick={() => handleConfirm(t.id, t.company_name)} disabled={confirming === t.id}
+                            <button onClick={() => handleConfirm(t.id, t.company_name, t.status)} disabled={confirming === t.id}
                               style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: "#EFF6FF", color: "#1D4ED8", fontWeight: 700, fontSize: 11, cursor: confirming === t.id ? "not-allowed" : "pointer", fontFamily: "inherit", marginRight: rowActions.length ? 6 : 0 }}>
                               {confirming === t.id ? "..." : "✅ Confirm"}
                             </button>
