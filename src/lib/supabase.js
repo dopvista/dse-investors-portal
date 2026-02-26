@@ -424,3 +424,137 @@ export async function sbDeleteTransaction(id) {
   if (!res.ok) throw new Error(await res.text());
   return true;
 }
+
+// ── PORTFOLIO & CDS PRICES ─────────────────────────────────────────
+
+/**
+ * sbGetPortfolio(cdsNumber)
+ * Returns companies where the given CDS has at least one transaction,
+ * joined with that CDS group's own price from cds_prices.
+ * Price will be null if they haven't set one yet.
+ */
+export async function sbGetPortfolio(cdsNumber) {
+  if (!cdsNumber) return [];
+
+  // Get distinct company_ids that this CDS has transacted
+  const txRes = await fetch(
+    `${BASE}/rest/v1/transactions?cds_number=eq.${encodeURIComponent(cdsNumber)}&select=company_id,company_name&order=company_name.asc`,
+    { headers: headers(token()) }
+  );
+  if (!txRes.ok) throw new Error(await txRes.text());
+  const txRows = await txRes.json();
+
+  // Deduplicate company_ids
+  const seen = new Set();
+  const uniqueCompanies = txRows.filter(t => {
+    if (seen.has(t.company_id)) return false;
+    seen.add(t.company_id);
+    return true;
+  });
+  if (!uniqueCompanies.length) return [];
+
+  // Fetch company details for those ids
+  const ids = uniqueCompanies.map(t => t.company_id);
+  const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+  const coRes = await fetch(
+    `${BASE}/rest/v1/companies?id=in.${idList}&order=name.asc`,
+    { headers: headers(token()) }
+  );
+  if (!coRes.ok) throw new Error(await coRes.text());
+  const companies = await coRes.json();
+
+  // Fetch this CDS's prices
+  const prRes = await fetch(
+    `${BASE}/rest/v1/cds_prices?cds_number=eq.${encodeURIComponent(cdsNumber)}`,
+    { headers: headers(token()) }
+  );
+  if (!prRes.ok) throw new Error(await prRes.text());
+  const prices = await prRes.json();
+
+  // Merge — attach CDS price to each company (null if not set)
+  const priceMap = {};
+  prices.forEach(p => { priceMap[p.company_id] = p; });
+
+  return companies.map(c => ({
+    ...c,
+    cds_price:          priceMap[c.id]?.price          ?? null,
+    cds_previous_price: priceMap[c.id]?.previous_price ?? null,
+    cds_updated_by:     priceMap[c.id]?.updated_by     ?? null,
+    cds_updated_at:     priceMap[c.id]?.updated_at     ?? null,
+    cds_price_id:       priceMap[c.id]?.id             ?? null,
+  }));
+}
+
+/**
+ * sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newPrice, oldPrice, reason, updatedBy })
+ * Creates or updates the CDS-scoped price for a company.
+ * Also writes to cds_price_history for a full audit trail.
+ */
+export async function sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newPrice, oldPrice, reason, updatedBy, datetime }) {
+  const changeAmount  = oldPrice != null ? newPrice - oldPrice : null;
+  const changePct     = oldPrice != null && oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : null;
+  const ts            = datetime ? new Date(datetime).toISOString() : new Date().toISOString();
+
+  // Upsert into cds_prices (insert or update by company_id + cds_number)
+  const upsertRes = await fetch(`${BASE}/rest/v1/cds_prices`, {
+    method:  "POST",
+    headers: { ...headers(token()), "Prefer": "return=representation,resolution=merge-duplicates" },
+    body: JSON.stringify({
+      company_id:     companyId,
+      cds_number:     cdsNumber,
+      price:          newPrice,
+      previous_price: oldPrice ?? null,
+      updated_by:     updatedBy,
+      notes:          reason || null,
+      updated_at:     ts,
+    }),
+  });
+  if (!upsertRes.ok) throw new Error(await upsertRes.text());
+  const upserted = await upsertRes.json();
+
+  // Write history record
+  const histRes = await fetch(`${BASE}/rest/v1/cds_price_history`, {
+    method:  "POST",
+    headers: headers(token()),
+    body: JSON.stringify({
+      company_id:     companyId,
+      company_name:   companyName,
+      cds_number:     cdsNumber,
+      old_price:      oldPrice ?? null,
+      new_price:      newPrice,
+      change_amount:  changeAmount,
+      change_percent: changePct,
+      notes:          reason || null,
+      updated_by:     updatedBy,
+      created_at:     ts,
+    }),
+  });
+  if (!histRes.ok) throw new Error(await histRes.text());
+
+  return upserted[0] || upserted;
+}
+
+/**
+ * sbGetCdsPriceHistory(companyId, cdsNumber)
+ * Returns price history for a specific company scoped to a CDS number.
+ */
+export async function sbGetCdsPriceHistory(companyId, cdsNumber) {
+  const res = await fetch(
+    `${BASE}/rest/v1/cds_price_history?company_id=eq.${companyId}&cds_number=eq.${encodeURIComponent(cdsNumber)}&order=created_at.desc`,
+    { headers: headers(token()) }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbGetAllCompanies()
+ * SA-only: returns the full master company list for the register/manage view.
+ */
+export async function sbGetAllCompanies() {
+  const res = await fetch(`${BASE}/rest/v1/companies?order=name.asc`, {
+    headers: headers(token()),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
