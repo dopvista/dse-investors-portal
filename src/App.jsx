@@ -38,34 +38,12 @@ export default function App() {
     setTimeout(() => setToast({ msg: "", type: "" }), 3500);
   };
 
-  // ── Check session on mount — also intercepts recovery tokens ────
-// ── Check session on mount — also intercepts recovery tokens ────
+  // ── Check session on mount — intercepts recovery tokens (hash + PKCE) ──
   useEffect(() => {
-    const hash = window.location.hash;
+    const hash   = window.location.hash;
+    const search = window.location.search;
 
-    // 1. Handle Password Recovery Link
-    if (hash.includes("type=recovery")) {
-      // Set the UI to recovery mode so the ResetPasswordPage shows up
-      setRecoveryMode(true);
-
-      // IMPORTANT: We do NOT clear the session or the URL immediately.
-      // We wait 500ms to let the Supabase Client "read" the token from the URL.
-      // If we clear it too fast, you get "Failed to fetch" or "Auth session missing".
-      setTimeout(() => {
-        window.history.replaceState(null, "", window.location.pathname);
-      }, 500);
-      
-      return; // Exit here so we don't trigger the standard session check yet
-    }
-
-    // 2. Normal Login Check
-    const s = getSession();
-    setSession(s || null);
-  }, []);
-  
-  
-/*  useEffect(() => {
-    const hash = window.location.hash;
+    // ── Old hash-based recovery flow ──────────────────────────────
     if (hash.includes("type=recovery")) {
       const params = new URLSearchParams(hash.replace("#", ""));
       const accessToken = params.get("access_token");
@@ -77,10 +55,42 @@ export default function App() {
         return;
       }
     }
+
+    // ── New PKCE code-based recovery flow ─────────────────────────
+    // Supabase sends: ?code=xxx&type=recovery (or redirects with code)
+    const qp   = new URLSearchParams(search);
+    const code = qp.get("code");
+    const type = qp.get("type");
+    if (code && type === "recovery") {
+      window.history.replaceState(null, "", window.location.pathname);
+      // Exchange code for session via PKCE token endpoint
+      const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+      const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      fetch(`${BASE}/auth/v1/token?grant_type=pkce`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": KEY },
+        body: JSON.stringify({ auth_code: code }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.access_token) {
+            localStorage.setItem("sb_recovery_token", data.access_token);
+            setRecoveryMode(true);
+            setSession(null);
+          } else {
+            // fallback — treat as normal session load
+            const s = getSession();
+            setSession(s || null);
+          }
+        })
+        .catch(() => { const s = getSession(); setSession(s || null); });
+      return;
+    }
+
     const s = getSession();
     setSession(s || null);
   }, []);
-*/
+
   // ── Load profile + role + data once session confirmed ────────────
   useEffect(() => {
     if (!session) return;
@@ -199,11 +209,10 @@ export default function App() {
   );
 
   // ── FILTERING LOGIC ONLY ──────────────────────────────────────────
-  // CDS scoping only — status filtering is handled inside TransactionsPage
+// CDS scoping only — status filtering handled inside TransactionsPage
   const filteredTransactions = transactions.filter(t => t.cds_number === profile?.cds_number);
 
   const visibleNav = NAV.filter(item => !role || item.roles.includes(role));
-  // Companies count = distinct companies this CDS has transacted (matches Portfolio page logic)
   const cdsCompanyCount = new Set(filteredTransactions.map(t => t.company_id)).size;
   const counts = { companies: cdsCompanyCount, transactions: filteredTransactions.length };
   const now = new Date();
