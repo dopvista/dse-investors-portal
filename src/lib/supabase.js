@@ -20,11 +20,6 @@ async function parseResponse(res, fallbackMsg) {
     throw new Error(fallbackMsg);
   }
   if (!res.ok) {
-    // Supabase returns errors in several shapes depending on the API:
-    // Auth admin API:  { code, msg }  e.g. email_exists → "User already registered"
-    // Auth user API:   { error, error_description }
-    // PostgREST:       { message, hint, details }
-    // Check code first so our short messages take priority over Supabase's verbose ones
     const msg = (data.code ? humanizeCode(data.code) : null)
       || data.msg
       || data.error_description
@@ -50,8 +45,24 @@ function humanizeCode(code) {
     weak_password:              "Password too weak. Use at least 8 characters.",
     over_request_rate_limit:    "Too many requests. Try again shortly.",
     over_email_send_rate_limit: "Email limit reached. Try again later.",
+    "42501":                    "Permission denied by database security policy.",
   };
   return map[code] || null;
+}
+
+// ── Shared error extractor ─────────────────────────────────────────
+async function extractError(res, rlsMessage) {
+  const errText = await res.text();
+  let msg = errText;
+  try {
+    const j = JSON.parse(errText);
+    if (j.code === "42501") {
+      msg = rlsMessage || "Permission denied: your role is not allowed to perform this action. Ensure the correct RLS UPDATE policy exists in Supabase.";
+    } else {
+      msg = j.message || j.hint || j.details || errText;
+    }
+  } catch { /* keep raw text */ }
+  return msg;
 }
 
 // ── Headers ────────────────────────────────────────────────────────
@@ -182,10 +193,9 @@ export async function sbDelete(table, id) {
 // ── PROFILE ────────────────────────────────────────────────────────
 
 export async function sbGetProfile(sessionToken) {
-  // Accept explicit token to avoid stale localStorage session race condition
   const session = sessionToken ? null : getSession();
   const uid     = sessionToken
-    ? JSON.parse(atob(sessionToken.split(".")[1])).sub   // decode JWT sub
+    ? JSON.parse(atob(sessionToken.split(".")[1])).sub
     : session?.user?.id;
   if (!uid) return null;
   const tok = sessionToken || token();
@@ -221,7 +231,6 @@ export async function sbUpsertProfile(data) {
 // ── ROLES ──────────────────────────────────────────────────────────
 
 export async function sbGetMyRole(sessionToken) {
-  // Accept explicit token to avoid stale localStorage session race condition
   const tok = sessionToken || token();
   const res = await fetch(`${BASE}/rest/v1/rpc/get_my_role`, {
     method:  "POST",
@@ -254,11 +263,6 @@ export async function sbGetAllUsers() {
   return res.json();
 }
 
-/**
- * sbAssignRole(userId, roleId)
- * Calls assign_user_role() DB function (SECURITY DEFINER).
- * Enforces CDS scoping server-side — AD can only assign within their CDS.
- */
 export async function sbAssignRole(userId, roleId) {
   const res = await fetch(`${BASE}/rest/v1/rpc/assign_user_role`, {
     method:  "POST",
@@ -275,10 +279,6 @@ export async function sbAssignRole(userId, roleId) {
   return true;
 }
 
-/**
- * sbDeactivateRole(userId)
- * Calls deactivate_user_role() DB function (SECURITY DEFINER).
- */
 export async function sbDeactivateRole(userId) {
   const res = await fetch(`${BASE}/rest/v1/rpc/deactivate_user_role`, {
     method:  "POST",
@@ -292,21 +292,6 @@ export async function sbDeactivateRole(userId) {
   return true;
 }
 
-/**
- * sbAdminCreateUser(email, password, cdsNumber)
- *
- * Calls the create-user Edge Function which uses the service role key
- * to create users via the Admin API — bypasses public signup restriction.
- *
- * cdsNumber behaviour:
- *   SA — required, passed explicitly, user is created under that CDS
- *   AD — optional/ignored, the edge function derives it server-side
- *        from the caller's own profile so it cannot be spoofed
- *
- * After creating the auth user the edge function also seeds a partial
- * profile row { id, cds_number, account_type: 'Individual' } so the
- * new user lands on ProfileSetupPage with CDS pre-filled and locked.
- */
 export async function sbAdminCreateUser(email, password, cdsNumber) {
   const res = await fetch(`${BASE}/functions/v1/create-user`, {
     method:  "POST",
@@ -329,9 +314,8 @@ export async function sbAdminCreateUser(email, password, cdsNumber) {
 
 /**
  * sbGetTransactions()
- * Fetches all transactions — all roles see all statuses.
- * Visibility filtering is handled client-side per role.
- * DE scope is enforced by RLS (created_by = auth.uid()).
+ * Fetches all transactions visible to the current user.
+ * RLS on the DB scopes DE to their own rows automatically.
  */
 export async function sbGetTransactions() {
   const url = `${BASE}/rest/v1/transactions?order=date.desc,created_at.desc`;
@@ -361,70 +345,110 @@ export async function sbInsertTransaction(data) {
 
 /**
  * sbConfirmTransaction(id)
- * DE confirms a pending transaction → status becomes confirmed.
+ * DE confirms a pending or rejected transaction → status becomes confirmed.
+ * Requires RLS policy: DE can UPDATE own rows where status IN ('pending','rejected').
  */
 export async function sbConfirmTransaction(id) {
-  const uid = getSession()?.user?.id;
+  const uid  = getSession()?.user?.id;
+  const body = { status: "confirmed" };
+  if (uid) {
+    body.confirmed_by = uid;
+    body.confirmed_at = new Date().toISOString();
+  }
+
   const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
     method:  "PATCH",
     headers: headers(token()),
-    body:    JSON.stringify({
-      status:       "confirmed",
-      confirmed_by: uid,
-      confirmed_at: new Date().toISOString(),
-    }),
+    body:    JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await res.text());
+
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: only the Data Entrant who created this transaction can confirm it. " +
+      "Ensure the RLS UPDATE policy for 'DE can confirm own transactions' exists in Supabase."
+    );
+    throw new Error(msg);
+  }
+
   return res.json();
 }
 
 /**
  * sbVerifyTransactions(ids)
- * VR verifies one or more confirmed transactions → status becomes verified.
- * ids: array of transaction UUIDs
+ * VR/SA/AD verifies one or more confirmed transactions → status becomes verified.
+ * ids: array of transaction UUIDs.
+ * Requires RLS policy: VR/SA/AD can UPDATE rows where status = 'confirmed'.
  */
 export async function sbVerifyTransactions(ids) {
-  const uid = getSession()?.user?.id;
+  const uid    = getSession()?.user?.id;
   const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+  const body   = { status: "verified" };
+  if (uid) {
+    body.verified_by = uid;
+    body.verified_at = new Date().toISOString();
+  }
+
   const res = await fetch(`${BASE}/rest/v1/transactions?id=in.${idList}`, {
     method:  "PATCH",
     headers: headers(token()),
-    body:    JSON.stringify({
-      status:      "verified",
-      verified_by: uid,
-      verified_at: new Date().toISOString(),
-    }),
+    body:    JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await res.text());
+
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: only a Verifier, SA, or AD can verify transactions. " +
+      "Ensure the RLS UPDATE policy for 'VR can verify confirmed transactions' exists in Supabase."
+    );
+    throw new Error(msg);
+  }
+
   return res.json();
 }
 
 /**
  * sbRejectTransactions(ids, comment)
- * VR rejects one or more confirmed transactions → status becomes rejected.
- * ids:     array of transaction UUIDs
- * comment: required rejection reason
+ * VR/SA/AD rejects one or more confirmed transactions → status becomes rejected.
+ * ids:     array of transaction UUIDs.
+ * comment: required rejection reason (enforced by NOT NULL check in policy).
+ * Requires RLS policy: VR/SA/AD can UPDATE rows where status = 'confirmed'.
  */
 export async function sbRejectTransactions(ids, comment) {
-  const uid = getSession()?.user?.id;
+  const uid    = getSession()?.user?.id;
   const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+  const body   = {
+    status:            "rejected",
+    rejection_comment: comment,
+  };
+  if (uid) {
+    body.rejected_by = uid;
+    body.rejected_at = new Date().toISOString();
+  }
+
   const res = await fetch(`${BASE}/rest/v1/transactions?id=in.${idList}`, {
     method:  "PATCH",
     headers: headers(token()),
-    body:    JSON.stringify({
-      status:             "rejected",
-      rejection_comment:  comment,
-      rejected_by:        uid,
-      rejected_at:        new Date().toISOString(),
-    }),
+    body:    JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(await res.text());
+
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: only a Verifier, SA, or AD can reject transactions. " +
+      "Ensure the RLS UPDATE policy for 'VR can reject confirmed transactions' exists in Supabase."
+    );
+    throw new Error(msg);
+  }
+
   return res.json();
 }
 
 /**
  * sbUpdateTransaction(id, data)
- * DE edits a pending transaction. Only allowed when status = pending.
+ * General-purpose update — used by DE to edit pending/rejected transactions,
+ * and by SA/AD for unverify (status → pending) or any field correction.
+ * Requires appropriate RLS UPDATE policy for the caller's role.
  */
 export async function sbUpdateTransaction(id, data) {
   const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
@@ -432,7 +456,16 @@ export async function sbUpdateTransaction(id, data) {
     headers: headers(token()),
     body:    JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(await res.text());
+
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: your role is not allowed to update this transaction. " +
+      "Check that the correct RLS UPDATE policy exists in Supabase for your role."
+    );
+    throw new Error(msg);
+  }
+
   return res.json();
 }
 
@@ -448,7 +481,7 @@ export async function sbDeleteTransaction(id) {
   });
   if (!res.ok) throw new Error(await res.text());
   // Content-Range: */0 means RLS silently blocked the delete — no rows affected
-  const range = res.headers.get("Content-Range") || "";
+  const range    = res.headers.get("Content-Range") || "";
   const affected = parseInt(range.split("/")[1] ?? "0", 10);
   if (affected === 0) throw new Error("Delete was not permitted. You may not have permission to delete this transaction.");
   return true;
@@ -460,12 +493,10 @@ export async function sbDeleteTransaction(id) {
  * sbGetPortfolio(cdsNumber)
  * Returns companies where the given CDS has at least one transaction,
  * joined with that CDS group's own price from cds_prices.
- * Price will be null if they haven't set one yet.
  */
 export async function sbGetPortfolio(cdsNumber) {
   if (!cdsNumber) return [];
 
-  // Get distinct company_ids that this CDS has transacted
   const txRes = await fetch(
     `${BASE}/rest/v1/transactions?cds_number=eq.${encodeURIComponent(cdsNumber)}&select=company_id,company_name&order=company_name.asc`,
     { headers: headers(token()) }
@@ -473,7 +504,6 @@ export async function sbGetPortfolio(cdsNumber) {
   if (!txRes.ok) throw new Error(await txRes.text());
   const txRows = await txRes.json();
 
-  // Deduplicate company_ids
   const seen = new Set();
   const uniqueCompanies = txRows.filter(t => {
     if (seen.has(t.company_id)) return false;
@@ -482,17 +512,15 @@ export async function sbGetPortfolio(cdsNumber) {
   });
   if (!uniqueCompanies.length) return [];
 
-  // Fetch company details for those ids
-  const ids = uniqueCompanies.map(t => t.company_id);
+  const ids    = uniqueCompanies.map(t => t.company_id);
   const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
-  const coRes = await fetch(
+  const coRes  = await fetch(
     `${BASE}/rest/v1/companies?id=in.${idList}&order=name.asc`,
     { headers: headers(token()) }
   );
   if (!coRes.ok) throw new Error(await coRes.text());
   const companies = await coRes.json();
 
-  // Fetch this CDS's prices
   const prRes = await fetch(
     `${BASE}/rest/v1/cds_prices?cds_number=eq.${encodeURIComponent(cdsNumber)}`,
     { headers: headers(token()) }
@@ -500,18 +528,17 @@ export async function sbGetPortfolio(cdsNumber) {
   if (!prRes.ok) throw new Error(await prRes.text());
   const prices = await prRes.json();
 
-  // Merge — attach CDS price to each company (null if not set)
   const priceMap = {};
   prices.forEach(p => { priceMap[p.company_id] = p; });
 
   return companies.map(c => ({
     ...c,
-    cds_price:              priceMap[c.id]?.price             ?? null,
-    cds_previous_price:     priceMap[c.id]?.previous_price    ?? null,
-    cds_updated_by:         priceMap[c.id]?.updated_by        ?? null,
-    cds_updated_at:         priceMap[c.id]?.updated_at        ?? null,
-    cds_price_id:           priceMap[c.id]?.id                ?? null,
-    cds_price_created_by_id:priceMap[c.id]?.created_by_id     ?? null,
+    cds_price:               priceMap[c.id]?.price             ?? null,
+    cds_previous_price:      priceMap[c.id]?.previous_price    ?? null,
+    cds_updated_by:          priceMap[c.id]?.updated_by        ?? null,
+    cds_updated_at:          priceMap[c.id]?.updated_at        ?? null,
+    cds_price_id:            priceMap[c.id]?.id                ?? null,
+    cds_price_created_by_id: priceMap[c.id]?.created_by_id     ?? null,
   }));
 }
 
@@ -524,29 +551,25 @@ export async function sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newP
   const changeAmount  = oldPrice != null ? newPrice - oldPrice : null;
   const changePct     = oldPrice != null && oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : null;
   const ts            = datetime ? new Date(datetime).toISOString() : new Date().toISOString();
-
   const currentUserId = getSession()?.user?.id;
 
-  // Upsert into cds_prices (insert or update by company_id + cds_number)
-  // created_by_id is set only on first insert — never overwritten on update
   const upsertRes = await fetch(`${BASE}/rest/v1/cds_prices?on_conflict=company_id,cds_number`, {
     method:  "POST",
     headers: { ...headers(token()), "Prefer": "return=representation,resolution=merge-duplicates" },
     body: JSON.stringify({
-      company_id:      companyId,
-      cds_number:      cdsNumber,
-      price:           newPrice,
-      previous_price:  oldPrice ?? null,
-      updated_by:      updatedBy,
-      notes:           reason || null,
-      updated_at:      ts,
-      created_by_id:   currentUserId,  // ignored on update by RLS/trigger
+      company_id:     companyId,
+      cds_number:     cdsNumber,
+      price:          newPrice,
+      previous_price: oldPrice ?? null,
+      updated_by:     updatedBy,
+      notes:          reason || null,
+      updated_at:     ts,
+      created_by_id:  currentUserId,
     }),
   });
   if (!upsertRes.ok) throw new Error(await upsertRes.text());
   const upserted = await upsertRes.json();
 
-  // Write history record
   const histRes = await fetch(`${BASE}/rest/v1/cds_price_history`, {
     method:  "POST",
     headers: headers(token()),
@@ -605,7 +628,7 @@ export async function sbGetAllCompanies() {
 export async function sbGetSiteSettings(key = "login_page") {
   const res = await fetch(
     `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}&select=value&limit=1`,
-    { headers: headers(KEY) }   // use anon key — public read
+    { headers: headers(KEY) }
   );
   if (!res.ok) throw new Error(await res.text());
   const rows = await res.json();
@@ -619,7 +642,6 @@ export async function sbGetSiteSettings(key = "login_page") {
 export async function sbSaveSiteSettings(key = "login_page", value, accessToken) {
   const tok = accessToken || token();
 
-  // Step 1: Try PATCH — returns the updated row so we can detect 0 rows matched
   const patchRes = await fetch(
     `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}`,
     {
@@ -643,7 +665,6 @@ export async function sbSaveSiteSettings(key = "login_page", value, accessToken)
 
   const patched = await patchRes.json();
 
-  // Step 2: If PATCH matched 0 rows (row missing), INSERT it
   if (!patched || patched.length === 0) {
     const insertRes = await fetch(
       `${BASE}/rest/v1/site_settings`,
@@ -671,7 +692,7 @@ export async function sbSaveSiteSettings(key = "login_page", value, accessToken)
 }
 
 /**
- * sbUploadSlideImage(file, slideIndex, session)
+ * sbUploadSlideImage(blob, slideIndex, session)
  * Uploads a slide image blob to the login-slides bucket.
  * Returns the public URL.
  */
@@ -696,6 +717,5 @@ export async function sbUploadSlideImage(blob, slideIndex, session) {
     throw new Error(err.message || "Image upload failed");
   }
 
-  // Return public URL with cache-busting timestamp
   return `${BASE}/storage/v1/object/public/login-slides/${filename}?t=${Date.now()}`;
 }
