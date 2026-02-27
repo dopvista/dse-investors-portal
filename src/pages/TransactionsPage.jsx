@@ -352,6 +352,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       return t && (t.status === "pending" || t.status === "rejected");
     }), [selected, myTransactions]);
 
+  // SA/AD can delete any status; DE restricted to pending/rejected
+  const selectedDeletable = useMemo(() =>
+    isSAAD
+      ? [...selected].filter(id => myTransactions.some(t => t.id === id))
+      : selectedPendingRejected
+  , [selected, myTransactions, isSAAD, selectedPendingRejected]);
+
   const selectedConfirmed = useMemo(() =>
     [...selected].filter(id => {
       const t = myTransactions.find(t => t.id === id);
@@ -663,8 +670,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         {/* Bulk action buttons */}
         {selected.size > 0 && (
           <>
-            {/* Data Entry bulk actions */}
-            {isDE && selectedPendingRejected.length > 0 && (
+            {/* Data Entry + SA/AD bulk confirm & delete for pending/rejected */}
+            {(isDE || isSAAD) && selectedPendingRejected.length > 0 && (
               <>
                 <button
                   onClick={() => setActionModal({ action: "confirm", ids: selectedPendingRejected, company: null })}
@@ -673,14 +680,16 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                 >
                   {isAnyConfirming ? <><Spinner size={12} color="#888" /> Confirming...</> : `✅ Confirm ${selectedPendingRejected.length}`}
                 </button>
+              </>
+            )}
+            {(isDE || isSAAD) && selectedDeletable.length > 0 && (
                 <button
-                  onClick={() => setBulkDeleteModal({ ids: selectedPendingRejected })}
+                  onClick={() => setBulkDeleteModal({ ids: selectedDeletable })}
                   disabled={isAnyDeleting}
                   style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: isAnyDeleting ? C.gray100 : C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: isAnyDeleting ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
                 >
-                  {isAnyDeleting ? <><Spinner size={12} color={C.red} /> Deleting...</> : `🗑️ Delete ${selectedPendingRejected.length}`}
+                  {isAnyDeleting ? <><Spinner size={12} color={C.red} /> Deleting...</> : `🗑️ Delete ${selectedDeletable.length}`}
                 </button>
-              </>
             )}
 
             {/* Verifier bulk actions */}
@@ -797,9 +806,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       const isRejected  = t.status === "rejected";
                       const globalIdx   = (safePage - 1) * pageSize + i + 1;
 
-                      const canConfirm  = isDE && (isPending || isRejected);
+                      const canConfirm  = (isDE || isSAAD) && (isPending || isRejected);
                       const canEdit     = isSAAD || (isDE && (isPending || isRejected));
-                      const canDelete   = isDE && (isPending || isRejected);
+                      const canDelete   = isDE ? (isPending || isRejected) : isSAAD;
                       const canUnVerify = isSAAD && isVerified;
                       const canVerify   = (isVR || isSAAD) && isConfirmed;
                       const canReject   = (isVR || isSAAD) && isConfirmed;
