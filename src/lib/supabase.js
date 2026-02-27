@@ -38,17 +38,17 @@ async function parseResponse(res, fallbackMsg) {
 // Convert Supabase error codes to readable messages
 function humanizeCode(code) {
   const map = {
-    email_exists:           "A user with this email already exists.",
-    phone_exists:           "A user with this phone number already exists.",
-    bad_jwt:                "Invalid or expired session. Please log in again.",
-    not_admin:              "You do not have admin privileges.",
-    user_not_found:         "User not found.",
-    email_not_confirmed:    "Email address has not been confirmed.",
-    invalid_credentials:    "Incorrect email or password.",
-    email_address_invalid:  "The email address is invalid.",
-    weak_password:          "Password is too weak. Use at least 8 characters.",
-    over_request_rate_limit:"Too many requests. Please wait a moment and try again.",
-    over_email_send_rate_limit: "Email sending limit reached. Please try again later.",
+    email_exists:               "Email already registered.",
+    phone_exists:               "Phone number already registered.",
+    bad_jwt:                    "Session expired. Please log in again.",
+    not_admin:                  "Admin access required.",
+    user_not_found:             "User not found.",
+    email_not_confirmed:        "Email not confirmed.",
+    invalid_credentials:        "Wrong email or password.",
+    email_address_invalid:      "Invalid email address.",
+    weak_password:              "Password too weak. Use at least 8 characters.",
+    over_request_rate_limit:    "Too many requests. Try again shortly.",
+    over_email_send_rate_limit: "Email limit reached. Try again later.",
   };
   return map[code] || null;
 }
