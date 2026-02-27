@@ -304,7 +304,7 @@ export default function App() {
               {tab === "profile"         && "My Profile"}
               {tab === "user-management" && "User Management"}
               {tab === "system-settings"   && "System Settings"}
-              {tab !== "profile" && tab !== "user-management" && NAV.find(n => n.id === tab)?.label}
+              {tab !== "profile" && tab !== "user-management" && tab !== "system-settings" && NAV.find(n => n.id === tab)?.label}
             </div>
             <div style={{ fontSize: 12, color: C.gray400, marginTop: 1 }}>
               {tab === "companies"       && "Your CDS portfolio holdings"}
@@ -349,7 +349,7 @@ export default function App() {
           {tab === "transactions"    && <TransactionsPage  companies={companies}    transactions={transactions}             setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
           {tab === "profile"         && <ProfilePage profile={profile} setProfile={setProfile} session={session} role={role} email={session?.user?.email || session?.email || ""} showToast={showToast} />}
           {tab === "user-management" && <UserManagementPage role={role} showToast={showToast} profile={profile} />}
-          {tab === "system-settings"   && <SystemSettingsPage  role={role} showToast={showToast} session={session} />}
+          {tab === "system-settings"   && <SystemSettingsPage  role={role} showToast={showToast} session={session} setLoginSettings={setLoginSettings} />}
         </div>
       </div>
 
