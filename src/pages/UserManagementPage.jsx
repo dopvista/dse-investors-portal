@@ -167,8 +167,16 @@ function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToa
   const handleSubmit = async () => {
     setError("");
     if (!form.email.trim())       return setError("Email is required");
-    if (!form.password.trim())    return setError("Temporary password is required");
-    if (form.password.length < 6) return setError("Password must be at least 6 characters");
+    if (!form.password.trim()) return setError("Temporary password is required.");
+    // Validate password policy — must match Supabase Auth settings
+    const pw = form.password;
+    const pwErrors = [];
+    if (pw.length < 8)              pwErrors.push("at least 8 characters");
+    if (!/[A-Z]/.test(pw))          pwErrors.push("one uppercase letter");
+    if (!/[a-z]/.test(pw))          pwErrors.push("one lowercase letter");
+    if (!/[0-9]/.test(pw))          pwErrors.push("one number");
+    if (!/[^A-Za-z0-9]/.test(pw))   pwErrors.push("one special character");
+    if (pwErrors.length > 0) return setError("Password must contain: " + pwErrors.join(", ") + ".");
     if (!form.cds_number.trim())  return setError("CDS Number is required");
     if (!form.role_id)            return setError("Please select a role");
     setSaving(true);
@@ -231,8 +239,28 @@ function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToa
       <div style={{ height: 1, background: C.gray100, margin: "4px 0 14px" }} />
 
       <Field label="Temporary Password" required hint="Share this with the user — they can change it after first login">
-        <input style={inp()} type="text" placeholder="Min. 6 characters"
+        <input style={inp()} type="password" placeholder="Min 8 chars, upper, lower, number, symbol"
           value={form.password} onChange={e => set("password", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
+        {form.password.length > 0 && (() => {
+          const pw = form.password;
+          const checks = [
+            { label: "8+ characters",    ok: pw.length >= 8 },
+            { label: "Uppercase",         ok: /[A-Z]/.test(pw) },
+            { label: "Lowercase",         ok: /[a-z]/.test(pw) },
+            { label: "Number",            ok: /[0-9]/.test(pw) },
+            { label: "Special char",      ok: /[^A-Za-z0-9]/.test(pw) },
+          ];
+          return (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+              {checks.map(c => (
+                <span key={c.label} style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5,
+                  background: c.ok ? "#dcfce7" : "#fee2e2", color: c.ok ? "#166534" : "#991b1b" }}>
+                  {c.ok ? "✓" : "✗"} {c.label}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
       </Field>
 
       <Field label="Assign Role" required>
