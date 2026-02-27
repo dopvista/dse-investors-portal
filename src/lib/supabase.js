@@ -584,30 +584,28 @@ export async function sbGetSiteSettings(key = "login_page") {
  * Upserts a site_settings row. Requires SA/AD session token.
  */
 export async function sbSaveSiteSettings(key = "login_page", value, accessToken) {
-  // Pass accessToken directly — never rely on stale localStorage token
   const tok = accessToken || token();
+  // PATCH the existing seeded row — simpler and more reliable than upsert POST
   const res = await fetch(
-    `${BASE}/rest/v1/site_settings`,
+    `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}`,
     {
-      method:  "POST",
+      method:  "PATCH",
       headers: {
         "apikey":        KEY,
         "Authorization": `Bearer ${tok}`,
         "Content-Type":  "application/json",
-        "Prefer":        "resolution=merge-duplicates,return=representation",
+        "Prefer":        "return=minimal",
       },
-      body: JSON.stringify({
-        key,
-        value,
-        updated_at: new Date().toISOString(),
-      }),
+      body: JSON.stringify({ value, updated_at: new Date().toISOString() }),
     }
   );
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(errText);
+    let msg = `HTTP ${res.status}`;
+    try { const j = await res.json(); msg = j.message || j.hint || JSON.stringify(j); }
+    catch { msg = await res.text().catch(() => msg); }
+    throw new Error(msg);
   }
-  return res.json();
+  return true;
 }
 
 /**
