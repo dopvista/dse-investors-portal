@@ -200,11 +200,11 @@ export function ActionMenu({ actions }) {
 // ═══════════════════════════════════════════════════════════════════
 // ─── MODAL SHELL ─────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════
-function ModalShell({ title, subtitle, headerRight, onClose, footer, children, maxWidth = 460, maxHeight }) {
+function ModalShell({ title, subtitle, headerRight, onClose, footer, children, maxWidth = 460, maxHeight, lockBackdrop = false }) {
   return (
     <div
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={e => { if (!lockBackdrop && e.target === e.currentTarget) onClose(); }}
     >
       <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth, display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.25)", ...(maxHeight ? { maxHeight } : {}) }}>
         <div style={{ padding: "22px 28px 16px", borderBottom: `1px solid ${C.gray200}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
@@ -552,6 +552,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
   const [errors, setErrors]       = useState([]);
   const [fileName, setFileName]   = useState("");
   const [importing, setImporting] = useState(false);
+  const [progress, setProgress]   = useState(0);
   const [parsing, setParsing]     = useState(false);
   const fileRef = useRef(null);
   const MAX_ROWS = 500;
@@ -714,9 +715,29 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
   const handleImport = async () => {
     if (!rows.length) return;
     setImporting(true);
-    try { await onImport(rows); onClose(); }
-    catch (e) { alert("Import failed: " + e.message); }
-    finally { setImporting(false); }
+    setProgress(0);
+
+    // Animate progress bar 0 → 85% while waiting for server
+    let current = 0;
+    const interval = setInterval(() => {
+      current += Math.random() * 6 + 2; // 2–8% increments
+      if (current >= 85) { current = 85; clearInterval(interval); }
+      setProgress(Math.round(current));
+    }, 180);
+
+    try {
+      await onImport(rows);
+      clearInterval(interval);
+      setProgress(100);
+      await new Promise(r => setTimeout(r, 500)); // briefly show 100%
+      onClose();
+    } catch (e) {
+      clearInterval(interval);
+      setProgress(0);
+      alert("Import failed: " + e.message);
+    } finally {
+      setImporting(false);
+    }
   };
 
   const UploadStep = () => (
@@ -749,12 +770,16 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
         </div>
       </div>
       <div style={{ background: "#FEF9EC", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "12px 16px" }}>
-        <div style={{ fontSize: 12, color: "#92400E", fontWeight: 600, marginBottom: 6 }}>💡 Tips</div>
-        <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.7 }}>
-          • Company names must match <strong>exactly</strong> with your Holdings<br/>
+        <div style={{ fontSize: 12, color: "#92400E", fontWeight: 600, marginBottom: 8 }}>📋 How to use the template</div>
+        <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.9 }}>
+          <strong>Step 1 —</strong> Download and open the template in Excel.<br/>
+          <strong>Step 2 —</strong> If you have data in another Excel file, <strong>do not cut or move rows</strong>. Instead copy your data, then in this template use <strong>Paste Special → Values only</strong> (shortcut: <strong>Ctrl+Shift+V</strong> or right-click → Paste Special → <strong>123</strong>) to paste without formulas or formatting.<br/>
+          <strong>Step 3 —</strong> Fill in all required columns in the <strong>Transactions</strong> sheet: Date, Company Name, Type, Quantity, Price per Share.<br/>
+          <strong>Step 4 —</strong> Do <strong>not</strong> delete, rename or move any columns or sheets. Do not modify rows 1–5.<br/>
+          <strong>Step 5 —</strong> Save the file and import it here.<br/>
+          <br/>
+          • Company names must match <strong>exactly</strong> as registered in the system<br/>
           • Type must be exactly <strong>Buy</strong> or <strong>Sell</strong><br/>
-          • Date format: <strong>DD/MM/YYYY</strong> (e.g. 24/02/2026)<br/>
-          • Delete the sample rows before importing<br/>
           • Maximum <strong>{MAX_ROWS} rows</strong> per import
         </div>
       </div>
@@ -876,19 +901,41 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
   return (
     <ModalShell
       title="⬆️ Import Transactions"
-      subtitle={step === "upload" ? "Upload your filled Excel template" : `Reviewing ${rows.length + errors.length} rows from "${fileName}"`}
-      onClose={onClose} maxWidth={640}
+      subtitle={importing
+        ? `Importing ${rows.length} transaction${rows.length !== 1 ? "s" : ""}… please wait`
+        : step === "upload" ? "Upload your filled Excel template" : `Reviewing ${rows.length + errors.length} rows from "${fileName}"`}
+      onClose={onClose} maxWidth={640} lockBackdrop={importing}
       footer={
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-          <div>{step === "preview" && <Btn variant="secondary" onClick={resetToUpload}>← Back</Btn>}</div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-            {step === "preview" && rows.length > 0 && (
-              <Btn variant="primary" onClick={handleImport} icon="⬆️" disabled={importing}>
-                {importing ? "Importing..." : `Import ${rows.length} Transaction${rows.length !== 1 ? "s" : ""}`}
-              </Btn>
-            )}
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+          {/* Progress bar — only shown while importing */}
+          {importing && (
+            <div style={{ width: "100%" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.gray600, marginBottom: 5 }}>
+                <span>⏳ Uploading to server…</span>
+                <span style={{ fontWeight: 700, color: C.green }}>{progress}%</span>
+              </div>
+              <div style={{ height: 10, background: C.gray200, borderRadius: 99, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${progress}%`, background: `linear-gradient(90deg, ${C.green}, ${C.greenLight})`, borderRadius: 99, transition: "width 0.3s ease" }} />
+              </div>
+              {progress === 100 && (
+                <div style={{ fontSize: 12, color: C.green, fontWeight: 600, marginTop: 5, textAlign: "center" }}>✅ Import complete!</div>
+              )}
+            </div>
+          )}
+          {/* Action buttons — hidden while importing */}
+          {!importing && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+              <div>{step === "preview" && <Btn variant="secondary" onClick={resetToUpload}>← Back</Btn>}</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+                {step === "preview" && rows.length > 0 && (
+                  <Btn variant="primary" onClick={handleImport} icon="⬆️">
+                    {`Import ${rows.length} Transaction${rows.length !== 1 ? "s" : ""}`}
+                  </Btn>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       }
     >
