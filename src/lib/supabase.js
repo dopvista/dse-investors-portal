@@ -584,15 +584,17 @@ export async function sbGetSiteSettings(key = "login_page") {
  * Upserts a site_settings row. Requires SA/AD session token.
  */
 export async function sbSaveSiteSettings(key = "login_page", value, userId) {
+  // Use upsert so it works whether the row exists or not
   const res = await fetch(
-    `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}`,
+    `${BASE}/rest/v1/site_settings`,
     {
-      method:  "PATCH",
+      method:  "POST",
       headers: {
         ...headers(token()),
-        "Prefer": "return=representation",
+        "Prefer": "resolution=merge-duplicates,return=representation",
       },
       body: JSON.stringify({
+        key,
         value,
         updated_by: userId,
         updated_at: new Date().toISOString(),
