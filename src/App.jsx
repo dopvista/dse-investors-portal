@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { sbGet, getSession, sbSignOut, sbGetProfile, sbGetMyRole } from "./lib/supabase";
+import { sbGet, getSession, sbSignOut, sbGetProfile, sbGetMyRole, sbGetSiteSettings } from "./lib/supabase";
 import { C, Toast } from "./components/ui";
 import CompaniesPage from "./pages/CompaniesPage";
 import TransactionsPage from "./pages/TransactionsPage";
@@ -8,6 +8,7 @@ import ProfileSetupPage from "./pages/ProfileSetupPage";
 import ProfilePage from "./pages/ProfilePage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import SystemSettingsPage from "./pages/SystemSettingsPage";
 import UserMenu from "./components/UserMenu";
 import logo from "./assets/logo.jpg";
 
@@ -15,7 +16,8 @@ import logo from "./assets/logo.jpg";
 const NAV = [
   { id: "companies",       label: "Portfolio",       icon: "📊", roles: ["SA","AD","DE","VR","RO"] },
   { id: "transactions",    label: "Transactions",    icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
-  { id: "user-management", label: "User Management", icon: "👥", roles: ["SA","AD"] },
+  { id: "user-management",   label: "User Management",  icon: "👥", roles: ["SA","AD"] },
+  { id: "system-settings",   label: "System Settings",  icon: "⚙️",  roles: ["SA"] },
 ];
 
 // ── Role display config ────────────────────────────────────────────
@@ -26,6 +28,7 @@ export default function App() {
   const [profile, setProfile]           = useState(undefined);
   const [role, setRole]                 = useState(null);
   const [tab, setTab]                   = useState("companies");
+  const [loginSettings, setLoginSettings] = useState(null);
   const [companies, setCompanies]       = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -92,6 +95,13 @@ export default function App() {
   }, []);
 
   // ── Load profile + role + data once session confirmed ────────────
+  // Load login page settings once on app mount (no auth needed)
+  useEffect(() => {
+    sbGetSiteSettings("login_page")
+      .then(data => { if (data) setLoginSettings(data); })
+      .catch(() => {}); // silently fall back to defaults
+  }, []);
+
   useEffect(() => {
     if (!session) return;
     (async () => {
@@ -126,6 +136,7 @@ export default function App() {
     setRole(null);
     setCompanies([]);
     setTransactions([]);
+    setLoginSettings(null);
     setLoading(true);
     setDbError(null);
   };
@@ -161,7 +172,7 @@ export default function App() {
     </div>
   );
 
-  if (!session) return <LoginPage onLogin={handleLogin} />;
+  if (!session) return <LoginPage onLogin={handleLogin} loginSettings={loginSettings} />;
 
   if (loading) return (
     <div style={{ height: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif", background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)" }}>
@@ -292,6 +303,7 @@ export default function App() {
             <div style={{ fontWeight: 800, fontSize: 18, color: C.text }}>
               {tab === "profile"         && "My Profile"}
               {tab === "user-management" && "User Management"}
+              {tab === "system-settings"   && "System Settings"}
               {tab !== "profile" && tab !== "user-management" && NAV.find(n => n.id === tab)?.label}
             </div>
             <div style={{ fontSize: 12, color: C.gray400, marginTop: 1 }}>
@@ -299,6 +311,7 @@ export default function App() {
               {tab === "transactions"    && "Record and view all buy/sell activity"}
               {tab === "profile"         && "Manage your personal information"}
               {tab === "user-management" && "Manage system users and assign roles"}
+              {tab === "system-settings"   && "Configure portal appearance and behaviour"}
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -336,6 +349,7 @@ export default function App() {
           {tab === "transactions"    && <TransactionsPage  companies={companies}    transactions={transactions}             setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
           {tab === "profile"         && <ProfilePage profile={profile} setProfile={setProfile} session={session} role={role} email={session?.user?.email || session?.email || ""} showToast={showToast} />}
           {tab === "user-management" && <UserManagementPage role={role} showToast={showToast} profile={profile} />}
+          {tab === "system-settings"   && <SystemSettingsPage  role={role} showToast={showToast} session={session} />}
         </div>
       </div>
 
