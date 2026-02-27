@@ -28,7 +28,7 @@ const blurGray   = e => e.target.style.borderColor = C.gray200;
 function Modal({ title, subtitle, onClose, children, footer }) {
   return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(10,37,64,0.6)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", overflow: "hidden", animation: "fadeIn 0.2s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", overflow: "hidden", animation: "fadeIn 0.2s ease", fontFamily: "'Inter', system-ui, sans-serif" }}>
         {/* Navy header — gradient matching sidebar */}
         <div style={{ background: "linear-gradient(135deg, #0c2548 0%, #0B1F3A 60%, #080f1e 100%)", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -204,18 +204,27 @@ function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToa
           value={form.email} onChange={e => set("email", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
       </Field>
 
-      <Field label="CDS Number" required hint={isAdmin ? "Auto-filled from your account — users will share your CDS" : "Enter the user's own CDS number"}>
-        <input
-          style={isAdmin
-            ? { ...inp(), background: `${C.green}08`, border: `1.5px solid ${C.green}30`, color: C.green, fontWeight: 600, cursor: "not-allowed" }
-            : inp()}
-          type="text" placeholder="e.g. CDS-647305"
-          value={form.cds_number}
-          onChange={e => { if (!isAdmin) set("cds_number", e.target.value); }}
-          readOnly={isAdmin}
-          onFocus={isAdmin ? null : focusGreen}
-          onBlur={isAdmin ? null : blurGray}
-        />
+      <Field label="CDS Number" required hint={isAdmin ? "Auto-filled from your account — users will share your CDS" : "Enter digits only — e.g. 647305"}>
+        <div style={{ position: "relative" }}>
+          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 700, color: isAdmin ? C.green : C.gray400, pointerEvents: "none", userSelect: "none" }}>CDS-</span>
+          <input
+            style={isAdmin
+              ? { ...inp(), paddingLeft: 48, background: `${C.green}08`, border: `1.5px solid ${C.green}30`, color: C.green, fontWeight: 600, cursor: "not-allowed" }
+              : { ...inp(), paddingLeft: 48 }}
+            type="text"
+            placeholder="647305"
+            value={(form.cds_number || "").replace(/^CDS-/i, "")}
+            onChange={e => {
+              if (isAdmin) return;
+              const digits = e.target.value.replace(/[^0-9]/g, "");
+              set("cds_number", digits ? `CDS-${digits}` : "");
+            }}
+            readOnly={isAdmin}
+            onFocus={isAdmin ? null : focusGreen}
+            onBlur={isAdmin ? null : blurGray}
+            maxLength={10}
+          />
+        </div>
       </Field>
 
       {/* Divider */}
