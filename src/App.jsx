@@ -14,7 +14,7 @@ import logo from "./assets/logo.jpg";
 
 // ── Role-based nav visibility ──────────────────────────────────────
 const NAV = [
-  { id: "companies",       label: "Portfolio",       icon: "📊", roles: ["AD","DE","VR","RO"] },
+  { id: "companies",       label: "Portfolio",       icon: "📊", roles: ["SA","AD","DE","VR","RO"] },
   { id: "transactions",    label: "Transactions",    icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
   { id: "user-management",   label: "User Management",  icon: "👥", roles: ["SA","AD"] },
   { id: "system-settings",   label: "System Settings",  icon: "⚙️",  roles: ["SA"] },
