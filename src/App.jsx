@@ -39,7 +39,30 @@ export default function App() {
   };
 
   // ── Check session on mount — also intercepts recovery tokens ────
+// ── Corrected Check session on mount ────────────────────────────
   useEffect(() => {
+    const hash = window.location.hash;
+    
+    // Check if this is a recovery link
+    if (hash.includes("type=recovery")) {
+      // IMPORTANT: Do NOT manually set session to null or clear the URL immediately
+      // Supabase needs the hash to automatically establish the recovery session
+      setRecoveryMode(true);
+      
+      // We still want to clean the URL for the user, 
+      // but we do it AFTER a slight delay so Supabase can parse it
+      setTimeout(() => {
+        window.history.replaceState(null, "", window.location.pathname);
+      }, 500);
+      return;
+    }
+
+    const s = getSession();
+    setSession(s || null);
+  }, []);
+  
+  
+/*  useEffect(() => {
     const hash = window.location.hash;
     if (hash.includes("type=recovery")) {
       const params = new URLSearchParams(hash.replace("#", ""));
@@ -55,7 +78,7 @@ export default function App() {
     const s = getSession();
     setSession(s || null);
   }, []);
-
+*/
   // ── Load profile + role + data once session confirmed ────────────
   useEffect(() => {
     if (!session) return;
