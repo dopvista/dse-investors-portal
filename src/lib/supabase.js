@@ -559,3 +559,76 @@ export async function sbGetAllCompanies() {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+
+// ═══════════════════════════════════════════════════════
+// SITE SETTINGS
+// ═══════════════════════════════════════════════════════
+
+/**
+ * sbGetSiteSettings(key)
+ * Reads one row from site_settings by key.
+ * Returns the parsed value object, or null if not found.
+ */
+export async function sbGetSiteSettings(key = "login_page") {
+  const res = await fetch(
+    `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}&select=value&limit=1`,
+    { headers: headers(KEY) }   // use anon key — public read
+  );
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows[0]?.value ?? null;
+}
+
+/**
+ * sbSaveSiteSettings(key, value, userId)
+ * Upserts a site_settings row. Requires SA/AD session token.
+ */
+export async function sbSaveSiteSettings(key = "login_page", value, userId) {
+  const res = await fetch(
+    `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}`,
+    {
+      method:  "PATCH",
+      headers: {
+        ...headers(token()),
+        "Prefer": "return=representation",
+      },
+      body: JSON.stringify({
+        value,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbUploadSlideImage(file, slideIndex, session)
+ * Uploads a slide image blob to the login-slides bucket.
+ * Returns the public URL.
+ */
+export async function sbUploadSlideImage(blob, slideIndex, session) {
+  const tok      = session?.access_token || KEY;
+  const filename = `slide-${slideIndex}.jpg`;
+
+  const uploadRes = await fetch(
+    `${BASE}/storage/v1/object/login-slides/${filename}`,
+    {
+      method:  "POST",
+      headers: {
+        "Authorization": `Bearer ${tok}`,
+        "Content-Type":  "image/jpeg",
+        "x-upsert":      "true",
+      },
+      body: blob,
+    }
+  );
+  if (!uploadRes.ok) {
+    const err = await uploadRes.json().catch(() => ({}));
+    throw new Error(err.message || "Image upload failed");
+  }
+
+  // Return public URL with cache-busting timestamp
+  return `${BASE}/storage/v1/object/public/login-slides/${filename}?t=${Date.now()}`;
+}
