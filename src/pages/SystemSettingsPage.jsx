@@ -95,7 +95,7 @@ function SlidePreview({ slide, allSlides = [], activeIdx = 0 }) {
 
 export default function SystemSettingsPage({ role, session, showToast, setLoginSettings, companies, setCompanies, transactions }) {
   // ── ALL hooks before any early return ─────────────────────────────
-  const [activeMenu,  setActiveMenu]  = useState("login_page");
+  const [activeMenu,  setActiveMenu]  = useState("companies");
   const [settings,    setSettings]    = useState(DEFAULT_SETTINGS);
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
@@ -234,7 +234,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       {/* ── Left sidebar ── */}
       <div style={{ width: 180, flexShrink: 0, background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.07em", padding: "6px 10px 8px" }}>Settings</div>
-        {[{ id: "login_page", icon: "🖼️", label: "Login Page" }, { id: "companies", icon: "🏢", label: "Companies" }].map(item => (
+        {[{ id: "companies", icon: "🏢", label: "Companies" }, { id: "login_page", icon: "🖼️", label: "Login Page" }].map(item => (
           <button key={item.id} onClick={() => setActiveMenu(item.id)} style={{
             display: "flex", alignItems: "center", gap: 8, padding: "9px 10px",
             borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit",
