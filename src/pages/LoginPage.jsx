@@ -104,7 +104,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
         {/* ── LEFT: Photo slider ── */}
         <div style={{ position: "relative", background: ADVERTS[activeAd].color, transition: "background 1s ease", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px" }}>
           {ADVERTS.map((ad, i) => (
-            <div key={ad.id} className="ad-bg" style={{ position: "absolute", inset: 0, opacity: i === activeAd ? 0.25 : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
+            <div key={ad.id} className="ad-bg" style={{ position: "absolute", inset: 0, opacity: i === activeAd ? (ad.opacity ?? 0.35) : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
           ))}
           <div style={{ position: "relative", zIndex: 2 }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>{ADVERTS[activeAd]?.label || "DAR ES SALAAM STOCK EXCHANGE"}</div>
