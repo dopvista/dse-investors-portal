@@ -593,7 +593,7 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
       // ── Parse as raw 2D array (no auto-header detection) ───────────
       // Template structure: rows 1-5 are headers, data is rows 6-505, row 506 is empty
       // Column 8 (Total Amount) is auto-calculated in Excel — ignored on import
-      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, cellDates: true });
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true, cellDates: true });
 
       const PLACEHOLDER  = "select company name";
       const END_MARKER   = "end of importation template"; // row 506 in template
