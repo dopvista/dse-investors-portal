@@ -94,7 +94,7 @@ function ChangeRoleModal({ user, roles, callerRole, onClose, onSave, showToast }
     <Modal title="Change Role" subtitle={`Assigning to ${user.full_name || "user"}`} onClose={onClose}
       footer={<><CancelBtn onClose={onClose} /><ConfirmBtn onClick={handleSave} label="✓  Save Role" saving={saving} /></>}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: C.gray50, border: `1px solid ${C.gray200}`, marginBottom: 14 }}>
-        <UserAvatar name={user.full_name} isActive={user.is_active} size={34} />
+        <UserAvatar name={user.full_name} avatarUrl={user.avatar_url} isActive={user.is_active} size={34} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{user.full_name || "User"}</div>
           <div style={{ fontSize: 11, color: C.gray400 }}>{user.cds_number || "No CDS"}</div>
@@ -258,12 +258,19 @@ function RoleBadge({ code }) {
 
 // ── User avatar ────────────────────────────────────────────────────
 const AVATAR_COLORS = ["#0A2540","#1E3A5F","#1D4ED8","#065F46","#374151","#7C3AED","#B45309","#0369A1"];
-function UserAvatar({ name, isActive, size = 34 }) {
+function UserAvatar({ name, avatarUrl, isActive, size = 34 }) {
   const initials = (name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const color    = AVATAR_COLORS[(name || "").charCodeAt(0) % AVATAR_COLORS.length];
+  const radius   = Math.round(size * 0.28);
   return (
     <div style={{ position: "relative", flexShrink: 0, width: size, height: size }}>
-      <div style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), background: `linear-gradient(135deg, ${color}, ${color}99)`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: Math.round(size * 0.35), color: "#fff" }}>{initials}</div>
+      {avatarUrl ? (
+        <img src={avatarUrl} alt={name || "User"}
+          style={{ width: size, height: size, borderRadius: radius, objectFit: "cover", display: "block", border: `1.5px solid ${C.gray200}` }}
+          onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+        />
+      ) : null}
+      <div style={{ width: size, height: size, borderRadius: radius, background: `linear-gradient(135deg, ${color}, ${color}99)`, display: avatarUrl ? "none" : "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: Math.round(size * 0.35), color: "#fff" }}>{initials}</div>
       <div style={{ position: "absolute", bottom: -1, right: -1, width: 9, height: 9, borderRadius: "50%", border: `2px solid ${C.white}`, background: isActive ? "#16a34a" : "#d1d5db" }} />
     </div>
   );
@@ -453,7 +460,7 @@ export default function UserManagementPage({ role, showToast, profile }) {
                 <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600 }}>{idx + 1}</div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                  <UserAvatar name={user.full_name} isActive={user.is_active} size={32} />
+                  <UserAvatar name={user.full_name} avatarUrl={user.avatar_url} isActive={user.is_active} size={32} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.full_name || "New User"}</span>
