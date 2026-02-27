@@ -149,6 +149,8 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       const tok = session?.access_token;
       if (!tok) throw new Error("Session expired");
       await sbSaveSiteSettings("login_page", newSettings, tok);
+      if (setLoginSettings) setLoginSettings({ ...newSettings });
+      try { const bc = new BroadcastChannel("dse_site_settings"); bc.postMessage({ key: "login_page", value: { ...newSettings } }); bc.close(); } catch {}
       showToast(`Slide ${idx + 1} default image updated!`, "success");
     } catch (err) {
       showToast("Failed to save default: " + err.message, "error");
@@ -188,6 +190,12 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       if (!tok) throw new Error("Session expired — please refresh the page.");
       await sbSaveSiteSettings("login_page", settings, tok);
       if (setLoginSettings) setLoginSettings({ ...settings });
+      // Broadcast to all open tabs instantly — no refresh needed
+      try {
+        const bc = new BroadcastChannel("dse_site_settings");
+        bc.postMessage({ key: "login_page", value: { ...settings } });
+        bc.close();
+      } catch {}
       showToast("Settings saved! Login page updated.", "success");
     } catch (err) {
       showToast("Save failed: " + err.message, "error");
