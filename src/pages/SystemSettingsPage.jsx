@@ -16,9 +16,9 @@ const focusGreen = e => e.target.style.borderColor = C.green;
 const blurGray   = e => e.target.style.borderColor = C.gray200;
 
 const DEFAULT_SLIDES = [
-  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Secure Investing",  sub: "Your assets are protected with DSE.",        image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1280&q=80", color: "#064e3b" },
-  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Smart Portfolio",   sub: "Track all your holdings in one place.",      image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1280&q=80", color: "#1e3a5f" },
-  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Real-time Data",    sub: "Stay ahead of the market with live insights.",image: "https://images.unsplash.com/photo-1642790551116-18a150d248c6?auto=format&fit=crop&w=1280&q=80", color: "#3b1f5e" },
+  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Secure Investing",  sub: "Your assets are protected with DSE.",         image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1280&q=80", color: "#064e3b", opacity: 0.35 },
+  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Smart Portfolio",   sub: "Track all your holdings in one place.",       image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1280&q=80", color: "#1e3a5f", opacity: 0.35 },
+  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Real-time Data",    sub: "Stay ahead of the market with live insights.", image: "https://images.unsplash.com/photo-1642790551116-18a150d248c6?auto=format&fit=crop&w=1280&q=80", color: "#3b1f5e", opacity: 0.35 },
 ];
 
 const DEFAULT_SETTINGS = { interval: 5000, slides: DEFAULT_SLIDES };
@@ -49,7 +49,7 @@ function SlidePreview({ slide }) {
   return (
     <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: slide.color || "#064e3b", border: `1px solid ${C.gray200}` }}>
       {slide.image && (
-        <img src={slide.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.35 }} />
+        <img src={slide.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: slide.opacity ?? 0.35 }} />
       )}
       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${slide.color || "#064e3b"}cc 0%, transparent 100%)` }} />
       <div style={{ position: "absolute", inset: 0, padding: "12px 14px", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
@@ -64,7 +64,7 @@ function SlidePreview({ slide }) {
 // ══════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ══════════════════════════════════════════════════════════════════
-export default function SystemSettingsPage({ role, session, showToast }) {
+export default function SystemSettingsPage({ role, session, showToast, setLoginSettings }) {
   const [activeMenu, setActiveMenu] = useState("login_page");
   const [settings,   setSettings]   = useState(DEFAULT_SETTINGS);
   const [loading,    setLoading]     = useState(true);
@@ -140,6 +140,7 @@ export default function SystemSettingsPage({ role, session, showToast }) {
     try {
       const uid = session?.user?.id;
       await sbSaveSiteSettings("login_page", settings, uid);
+      if (setLoginSettings) setLoginSettings(settings);   // update LoginPage live
       showToast("Settings saved! Login page updated.", "success");
     } catch (err) {
       showToast("Save failed: " + err.message, "error");
