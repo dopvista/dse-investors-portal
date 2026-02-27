@@ -104,10 +104,12 @@ export default function LoginPage({ onLogin, loginSettings }) {
         {/* ── LEFT: Photo slider ── */}
         <div style={{ position: "relative", background: ADVERTS[activeAd].color, transition: "background 1s ease", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px" }}>
           {ADVERTS.map((ad, i) => (
-            <div key={ad.id} className="ad-bg" style={{ position: "absolute", inset: 0, opacity: i === activeAd ? (ad.opacity ?? 0.35) : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
+            <div key={ad.id} className="ad-bg" style={{ position: "absolute", inset: 0, opacity: i === activeAd ? 1 : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
           ))}
+          {/* Dynamic color overlay — 0 = no overlay */}
+          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${ADVERTS[activeAd]?.color || "#064e3b"}${Math.round(((ADVERTS[activeAd]?.overlay ?? 0.35)) * 255).toString(16).padStart(2,"0")} 0%, transparent 100%)`, transition: "background 1s ease", pointerEvents: "none" }} />
           <div style={{ position: "relative", zIndex: 2 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>{ADVERTS[activeAd]?.label || "DAR ES SALAAM STOCK EXCHANGE"}</div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>{ADVERTS[activeAd]?.label || "DSE Investors Portal"}</div>
             {ADVERTS.map((ad, i) => (
               <div key={ad.id} style={{ display: i === activeAd ? "block" : "none", animation: "fadeIn 0.8s ease-out" }}>
                 <h2 style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 800, color: "white", margin: "0 0 6px 0", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>{ad.title}</h2>
