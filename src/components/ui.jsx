@@ -769,18 +769,10 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
           </div>
         </div>
       </div>
-      <div style={{ background: "#FEF9EC", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "12px 16px" }}>
-        <div style={{ fontSize: 12, color: "#92400E", fontWeight: 600, marginBottom: 8 }}>📋 How to use the template</div>
-        <div style={{ fontSize: 12, color: "#92400E", lineHeight: 1.9 }}>
-          <strong>Step 1 —</strong> Download and open the template in Excel.<br/>
-          <strong>Step 2 —</strong> If you have data in another Excel file, <strong>do not cut or move rows</strong>. Instead copy your data, then in this template use <strong>Paste Special → Values only</strong> (shortcut: <strong>Ctrl+Shift+V</strong> or right-click → Paste Special → <strong>123</strong>) to paste without formulas or formatting.<br/>
-          <strong>Step 3 —</strong> Fill in all required columns in the <strong>Transactions</strong> sheet: Date, Company Name, Type, Quantity, Price per Share.<br/>
-          <strong>Step 4 —</strong> Do <strong>not</strong> delete, rename or move any columns or sheets. Do not modify rows 1–5.<br/>
-          <strong>Step 5 —</strong> Save the file and import it here.<br/>
-          <br/>
-          • Company names must match <strong>exactly</strong> as registered in the system<br/>
-          • Type must be exactly <strong>Buy</strong> or <strong>Sell</strong><br/>
-          • Maximum <strong>{MAX_ROWS} rows</strong> per import
+      <div style={{ background: "#FEF9EC", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
+        <div style={{ fontSize: 13, color: "#92400E", lineHeight: 1.7 }}>
+          Read the <strong>Instructions</strong> sheet inside the template, fill in your transactions in the <strong>Transactlons</strong> sheet, save the file, then come back here to upload it.
         </div>
       </div>
     </div>
