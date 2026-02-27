@@ -20,9 +20,37 @@ async function parseResponse(res, fallbackMsg) {
     throw new Error(fallbackMsg);
   }
   if (!res.ok) {
-    throw new Error(data.error_description || data.message || data.msg || fallbackMsg);
+    // Supabase returns errors in several shapes depending on the API:
+    // Auth admin API:  { code, msg }  e.g. email_exists → "User already registered"
+    // Auth user API:   { error, error_description }
+    // PostgREST:       { message, hint, details }
+    const msg = data.msg
+      || data.error_description
+      || data.message
+      || data.error
+      || (data.code ? humanizeCode(data.code) : null)
+      || fallbackMsg;
+    throw new Error(msg);
   }
   return data;
+}
+
+// Convert Supabase error codes to readable messages
+function humanizeCode(code) {
+  const map = {
+    email_exists:           "A user with this email already exists.",
+    phone_exists:           "A user with this phone number already exists.",
+    bad_jwt:                "Invalid or expired session. Please log in again.",
+    not_admin:              "You do not have admin privileges.",
+    user_not_found:         "User not found.",
+    email_not_confirmed:    "Email address has not been confirmed.",
+    invalid_credentials:    "Incorrect email or password.",
+    email_address_invalid:  "The email address is invalid.",
+    weak_password:          "Password is too weak. Use at least 8 characters.",
+    over_request_rate_limit:"Too many requests. Please wait a moment and try again.",
+    over_email_send_rate_limit: "Email sending limit reached. Please try again later.",
+  };
+  return map[code] || null;
 }
 
 // ── Headers ────────────────────────────────────────────────────────
@@ -585,8 +613,9 @@ export async function sbGetSiteSettings(key = "login_page") {
  */
 export async function sbSaveSiteSettings(key = "login_page", value, accessToken) {
   const tok = accessToken || token();
-  // PATCH the existing seeded row — simpler and more reliable than upsert POST
-  const res = await fetch(
+
+  // Step 1: Try PATCH — returns the updated row so we can detect 0 rows matched
+  const patchRes = await fetch(
     `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}`,
     {
       method:  "PATCH",
@@ -594,18 +623,46 @@ export async function sbSaveSiteSettings(key = "login_page", value, accessToken)
         "apikey":        KEY,
         "Authorization": `Bearer ${tok}`,
         "Content-Type":  "application/json",
-        "Prefer":        "return=minimal",
+        "Prefer":        "return=representation",
       },
       body: JSON.stringify({ value, updated_at: new Date().toISOString() }),
     }
   );
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try { const j = await res.json(); msg = j.message || j.hint || JSON.stringify(j); }
-    catch { msg = await res.text().catch(() => msg); }
+
+  if (!patchRes.ok) {
+    let msg = `PATCH failed HTTP ${patchRes.status}`;
+    try { const j = await patchRes.json(); msg = j.message || j.hint || JSON.stringify(j); }
+    catch { msg = await patchRes.text().catch(() => msg); }
     throw new Error(msg);
   }
-  return true;
+
+  const patched = await patchRes.json();
+
+  // Step 2: If PATCH matched 0 rows (row missing), INSERT it
+  if (!patched || patched.length === 0) {
+    const insertRes = await fetch(
+      `${BASE}/rest/v1/site_settings`,
+      {
+        method:  "POST",
+        headers: {
+          "apikey":        KEY,
+          "Authorization": `Bearer ${tok}`,
+          "Content-Type":  "application/json",
+          "Prefer":        "return=representation",
+        },
+        body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
+      }
+    );
+    if (!insertRes.ok) {
+      let msg = `INSERT failed HTTP ${insertRes.status}`;
+      try { const j = await insertRes.json(); msg = j.message || j.hint || JSON.stringify(j); }
+      catch { msg = await insertRes.text().catch(() => msg); }
+      throw new Error(msg);
+    }
+    return insertRes.json();
+  }
+
+  return patched;
 }
 
 /**
