@@ -14,7 +14,7 @@ import logo from "./assets/logo.jpg";
 
 // ── Role-based nav visibility ──────────────────────────────────────
 const NAV = [
-  { id: "companies",       label: "Portfolio",       icon: "📊", roles: ["SA","AD","DE","VR","RO"] },
+  { id: "companies",       label: "Portfolio",       icon: "📊", roles: ["AD","DE","VR","RO"] },
   { id: "transactions",    label: "Transactions",    icon: "📋", roles: ["SA","AD","DE","VR","RO"] },
   { id: "user-management",   label: "User Management",  icon: "👥", roles: ["SA","AD"] },
   { id: "system-settings",   label: "System Settings",  icon: "⚙️",  roles: ["SA"] },
@@ -386,7 +386,7 @@ export default function App() {
           {tab === "transactions"    && <TransactionsPage  companies={companies}    transactions={transactions}             setTransactions={setTransactions}               showToast={showToast} role={role} cdsNumber={profile?.cds_number} />}
           {tab === "profile"         && <ProfilePage profile={profile} setProfile={setProfile} session={session} role={role} email={session?.user?.email || session?.email || ""} showToast={showToast} />}
           {tab === "user-management" && <UserManagementPage role={role} showToast={showToast} profile={profile} />}
-          {tab === "system-settings"   && <SystemSettingsPage  role={role} showToast={showToast} session={session} setLoginSettings={setLoginSettings} />}
+          {tab === "system-settings"   && <SystemSettingsPage  role={role} showToast={showToast} session={session} setLoginSettings={setLoginSettings} companies={companies} setCompanies={setCompanies} transactions={transactions} />}
         </div>
       </div>
 
