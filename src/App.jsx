@@ -39,24 +39,26 @@ export default function App() {
   };
 
   // ── Check session on mount — also intercepts recovery tokens ────
-// ── Corrected Check session on mount ────────────────────────────
+// ── Check session on mount — also intercepts recovery tokens ────
   useEffect(() => {
     const hash = window.location.hash;
-    
-    // Check if this is a recovery link
+
+    // 1. Handle Password Recovery Link
     if (hash.includes("type=recovery")) {
-      // IMPORTANT: Do NOT manually set session to null or clear the URL immediately
-      // Supabase needs the hash to automatically establish the recovery session
+      // Set the UI to recovery mode so the ResetPasswordPage shows up
       setRecoveryMode(true);
-      
-      // We still want to clean the URL for the user, 
-      // but we do it AFTER a slight delay so Supabase can parse it
+
+      // IMPORTANT: We do NOT clear the session or the URL immediately.
+      // We wait 500ms to let the Supabase Client "read" the token from the URL.
+      // If we clear it too fast, you get "Failed to fetch" or "Auth session missing".
       setTimeout(() => {
         window.history.replaceState(null, "", window.location.pathname);
       }, 500);
-      return;
+      
+      return; // Exit here so we don't trigger the standard session check yet
     }
 
+    // 2. Normal Login Check
     const s = getSession();
     setSession(s || null);
   }, []);
