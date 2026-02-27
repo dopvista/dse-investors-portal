@@ -90,9 +90,16 @@ export default function ResetPasswordPage({ onDone }) {
     <div style={{
       height: "100vh", width: "100%",
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: C.navy, fontFamily: "'Inter', system-ui, sans-serif",
-      padding: 20, boxSizing: "border-box",
+      background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)",
+      fontFamily: "'Inter', system-ui, sans-serif",
+      padding: 20, boxSizing: "border-box", position: "relative", overflow: "hidden",
     }}>
+      {/* dot grid */}
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
+      {/* green orb */}
+      <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+      {/* gold orb */}
+      <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
         @keyframes spin   { to   { transform: rotate(360deg); } }
@@ -101,6 +108,7 @@ export default function ResetPasswordPage({ onDone }) {
       `}</style>
 
       <div style={{
+        position: "relative", zIndex: 1,
         background: C.white, borderRadius: 20, padding: "40px 36px",
         width: "100%", maxWidth: 420,
         boxShadow: "0 24px 64px rgba(0,0,0,0.35)",
@@ -110,6 +118,7 @@ export default function ResetPasswordPage({ onDone }) {
         {/* ── Header ── */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <img src={logo} alt="DSE" style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover", marginBottom: 14, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }} />
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.gray400, marginBottom: 6 }}>DSE Investors Portal</div>
           <div style={{ fontWeight: 800, fontSize: 20, color: C.text }}>Set New Password</div>
           <div style={{ fontSize: 13, color: C.gray400, marginTop: 4 }}>
             Choose a strong password for your account
@@ -264,6 +273,11 @@ export default function ResetPasswordPage({ onDone }) {
         <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${C.gray200}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
           <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>Manage Your Investments Digitally</span>
+        </div>
+        <div style={{ marginTop: 8, textAlign: "center" }}>
+          <span style={{ fontSize: 11, color: C.gray400 }}>© 2026 </span>
+          <span style={{ fontSize: 11, color: C.navy, fontWeight: 700 }}>Dopvista Creative Hub</span>
+          <span style={{ fontSize: 11, color: C.gray400 }}>. All rights reserved.</span>
         </div>
       </div>
     </div>
