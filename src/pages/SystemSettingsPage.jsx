@@ -141,8 +141,8 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
   const handleSetAsDefault = async (idx) => {
     const currentImage = settings.slides[idx]?.image;
     if (!currentImage) { showToast("No image to set as default", "error"); return; }
-    const newDefaults = [...(settings.defaults || DEFAULT_SLIDES.map(s => ({ image: s.image })))];
-    newDefaults[idx] = { ...newDefaults[idx], image: currentImage };
+    const newDefaults = [...(settings.defaults || DEFAULT_SLIDES.map(s => ({ ...s })))];
+    newDefaults[idx] = { ...settings.slides[idx] }; // save full slide as default
     const newSettings = { ...settings, defaults: newDefaults };
     setSettings(newSettings);
     try {
@@ -391,7 +391,13 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                   {/* Use default image */}
                   <div style={{ marginTop: 16 }}>
                     <button
-                      onClick={() => setSlideField(idx, "image", settings.defaults?.[idx]?.image || DEFAULT_SLIDES[idx]?.image || "")}
+                      onClick={() => {
+                        const def = settings.defaults?.[idx] || DEFAULT_SLIDES[idx];
+                        if (def) setSettings(prev => ({
+                          ...prev,
+                          slides: prev.slides.map((s, i) => i === idx ? { ...def } : s),
+                        }));
+                      }}
                       style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}
@@ -460,10 +466,9 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
             onClick={() => {
               // Use user-saved defaults if available, else fall back to Unsplash
               const userDefaults = settings.defaults;
-              const resetSlides = DEFAULT_SLIDES.map((s, i) => ({
-                ...s,
-                image: userDefaults?.[i]?.image || s.image,
-              }));
+              const resetSlides = DEFAULT_SLIDES.map((s, i) =>
+                userDefaults?.[i] ? { ...userDefaults[i] } : { ...s }
+              );
               setSettings({ ...DEFAULT_SETTINGS, slides: resetSlides, defaults: settings.defaults });
               showToast("Reset to defaults", "success");
             }}
