@@ -568,6 +568,8 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const REQUIRED_SHEET = "Transactlons."; // exact sheet name of official DSE template (includes dot)
+
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -577,32 +579,93 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
     try {
       const data = await file.arrayBuffer();
       const wb   = XLSX.read(data, { type: "array", cellDates: true });
-      const ws   = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(ws, { defval: "" });
-      const SKIP_PREFIXES = ["dse", "fill", "date", "dd/", "yyyy", "column", "step", "important", "•", "note"];
-      const dataRows = json.filter(row => {
-        const first = String(Object.values(row)[0] ?? "").trim().toLowerCase();
-        if (!first) return false;
-        return !SKIP_PREFIXES.some(p => first.startsWith(p));
-      });
-      if (dataRows.length > MAX_ROWS) { alert(`This file has ${dataRows.length} rows. Maximum allowed is ${MAX_ROWS} rows per import.`); setParsing(false); if (fileRef.current) fileRef.current.value = ""; return; }
+
+      // ── Sheet name check — must use the official DSE template ──────
+      if (!wb.SheetNames.includes(REQUIRED_SHEET)) {
+        alert("Invalid file.\n\nPlease use the official DSE Investors Portal import template.\nCustom Excel files are not accepted.");
+        setParsing(false);
+        if (fileRef.current) fileRef.current.value = "";
+        return;
+      }
+
+      const ws = wb.Sheets[REQUIRED_SHEET];
+
+      // ── Parse as raw 2D array (no auto-header detection) ───────────
+      // Template structure: rows 1-5 are headers, data is rows 6-505, row 506 is empty
+      // Column 8 (Total Amount) is auto-calculated in Excel — ignored on import
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false, cellDates: true });
+
+      const PLACEHOLDER  = "select company name";
+      const END_MARKER   = "end of importation template"; // row 506 in template
+
+      const dataRows = [];
+      for (let i = 5; i < raw.length; i++) {
+        const row       = raw[i];
+        const firstCell = String(row[0] ?? "").trim().toLowerCase();
+
+        // Stop at end-of-template marker (row 506)
+        if (firstCell.includes(END_MARKER)) break;
+
+        // Skip completely empty rows
+        const hasContent = row.slice(0, 7).some(cell => String(cell ?? "").trim() !== "");
+        if (!hasContent) continue;
+
+        // Skip placeholder/example row
+        const companyCell = String(row[1] ?? "").trim().toLowerCase();
+        if (companyCell === PLACEHOLDER) continue;
+
+        dataRows.push({ rowNum: i + 1, cells: row }); // rowNum = 1-based Excel row number
+      }
+
+      if (dataRows.length > MAX_ROWS) {
+        alert(`This file has ${dataRows.length} data rows. Maximum allowed is ${MAX_ROWS} rows per import.`);
+        setParsing(false);
+        if (fileRef.current) fileRef.current.value = "";
+        return;
+      }
+
       if (dataRows.length === 0) { setRows([]); setErrors([]); setStep("preview"); setParsing(false); return; }
 
+      // ── Parse and validate each row ────────────────────────────────
       const parsed = [], errs = [];
-      dataRows.forEach((row, i) => {
-        const keys = Object.keys(row);
-        const getRaw = (idx) => row[keys[idx]];
-        const get    = (idx) => String(row[keys[idx]] ?? "").trim();
-        const dateRaw = getRaw(0), company = get(1).trim(), type = get(2).trim();
-        const qty = Number(get(3)), price = Number(get(4)), fees = Number(get(5)) || 0, remarks = get(6);
+
+      dataRows.forEach(({ rowNum, cells }) => {
+        const getRaw = (idx) => cells[idx];
+        const get    = (idx) => String(cells[idx] ?? "").trim();
+
+        const dateRaw = getRaw(0);
+        const company = get(1);
+        const type    = get(2);
+        const qty     = parseFloat(get(3));
+        const price   = parseFloat(get(4));
+        const fees    = parseFloat(get(5)) || 0;
+        const remarks = get(6);
+        // Column 8 (index 7) = Total Amount — auto-calculated in Excel, ignored here
+
         const rowErrs = [];
-        if (!dateRaw) rowErrs.push("Missing date");
+
+        // Date
+        if (!dateRaw || String(dateRaw).trim() === "") rowErrs.push("Missing date");
+
+        // Company
         if (!company) rowErrs.push("Missing company name");
+
+        // Type
         if (!["Buy", "Sell"].includes(type)) rowErrs.push("Type must be exactly 'Buy' or 'Sell'");
-        if (!qty || isNaN(qty) || qty <= 0)   rowErrs.push("Invalid quantity");
-        if (!price || isNaN(price) || price <= 0) rowErrs.push("Invalid price");
-        const matchedCompany = companies.find(c => c.name.toLowerCase().trim() === company.toLowerCase());
-        if (company && !matchedCompany) rowErrs.push(`Company "${company}" not found in Holdings`);
+
+        // Quantity
+        if (isNaN(qty) || qty <= 0) rowErrs.push("Invalid quantity");
+
+        // Price
+        if (isNaN(price) || price <= 0) rowErrs.push("Invalid price");
+
+        // Company lookup
+        const matchedCompany = company
+          ? companies.find(c => c.name.toLowerCase().trim() === company.toLowerCase())
+          : null;
+        if (company && !matchedCompany) rowErrs.push(`Company "${company}" not found in system`);
+
+        // Parse date
         let date = "";
         if (dateRaw instanceof Date && !isNaN(dateRaw)) {
           date = `${dateRaw.getFullYear()}-${String(dateRaw.getMonth()+1).padStart(2,"0")}-${String(dateRaw.getDate()).padStart(2,"0")}`;
@@ -611,15 +674,41 @@ export function ImportTransactionsModal({ companies, onImport, onClose }) {
           date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
         } else {
           const dateStr = String(dateRaw).trim();
-          if (dateStr.includes("/")) { const [dd, mm, yyyy] = dateStr.split("/"); date = `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`; }
-          else { date = dateStr; }
+          if (dateStr.includes("/")) {
+            const parts = dateStr.split("/");
+            if (parts.length === 3) {
+              const [dd, mm, yyyy] = parts;
+              date = `${yyyy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+            }
+          } else {
+            date = dateStr;
+          }
         }
-        if (rowErrs.length) { errs.push({ row: i + 1, errors: rowErrs }); }
-        else { parsed.push({ date, company_id: matchedCompany.id, company_name: matchedCompany.name, type, qty, price, fees: fees || null, remarks: remarks || null, total: qty * price }); }
+
+        if (!date && rowErrs.filter(e => e === "Missing date").length === 0) rowErrs.push("Invalid date format");
+
+        if (rowErrs.length) {
+          errs.push({ row: rowNum, errors: rowErrs });
+        } else {
+          parsed.push({
+            date,
+            company_id:   matchedCompany.id,
+            company_name: matchedCompany.name,
+            type, qty, price,
+            fees:    fees || null,
+            remarks: remarks || null,
+            total:   qty * price,
+          });
+        }
       });
+
       setRows(parsed); setErrors(errs); setStep("preview");
-    } catch (err) { alert("Failed to read file: " + err.message); if (fileRef.current) fileRef.current.value = ""; }
-    finally { setParsing(false); }
+    } catch (err) {
+      alert("Failed to read file: " + err.message);
+      if (fileRef.current) fileRef.current.value = "";
+    } finally {
+      setParsing(false);
+    }
   };
 
   const handleImport = async () => {
