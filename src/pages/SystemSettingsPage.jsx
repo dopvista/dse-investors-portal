@@ -13,10 +13,12 @@ const inp = (extra = {}) => ({
 const focusGreen = e => e.target.style.borderColor = C.green;
 const blurGray   = e => e.target.style.borderColor = C.gray200;
 
+// overlay = 0 means NO color overlay (pure photo, useful for text-heavy slides)
+// overlay = 0.35 is default (subtle tint)
 const DEFAULT_SLIDES = [
-  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Secure Investing",   sub: "Your assets are protected with DSE.",          image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1280&q=80", color: "#064e3b", opacity: 0.35 },
-  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Smart Portfolio",    sub: "Track all your holdings in one place.",        image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1280&q=80", color: "#1e3a5f", opacity: 0.35 },
-  { label: "DAR ES SALAAM STOCK EXCHANGE", title: "Real-time Data",     sub: "Stay ahead of the market with live insights.", image: "https://images.unsplash.com/photo-1642790551116-18a150d248c6?auto=format&fit=crop&w=1280&q=80", color: "#3b1f5e", opacity: 0.35 },
+  { label: "DSE Investors Portal", title: "Secure Investing",   sub: "Your assets are protected with DSE.",          image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1280&q=80", color: "#064e3b", overlay: 0.35 },
+  { label: "DSE Investors Portal", title: "Smart Portfolio",    sub: "Track all your holdings in one place.",        image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1280&q=80", color: "#1e3a5f", overlay: 0.35 },
+  { label: "DSE Investors Portal", title: "Real-time Data",     sub: "Stay ahead of the market with live insights.", image: "https://images.unsplash.com/photo-1642790551116-18a150d248c6?auto=format&fit=crop&w=1280&q=80", color: "#3b1f5e", overlay: 0.35 },
 ];
 const DEFAULT_SETTINGS = { interval: 5000, slides: DEFAULT_SLIDES };
 
@@ -39,24 +41,30 @@ function Field({ label, children, hint }) {
   );
 }
 
+// overlay controls the tint gradient alpha (0 = no tint, pure photo)
 function SlidePreview({ slide }) {
+  const overlayVal = slide.overlay ?? 0.35;
+  // Convert overlay 0-1 → hex alpha for gradient
+  const hexAlpha = Math.round(overlayVal * 255).toString(16).padStart(2, "0");
   return (
     <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: slide.color || "#064e3b", border: `1px solid ${C.gray200}` }}>
       {slide.image && (
-        <img src={slide.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: slide.opacity ?? 0.35 }} />
+        <img src={slide.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       )}
-      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${slide.color || "#064e3b"}cc 0%, transparent 100%)` }} />
+      {overlayVal > 0 && (
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${slide.color || "#064e3b"}${hexAlpha} 0%, transparent 100%)` }} />
+      )}
       <div style={{ position: "absolute", inset: 0, padding: "12px 14px", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
         {slide.label && <div style={{ color: "#D4AF37", fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{slide.label}</div>}
-        {slide.title && <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1.2, marginBottom: 4 }}>{slide.title}</div>}
-        {slide.sub   && <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 10, lineHeight: 1.5 }}>{slide.sub}</div>}
+        {slide.title && <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1.2, marginBottom: 4, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{slide.title}</div>}
+        {slide.sub   && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 10, lineHeight: 1.5, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{slide.sub}</div>}
       </div>
     </div>
   );
 }
 
 export default function SystemSettingsPage({ role, session, showToast, setLoginSettings }) {
-  // ── ALL hooks BEFORE any early return ─────────────────────────────
+  // ── ALL hooks before any early return ─────────────────────────────
   const [activeMenu,  setActiveMenu]  = useState("login_page");
   const [settings,    setSettings]    = useState(DEFAULT_SETTINGS);
   const [loading,     setLoading]     = useState(true);
@@ -65,7 +73,6 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
   const [cropSrc,     setCropSrc]     = useState(null);
   const [cropIdx,     setCropIdx]     = useState(null);
   const [uploading,   setUploading]   = useState(null);
-  // useRef in array not allowed — declare individually
   const fileRef0 = useRef();
   const fileRef1 = useRef();
   const fileRef2 = useRef();
@@ -84,7 +91,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
     })();
   }, []);
 
-  // ── Access guard AFTER hooks ──────────────────────────────────────
+  // Access guard AFTER hooks
   if (!["SA"].includes(role)) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
       <div style={{ textAlign: "center" }}>
@@ -131,7 +138,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
     setSaving(true);
     try {
       const tok = session?.access_token;
-      if (!tok) throw new Error("Not authenticated — please refresh and try again.");
+      if (!tok) throw new Error("Session expired — please refresh the page.");
       await sbSaveSiteSettings("login_page", settings, tok);
       if (setLoginSettings) setLoginSettings({ ...settings });
       showToast("Settings saved! Login page updated.", "success");
@@ -165,6 +172,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
         .speed-slider { -webkit-appearance: none; width: 100%; height: 5px; background: ${C.gray200}; border-radius: 5px; outline: none; }
         .speed-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: ${C.green}; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
         input::placeholder { color: #9ca3af; }
+        .no-overlay-check { width: 15px; height: 15px; accent-color: ${C.green}; cursor: pointer; }
       `}</style>
 
       {/* ── Left sidebar ── */}
@@ -242,7 +250,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Slide Image</div>
 
-                  {/* Image upload */}
+                  {/* Image upload box */}
                   <div
                     onClick={() => !uploading && fileRefs[idx].current?.click()}
                     style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: slide.color || "#064e3b", border: `2px dashed ${C.gray200}`, cursor: uploading === idx ? "wait" : "pointer" }}
@@ -287,21 +295,42 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     </div>
                   </div>
 
-                  {/* Overlay intensity */}
+                  {/* Overlay intensity + no-overlay toggle */}
                   <div style={{ marginTop: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Overlay Intensity</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em" }}>Overlay Intensity</div>
+                      {/* No overlay checkbox */}
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: (slide.overlay ?? 0.35) === 0 ? C.green : C.gray400, fontWeight: (slide.overlay ?? 0.35) === 0 ? 700 : 500 }}>
+                        <input
+                          type="checkbox"
+                          className="no-overlay-check"
+                          checked={(slide.overlay ?? 0.35) === 0}
+                          onChange={e => setSlideField(idx, "overlay", e.target.checked ? 0 : 0.35)}
+                        />
+                        No overlay
+                      </label>
+                    </div>
+
+                    {/* Slider — disabled when no-overlay is on */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: (slide.overlay ?? 0.35) === 0 ? 0.35 : 1, transition: "opacity 0.2s" }}>
                       <span style={{ fontSize: 11, color: C.gray400, whiteSpace: "nowrap" }}>0%</span>
-                      <input type="range" min="0" max="1" step="0.05"
-                        value={slide.opacity ?? 0.35}
+                      <input type="range" min="0.05" max="1" step="0.05"
+                        value={slide.overlay ?? 0.35}
+                        disabled={(slide.overlay ?? 0.35) === 0}
                         className="speed-slider"
-                        onChange={e => setSlideField(idx, "opacity", parseFloat(e.target.value))} />
+                        onChange={e => setSlideField(idx, "overlay", parseFloat(e.target.value))} />
                       <span style={{ fontSize: 11, color: C.gray400, whiteSpace: "nowrap" }}>100%</span>
                       <div style={{ background: `${C.navy}10`, border: `1px solid ${C.navy}20`, borderRadius: 8, padding: "4px 8px", minWidth: 42, textAlign: "center" }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: C.navy }}>{Math.round((slide.opacity ?? 0.35) * 100)}%</span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: (slide.overlay ?? 0.35) === 0 ? C.gray400 : C.navy }}>
+                          {(slide.overlay ?? 0.35) === 0 ? "Off" : `${Math.round((slide.overlay ?? 0.35) * 100)}%`}
+                        </span>
                       </div>
                     </div>
-                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 5 }}>How much the photo shows through the color overlay</div>
+                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 5 }}>
+                      {(slide.overlay ?? 0.35) === 0
+                        ? "No overlay — photo shows fully. Useful for text-heavy images."
+                        : "Color tint over the photo. Reduce for clearer images."}
+                    </div>
                   </div>
 
                   {/* Use default image */}
@@ -323,7 +352,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Slide Text</div>
 
                   <Field label="Label (small gold text)">
-                    <input style={inp()} placeholder="e.g. DAR ES SALAAM STOCK EXCHANGE"
+                    <input style={inp()} placeholder="e.g. DSE Investors Portal"
                       value={slide.label || ""}
                       onChange={e => setSlideField(idx, "label", e.target.value)}
                       onFocus={focusGreen} onBlur={blurGray} />
