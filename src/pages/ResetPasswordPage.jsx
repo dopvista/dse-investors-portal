@@ -88,8 +88,10 @@ export default function ResetPasswordPage({ onDone }) {
 
   return (
     <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: C.navy, fontFamily: "'Inter', system-ui, sans-serif", padding: 20,
+      height: "100vh", width: "100%",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: C.navy, fontFamily: "'Inter', system-ui, sans-serif",
+      padding: 20, boxSizing: "border-box",
     }}>
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
