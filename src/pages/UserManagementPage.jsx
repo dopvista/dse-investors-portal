@@ -15,9 +15,8 @@ const ROLE_META = {
   RO: { label: "Read Only",    bg: "#37415115", border: "#37415140", text: "#374151" },
 };
 
-// ── Shared input style (mirrors ProfilePage) ──────────────────────
 const inp = (extra = {}) => ({
-  width: "100%", padding: "7px 10px", borderRadius: 8, fontSize: 12,
+  width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
   border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "inherit",
   background: C.white, color: C.text, transition: "border 0.2s",
   boxSizing: "border-box", ...extra,
@@ -25,20 +24,21 @@ const inp = (extra = {}) => ({
 const focusGreen = e => e.target.style.borderColor = C.green;
 const blurGray   = e => e.target.style.borderColor = C.gray200;
 
-// ── Modal portal — navy header matching ProfilePage modals ─────────
+// ── Modal portal ───────────────────────────────────────────────────
 function Modal({ title, subtitle, onClose, children, footer }) {
   return createPortal(
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(10,37,64,0.55)", backdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 18, width: "100%", maxWidth: 440, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", overflow: "hidden", animation: "fadeIn 0.2s ease" }}>
-        <div style={{ background: C.navy, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(10,37,64,0.6)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 32px 80px rgba(0,0,0,0.35)", overflow: "hidden", animation: "fadeIn 0.2s ease" }}>
+        {/* Navy header — gradient matching sidebar */}
+        <div style={{ background: "linear-gradient(135deg, #0c2548 0%, #0B1F3A 60%, #080f1e 100%)", padding: "18px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ color: C.white, fontWeight: 800, fontSize: 15 }}>{title}</div>
-            {subtitle && <div style={{ color: C.gold, fontSize: 11, marginTop: 2, fontWeight: 500 }}>{subtitle}</div>}
+            <div style={{ color: C.white, fontWeight: 800, fontSize: 16 }}>{title}</div>
+            {subtitle && <div style={{ color: C.gold, fontSize: 11, marginTop: 3, fontWeight: 600, letterSpacing: "0.02em" }}>{subtitle}</div>}
           </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 28, height: 28, borderRadius: "50%", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: C.white, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
-        <div style={{ padding: "14px 20px 0" }}>{children}</div>
-        {footer && <div style={{ display: "flex", gap: 8, padding: "14px 20px" }}>{footer}</div>}
+        <div style={{ padding: "20px 24px 4px" }}>{children}</div>
+        {footer && <div style={{ display: "flex", gap: 8, padding: "16px 24px" }}>{footer}</div>}
       </div>
     </div>,
     document.body
@@ -46,19 +46,30 @@ function Modal({ title, subtitle, onClose, children, footer }) {
 }
 
 function CancelBtn({ onClose }) {
-  return <button onClick={onClose} style={{ flex: 1, padding: "9px", borderRadius: 9, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.text, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>;
+  return (
+    <button onClick={onClose} style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.text, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}>
+      Cancel
+    </button>
+  );
 }
 function ConfirmBtn({ onClick, label, color, saving }) {
-  return <button onClick={onClick} disabled={saving} style={{ flex: 2, padding: "9px", borderRadius: 9, border: "none", background: saving ? C.gray200 : (color || C.green), color: C.white, fontWeight: 700, fontSize: 13, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit" }}>{saving ? "Saving..." : label}</button>;
+  return (
+    <button onClick={onClick} disabled={saving} style={{ flex: 2, padding: "10px", borderRadius: 10, border: "none", background: saving ? C.gray200 : (color || C.green), color: C.white, fontWeight: 700, fontSize: 13, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: saving ? "none" : `0 2px 10px ${(color || C.green)}44` }}>
+      {saving ? "Saving..." : label}
+    </button>
+  );
 }
 
-function Field({ label, required, children }) {
+function Field({ label, required, hint, children }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <label style={{ fontSize: 10, fontWeight: 700, color: C.gray400, display: "block", marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ fontSize: 11, fontWeight: 700, color: C.navy, display: "block", marginBottom: 5, letterSpacing: "0.04em", textTransform: "uppercase" }}>
         {label}{required && <span style={{ color: "#dc2626", marginLeft: 2 }}>*</span>}
       </label>
       {children}
+      {hint && <div style={{ fontSize: 11, color: C.gray400, marginTop: 4, lineHeight: 1.4 }}>{hint}</div>}
     </div>
   );
 }
@@ -81,30 +92,30 @@ function ChangeRoleModal({ user, roles, callerRole, onClose, onSave, showToast }
 
   return (
     <Modal title="Change Role" subtitle={`Assigning to ${user.full_name || "user"}`} onClose={onClose}
-      footer={<><CancelBtn onClose={onClose} /><ConfirmBtn onClick={handleSave} label="✓ Save Role" saving={saving} /></>}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: C.gray50, border: `1px solid ${C.gray200}`, marginBottom: 12 }}>
+      footer={<><CancelBtn onClose={onClose} /><ConfirmBtn onClick={handleSave} label="✓  Save Role" saving={saving} /></>}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, background: C.gray50, border: `1px solid ${C.gray200}`, marginBottom: 14 }}>
         <UserAvatar name={user.full_name} isActive={user.is_active} size={34} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{user.full_name || "User"}</div>
-          <div style={{ fontSize: 10, color: C.gray400 }}>{user.cds_number || "No CDS"}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{user.full_name || "User"}</div>
+          <div style={{ fontSize: 11, color: C.gray400 }}>{user.cds_number || "No CDS"}</div>
         </div>
         {user.role_code && <RoleBadge code={user.role_code} />}
       </div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Select New Role</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 4 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Select New Role</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
         {available.map(r => {
           const m = ROLE_META[r.code];
           const checked = String(sel) === String(r.id);
           return (
-            <button key={r.id} onClick={() => setSel(r.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "left", border: `2px solid ${checked ? m.text : C.gray200}`, background: checked ? m.bg : C.white, transition: "all 0.15s" }}>
-              <div style={{ width: 15, height: 15, borderRadius: "50%", border: `2px solid ${checked ? m.text : C.gray300}`, background: checked ? m.text : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <button key={r.id} onClick={() => setSel(r.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 10, cursor: "pointer", fontFamily: "inherit", textAlign: "left", border: `2px solid ${checked ? m.text : C.gray200}`, background: checked ? m.bg : C.white, transition: "all 0.15s" }}>
+              <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${checked ? m.text : C.gray300}`, background: checked ? m.text : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 {checked && <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.white }} />}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{r.name}</div>
-                {r.description && <div style={{ fontSize: 10, color: C.gray400, marginTop: 1 }}>{r.description}</div>}
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{r.name}</div>
+                {r.description && <div style={{ fontSize: 11, color: C.gray400, marginTop: 1 }}>{r.description}</div>}
               </div>
-              <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: m.bg, border: `1px solid ${m.border}`, color: m.text }}>{r.code}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: m.bg, border: `1px solid ${m.border}`, color: m.text }}>{r.code}</span>
             </button>
           );
         })}
@@ -121,24 +132,19 @@ function ToggleStatusModal({ user, onClose, onConfirm, showToast }) {
   const deactivating = user.is_active;
   const handleConfirm = async () => {
     setSaving(true);
-    try {
-      await onConfirm(user);
-      onClose();
-    } catch (e) {
-      setSaving(false);
-      showToast(e.message, "error");
-    }
+    try { await onConfirm(user); onClose(); }
+    catch (e) { setSaving(false); showToast(e.message, "error"); }
   };
 
   return (
     <Modal title={deactivating ? "Deactivate User" : "Reactivate User"} onClose={onClose}
       footer={<><CancelBtn onClose={onClose} /><ConfirmBtn onClick={handleConfirm} label={deactivating ? "Yes, Deactivate" : "Yes, Reactivate"} color={deactivating ? "#dc2626" : "#16a34a"} saving={saving} /></>}>
       <div style={{ textAlign: "center", padding: "8px 0 4px" }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>{deactivating ? "🚫" : "✅"}</div>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>
+        <div style={{ fontSize: 40, marginBottom: 10 }}>{deactivating ? "🚫" : "✅"}</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8 }}>
           {deactivating ? `Deactivate ${user.full_name}?` : `Reactivate ${user.full_name}?`}
         </div>
-        <div style={{ fontSize: 12, color: C.gray400, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 13, color: C.gray400, lineHeight: 1.7 }}>
           {deactivating
             ? "This user will lose access immediately. Their data is preserved and they can be reactivated anytime."
             : "This user will regain access with their previous role restored."}
@@ -171,7 +177,6 @@ function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToa
       const uid = result?.user?.id || result?.id;
       if (uid) {
         await sbAssignRole(uid, parseInt(form.role_id));
-        // Save CDS number to the new user's profile
         await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Prefer": "return=minimal" },
@@ -186,15 +191,24 @@ function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToa
 
   return (
     <Modal title="Invite New User" subtitle="Create an account and assign a role" onClose={onClose}
-      footer={<><CancelBtn onClose={onClose} /><ConfirmBtn onClick={handleSubmit} label="✉️ Create & Invite" saving={saving} /></>}>
-      {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 10 }}>{error}</div>}
+      footer={<><CancelBtn onClose={onClose} /><ConfirmBtn onClick={handleSubmit} label="Create & Invite" saving={saving} /></>}>
+
+      {error && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+          <span>⚠️</span> {error}
+        </div>
+      )}
+
       <Field label="Email Address" required>
         <input style={inp()} type="email" placeholder="user@example.com"
           value={form.email} onChange={e => set("email", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
       </Field>
-      <Field label="CDS Number" required>
+
+      <Field label="CDS Number" required hint={isAdmin ? "Auto-filled from your account — users will share your CDS" : "Enter the user's own CDS number"}>
         <input
-          style={isAdmin ? { ...inp(), background: "#f9fafb", color: C.gray400, cursor: "not-allowed", border: `1.5px solid ${C.gray100}` } : inp()}
+          style={isAdmin
+            ? { ...inp(), background: `${C.green}08`, border: `1.5px solid ${C.green}30`, color: C.green, fontWeight: 600, cursor: "not-allowed" }
+            : inp()}
           type="text" placeholder="e.g. CDS-647305"
           value={form.cds_number}
           onChange={e => { if (!isAdmin) set("cds_number", e.target.value); }}
@@ -202,21 +216,26 @@ function InviteModal({ roles, callerRole, callerCds, onClose, onSuccess, showToa
           onFocus={isAdmin ? null : focusGreen}
           onBlur={isAdmin ? null : blurGray}
         />
-        <div style={{ fontSize: 10, color: isAdmin ? C.green : C.gray400, marginTop: 3, fontWeight: isAdmin ? 600 : 400 }}>
-          {isAdmin ? "Auto-filled from your account — users will share your CDS" : "Enter the user's own CDS number"}
-        </div>
       </Field>
-      <Field label="Temporary Password" required>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: C.gray100, margin: "4px 0 14px" }} />
+
+      <Field label="Temporary Password" required hint="Share this with the user — they can change it after first login">
         <input style={inp()} type="text" placeholder="Min. 6 characters"
           value={form.password} onChange={e => set("password", e.target.value)} onFocus={focusGreen} onBlur={blurGray} />
-        <div style={{ fontSize: 10, color: C.gray400, marginTop: 3 }}>Share this with the user — they can change it after first login</div>
       </Field>
+
       <Field label="Assign Role" required>
-        <select style={{ ...inp(), cursor: "pointer" }} value={form.role_id} onChange={e => set("role_id", e.target.value)} onFocus={focusGreen} onBlur={blurGray}>
+        <select style={{ ...inp(), cursor: "pointer", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 32 }}
+          value={form.role_id} onChange={e => set("role_id", e.target.value)} onFocus={focusGreen} onBlur={blurGray}>
           <option value="">Select a role...</option>
-          {(isAdmin ? roles.filter(r => r.code !== "SA") : roles).map(r => <option key={r.id} value={r.id}>{r.name} ({r.code})</option>)}
+          {(isAdmin ? roles.filter(r => r.code !== "SA") : roles).map(r => (
+            <option key={r.id} value={r.id}>{r.name} ({r.code})</option>
+          ))}
         </select>
       </Field>
+
     </Modal>
   );
 }
@@ -228,7 +247,7 @@ function RoleBadge({ code }) {
   return <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20, background: m.bg, border: `1px solid ${m.border}`, color: m.text, whiteSpace: "nowrap" }}>{m.label}</span>;
 }
 
-// ── User avatar with active status dot ────────────────────────────
+// ── User avatar ────────────────────────────────────────────────────
 const AVATAR_COLORS = ["#0A2540","#1E3A5F","#1D4ED8","#065F46","#374151","#7C3AED","#B45309","#0369A1"];
 function UserAvatar({ name, isActive, size = 34 }) {
   const initials = (name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
@@ -347,6 +366,7 @@ export default function UserManagementPage({ role, showToast, profile }) {
         .um-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
         .um-scroll { scrollbar-width: thin; scrollbar-color: #e5e7eb transparent; }
         input::placeholder { color: #9ca3af; }
+        select option { font-weight: 500; }
       `}</style>
 
       {/* ── Stats row ── */}
@@ -383,10 +403,10 @@ export default function UserManagementPage({ role, showToast, profile }) {
           {filtered.length}/{total}
         </span>
         <button onClick={() => setInviteOpen(true)} style={{
-          display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-          borderRadius: 8, border: "none", background: C.green, color: C.white,
+          display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
+          borderRadius: 9, border: "none", background: C.green, color: C.white,
           fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-          boxShadow: `0 2px 8px ${C.green}44`, whiteSpace: "nowrap",
+          boxShadow: `0 2px 10px ${C.green}44`, whiteSpace: "nowrap",
         }}
           onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
           onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
@@ -397,82 +417,70 @@ export default function UserManagementPage({ role, showToast, profile }) {
       {/* ── Table ── */}
       <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
         <div style={{ overflowX: "auto", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        {/* Header */}
-        <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "8px 14px", minWidth: 900, borderBottom: `1px solid ${C.gray100}`, background: C.gray50, flexShrink: 0 }}>
-          {["#","User","CDS Number","Account Type","Role","Phone Number","Email Address","Created","Actions"].map((h, i) => (
-            <div key={i} style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</div>
-          ))}
-        </div>
+          {/* Header */}
+          <div style={{ display: "grid", gridTemplateColumns: GRID, padding: "8px 14px", minWidth: 900, borderBottom: `1px solid ${C.gray100}`, background: C.gray50, flexShrink: 0 }}>
+            {["#","User","CDS Number","Account Type","Role","Phone Number","Email Address","Created","Actions"].map((h, i) => (
+              <div key={i} style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</div>
+            ))}
+          </div>
 
-        {/* Scrollable body */}
-        <div className="um-scroll" style={{ overflowY: "auto", flex: 1 }}>
-          {filtered.length === 0 ? (
-            <div style={{ padding: "40px 20px", textAlign: "center", color: C.gray400 }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
-              <div style={{ fontSize: 13 }}>No users match your search</div>
-            </div>
-          ) : filtered.map((user, idx) => (
-            <div key={user.id} style={{
-              display: "grid", gridTemplateColumns: GRID,
-              padding: "9px 14px", minWidth: 900, borderBottom: `1px solid ${C.gray100}`,
-              alignItems: "center", transition: "background 0.12s",
-              opacity: user.is_active ? 1 : 0.5,
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+          {/* Scrollable body */}
+          <div className="um-scroll" style={{ overflowY: "auto", flex: 1 }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: C.gray400 }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
+                <div style={{ fontSize: 13 }}>No users match your search</div>
+              </div>
+            ) : filtered.map((user, idx) => (
+              <div key={user.id} style={{
+                display: "grid", gridTemplateColumns: GRID,
+                padding: "9px 14px", minWidth: 900, borderBottom: `1px solid ${C.gray100}`,
+                alignItems: "center", transition: "background 0.12s",
+                opacity: user.is_active ? 1 : 0.5,
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
 
-              <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600 }}>{idx + 1}</div>
+                <div style={{ fontSize: 11, color: C.gray400, fontWeight: 600 }}>{idx + 1}</div>
 
-              {/* User */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <UserAvatar name={user.full_name} isActive={user.is_active} size={32} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.full_name || "New User"}</span>
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 20, flexShrink: 0, background: user.is_active ? "#f0fdf4" : "#fef2f2", border: `1px solid ${user.is_active ? "#bbf7d0" : "#fecaca"}`, color: user.is_active ? "#16a34a" : "#dc2626" }}>
-                      {user.is_active ? "Active" : "Inactive"}
-                    </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <UserAvatar name={user.full_name} isActive={user.is_active} size={32} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.full_name || "New User"}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 20, flexShrink: 0, background: user.is_active ? "#f0fdf4" : "#fef2f2", border: `1px solid ${user.is_active ? "#bbf7d0" : "#fecaca"}`, color: user.is_active ? "#16a34a" : "#dc2626" }}>
+                        {user.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* CDS Number */}
-              <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{user.cds_number || <span style={{ color: C.gray400 }}>—</span>}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{user.cds_number || <span style={{ color: C.gray400 }}>—</span>}</div>
+                <div style={{ fontSize: 11, color: C.text }}>{user.account_type || <span style={{ color: C.gray400 }}>—</span>}</div>
+                <div><RoleBadge code={user.role_code} /></div>
+                <div style={{ fontSize: 11, color: C.text }}>{user.phone || <span style={{ color: C.gray400 }}>—</span>}</div>
+                <div style={{ fontSize: 10, color: C.gray400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email || "—"}</div>
+                <div style={{ fontSize: 10, color: C.gray400 }}>
+                  {user.assigned_at ? new Date(user.assigned_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
+                </div>
 
-              {/* Account Type */}
-              <div style={{ fontSize: 11, color: C.text }}>{user.account_type || <span style={{ color: C.gray400 }}>—</span>}</div>
-
-              {/* Role */}
-              <div><RoleBadge code={user.role_code} /></div>
-
-              {/* Phone */}
-              <div style={{ fontSize: 11, color: C.text }}>{user.phone || <span style={{ color: C.gray400 }}>—</span>}</div>
-
-              {/* Email */}
-              <div style={{ fontSize: 10, color: C.gray400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email || "—"}</div>
-
-              {/* Created */}
-              <div style={{ fontSize: 10, color: C.gray400 }}>
-                {user.assigned_at ? new Date(user.assigned_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) : "—"}
-              </div>
-
-              <div style={{ display: "flex", gap: 5 }}>
-                <button onClick={() => setChangeRoleUser(user)} style={{ padding: "4px 9px", borderRadius: 7, border: `1px solid ${C.gray200}`, background: C.white, color: C.text, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.12s" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.green; e.currentTarget.style.color = C.green; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}>
-                  ✏️ Role
-                </button>
-                {user.role_code && (
-                  <button onClick={() => setToggleUser(user)} style={{ padding: "4px 9px", borderRadius: 7, border: "none", background: user.is_active ? "#fef2f2" : "#f0fdf4", color: user.is_active ? "#dc2626" : "#16a34a", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
-                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-                    {user.is_active ? "🚫" : "✅"}
+                <div style={{ display: "flex", gap: 5 }}>
+                  <button onClick={() => setChangeRoleUser(user)} style={{ padding: "4px 9px", borderRadius: 7, border: `1px solid ${C.gray200}`, background: C.white, color: C.text, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.12s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = C.green; e.currentTarget.style.color = C.green; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.text; }}>
+                    ✏️ Role
                   </button>
-                )}
+                  {user.role_code && (
+                    <button onClick={() => setToggleUser(user)} style={{ padding: "4px 9px", borderRadius: 7, border: "none", background: user.is_active ? "#fef2f2" : "#f0fdf4", color: user.is_active ? "#dc2626" : "#16a34a", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
+                      onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+                      {user.is_active ? "🚫" : "✅"}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
         </div>
       </div>
 
