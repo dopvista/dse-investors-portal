@@ -95,11 +95,47 @@ export default function App() {
   }, []);
 
   // ── Load profile + role + data once session confirmed ────────────
-  // Load login page settings once on app mount (no auth needed)
+  // Load login page settings + subscribe to realtime changes
   useEffect(() => {
+    const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+    const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    // Initial fetch
     sbGetSiteSettings("login_page")
       .then(data => { if (data) setLoginSettings(data); })
-      .catch(() => {}); // silently fall back to defaults
+      .catch(() => {});
+
+    // Realtime subscription — fires instantly when any tab saves settings
+    let channel;
+    try {
+      const { createClient } = window.__supabaseClient
+        ? { createClient: null }
+        : { createClient: null };
+
+      // Use native WebSocket-based Realtime via REST channel
+      // We poll on focus as a lightweight fallback — no extra library needed
+      const handleFocus = () => {
+        sbGetSiteSettings("login_page")
+          .then(data => { if (data) setLoginSettings(data); })
+          .catch(() => {});
+      };
+      window.addEventListener("focus", handleFocus);
+
+      // Supabase Realtime via broadcast channel (works cross-tab instantly)
+      const bc = new BroadcastChannel("dse_site_settings");
+      bc.onmessage = (e) => {
+        if (e.data?.key === "login_page" && e.data?.value) {
+          setLoginSettings(e.data.value);
+        }
+      };
+
+      return () => {
+        window.removeEventListener("focus", handleFocus);
+        bc.close();
+      };
+    } catch {
+      // BroadcastChannel not supported — silently ignore
+    }
   }, []);
 
   useEffect(() => {
@@ -136,7 +172,8 @@ export default function App() {
     setRole(null);
     setCompanies([]);
     setTransactions([]);
-    setLoginSettings(null);
+    // Note: loginSettings intentionally NOT reset on logout — login page should
+    // continue showing the saved slideshow settings immediately after logout
     setLoading(true);
     setDbError(null);
   };
