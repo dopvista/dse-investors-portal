@@ -23,6 +23,26 @@ const STATUS = {
   rejected:  { label: "Rejected",  bg: "#FEF2F2", color: "#DC2626", border: "#FECACA", icon: "✖" },
 };
 
+// ── Spinner ────────────────────────────────────────────────────────
+function Spinner({ size = 13, color = "#fff", style = {} }) {
+  return (
+    <>
+      <style>{`@keyframes _txSpin { to { transform: rotate(360deg); } }`}</style>
+      <span style={{
+        display: "inline-block",
+        width: size,
+        height: size,
+        border: `2px solid ${color}33`,
+        borderTop: `2px solid ${color}`,
+        borderRadius: "50%",
+        animation: "_txSpin 0.65s linear infinite",
+        flexShrink: 0,
+        ...style,
+      }} />
+    </>
+  );
+}
+
 function StatusBadge({ status }) {
   const s = STATUS[status] || STATUS.pending;
   return (
@@ -36,6 +56,7 @@ function StatusBadge({ status }) {
   );
 }
 
+// ── Reject Modal ───────────────────────────────────────────────────
 function RejectModal({ count, onConfirm, onClose }) {
   const [comment, setComment] = useState("");
   const [saving,  setSaving]  = useState(false);
@@ -69,9 +90,9 @@ function RejectModal({ count, onConfirm, onClose }) {
           <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>This comment will be visible to the Data Entrant.</div>
         </div>
         <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-          <button onClick={handleSubmit} disabled={saving || !comment.trim()} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: saving || !comment.trim() ? C.gray200 : C.red, color: C.white, fontWeight: 700, fontSize: 13, cursor: saving || !comment.trim() ? "not-allowed" : "pointer", fontFamily: "inherit" }}>
-            {saving ? "Rejecting..." : `Reject ${count > 1 ? `${count} Transactions` : "Transaction"}`}
+          <button onClick={onClose} disabled={saving} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={handleSubmit} disabled={saving || !comment.trim()} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: saving || !comment.trim() ? C.gray200 : C.red, color: C.white, fontWeight: 700, fontSize: 13, cursor: saving || !comment.trim() ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+            {saving ? <><Spinner size={13} color="#fff" /> Rejecting...</> : `Reject ${count > 1 ? `${count} Transactions` : "Transaction"}`}
           </button>
         </div>
       </div>
@@ -79,7 +100,8 @@ function RejectModal({ count, onConfirm, onClose }) {
   );
 }
 
-function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) {
+// ── Confirm Action Modal ───────────────────────────────────────────
+function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose, loading }) {
   const isVerify    = action === "verify";
   const accentColor = isVerify ? C.green : "#1D4ED8";
   const accentBg    = isVerify ? C.greenBg : "#EFF6FF";
@@ -100,7 +122,7 @@ function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) 
             <div style={{ color: C.white, fontWeight: 700, fontSize: 15 }}>{icon} {title}</div>
             <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, marginTop: 2 }}>{subtitle}</div>
           </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 28, height: 28, borderRadius: "50%", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          <button onClick={onClose} disabled={loading} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 28, height: 28, borderRadius: "50%", cursor: loading ? "not-allowed" : "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
         <div style={{ padding: "20px" }}>
           <div style={{ background: accentBg, border: `1px solid ${accentBdr}`, borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 16 }}>
@@ -110,9 +132,12 @@ function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) 
           <div style={{ fontSize: 13, color: C.gray600 }}>Are you sure you want to proceed?</div>
         </div>
         <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: accentColor, color: C.white, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
-            {icon} {isVerify ? (count > 1 ? `Verify ${count}` : "Verify") : "Confirm"}
+          <button onClick={onClose} disabled={loading} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={onConfirm} disabled={loading} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: loading ? C.gray200 : accentColor, color: C.white, fontWeight: 700, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+            {loading
+              ? <><Spinner size={13} color="#fff" />{isVerify ? "Verifying..." : "Confirming..."}</>
+              : <>{icon} {isVerify ? (count > 1 ? `Verify ${count}` : "Verify") : "Confirm"}</>
+            }
           </button>
         </div>
       </div>
@@ -120,7 +145,8 @@ function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) 
   );
 }
 
-function SimpleConfirmModal({ title, message, count, onConfirm, onClose }) {
+// ── Simple confirmation modal for bulk delete / unverify ──────────
+function SimpleConfirmModal({ title, message, count, onConfirm, onClose, loading }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(10,31,58,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20, backdropFilter: "blur(2px)" }}>
       <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflow: "hidden" }}>
@@ -129,20 +155,23 @@ function SimpleConfirmModal({ title, message, count, onConfirm, onClose }) {
             <div style={{ color: C.white, fontWeight: 700, fontSize: 15 }}>{title}</div>
             <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, marginTop: 2 }}>{count} transaction{count > 1 ? "s" : ""} selected</div>
           </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 28, height: 28, borderRadius: "50%", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          <button onClick={onClose} disabled={loading} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 28, height: 28, borderRadius: "50%", cursor: loading ? "not-allowed" : "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
         <div style={{ padding: "20px" }}>
           <div style={{ fontSize: 14, color: C.text, marginBottom: 16 }}>{message}</div>
         </div>
         <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: C.red, color: C.white, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Confirm</button>
+          <button onClick={onClose} disabled={loading} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={onConfirm} disabled={loading} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: loading ? C.gray200 : C.red, color: C.white, fontWeight: 700, fontSize: 13, cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+            {loading ? <><Spinner size={13} color="#fff" /> Processing...</> : "Confirm"}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
+// ── Pagination component ───────────────────────────────────────────
 function Pagination({ page, totalPages, pageSize, setPage, setPageSize, total, filtered }) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to   = Math.min(page * pageSize, filtered);
@@ -196,6 +225,7 @@ function PgBtn({ onClick, disabled, label, active }) {
   );
 }
 
+// ── Main Page ──────────────────────────────────────────────────────
 export default function TransactionsPage({ companies, transactions, setTransactions, showToast, role, cdsNumber }) {
 
   const isDE   = role === "DE";
@@ -212,16 +242,30 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const [page,         setPage]        = useState(1);
   const [pageSize,     setPageSize]    = useState(50);
   const [selected,     setSelected]    = useState(new Set());
-  const [deleting,     setDeleting]    = useState(null);
-  const [confirming,   setConfirming]  = useState(null);
-  const [verifying,    setVerifying]   = useState(false);
-  const [rejectModal,  setRejectModal] = useState(null);
-  const [deleteModal,  setDeleteModal] = useState(null);
-  const [actionModal,  setActionModal] = useState(null);
-  const [formModal,    setFormModal]   = useState({ open: false, transaction: null });
-  const [importModal,  setImportModal] = useState(false);
-  const [bulkDeleteModal,   setBulkDeleteModal]   = useState(null);
-  const [bulkUnverifyModal, setBulkUnverifyModal] = useState(null);
+
+  // ── Loading states per action ──────────────────────────────────
+  const [confirmingIds,  setConfirmingIds]  = useState(new Set()); // IDs currently being confirmed
+  const [verifyingIds,   setVerifyingIds]   = useState(new Set()); // IDs currently being verified
+  const [rejectingIds,   setRejectingIds]   = useState(new Set()); // IDs currently being rejected
+  const [unverifyingIds, setUnverifyingIds] = useState(new Set()); // IDs currently being unverified
+  const [deletingId,     setDeletingId]     = useState(null);      // single ID being deleted
+  const [bulkDeletingIds,setBulkDeletingIds]= useState(new Set()); // IDs being bulk-deleted
+
+  // ── Modal states ───────────────────────────────────────────────
+  const [deleteModal,      setDeleteModal]      = useState(null);
+  const [bulkDeleteModal,  setBulkDeleteModal]  = useState(null);
+  const [bulkUnverifyModal,setBulkUnverifyModal]= useState(null);
+  const [formModal,        setFormModal]        = useState({ open: false, transaction: null });
+  const [importModal,      setImportModal]      = useState(false);
+  const [actionModal,      setActionModal]      = useState(null);
+  const [rejectModal,      setRejectModal]      = useState(null);
+
+  // Derived: is any action globally in flight (for disabling bulk bars)
+  const isAnyConfirming  = confirmingIds.size  > 0;
+  const isAnyVerifying   = verifyingIds.size   > 0;
+  const isAnyRejecting   = rejectingIds.size   > 0;
+  const isAnyUnverifying = unverifyingIds.size > 0;
+  const isAnyDeleting    = !!deletingId || bulkDeletingIds.size > 0;
 
   const myTransactions = useMemo(() =>
     cdsNumber ? transactions.filter(t => t.cds_number === cdsNumber) : transactions
@@ -283,49 +327,53 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const paginatedIds = paginated.map(t => t.id);
   const allSelected  = paginatedIds.length > 0 && paginatedIds.every(id => selected.has(id));
   const someSelected = paginatedIds.some(id => selected.has(id));
+
   const toggleAll = () => {
-    if (allSelected) { const s = new Set(selected); paginatedIds.forEach(id => s.delete(id)); setSelected(s); }
-    else             { const s = new Set(selected); paginatedIds.forEach(id => s.add(id));    setSelected(s); }
+    if (allSelected) {
+      const newSelected = new Set(selected);
+      paginatedIds.forEach(id => newSelected.delete(id));
+      setSelected(newSelected);
+    } else {
+      const newSelected = new Set(selected);
+      paginatedIds.forEach(id => newSelected.add(id));
+      setSelected(newSelected);
+    }
   };
-  const toggleOne = (id) => { const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSelected(s); };
+
+  const toggleOne = (id) => {
+    const s = new Set(selected);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setSelected(s);
+  };
 
   const selectedPendingRejected = useMemo(() =>
-    [...selected].filter(id => { const t = myTransactions.find(t => t.id === id); return t && (t.status === "pending" || t.status === "rejected"); }),
-    [selected, myTransactions]);
+    [...selected].filter(id => {
+      const t = myTransactions.find(t => t.id === id);
+      return t && (t.status === "pending" || t.status === "rejected");
+    }), [selected, myTransactions]);
 
   const selectedConfirmed = useMemo(() =>
-    [...selected].filter(id => { const t = myTransactions.find(t => t.id === id); return t && t.status === "confirmed"; }),
-    [selected, myTransactions]);
+    [...selected].filter(id => {
+      const t = myTransactions.find(t => t.id === id);
+      return t && t.status === "confirmed";
+    }), [selected, myTransactions]);
 
   const selectedVerified = useMemo(() =>
-    [...selected].filter(id => { const t = myTransactions.find(t => t.id === id); return t && t.status === "verified"; }),
-    [selected, myTransactions]);
-
-  // ── mergeUpdated ─────────────────────────────────────────────────
-  // Safely patches changed rows back into the full transactions list.
-  // Never replaces the whole list — safe when SA/AD has multi-CDS data loaded.
-  const mergeUpdated = (updatedRows) => {
-    const map = Object.fromEntries(updatedRows.map(r => [r.id, r]));
-    setTransactions(prev => prev.map(t => map[t.id] ? map[t.id] : t));
-  };
+    [...selected].filter(id => {
+      const t = myTransactions.find(t => t.id === id);
+      return t && t.status === "verified";
+    }), [selected, myTransactions]);
 
   // ── Handlers ──────────────────────────────────────────────────────
-
-  // Record / Edit
   const handleFormConfirm = async ({ date, companyId, type, qty, price, fees, remarks, total }) => {
     const isEdit  = !!formModal.transaction;
     const company = companies.find(c => c.id === companyId);
-    const payload = {
-      date, company_id: companyId, company_name: company?.name,
-      type, qty: Number(qty), price: Number(price), total,
-      fees: fees ? Number(fees) : null,
-      remarks: remarks || null,
-      cds_number: cdsNumber || null,
-    };
+    const payload = { date, company_id: companyId, company_name: company?.name, type, qty: Number(qty), price: Number(price), total, fees: fees ? Number(fees) : null, remarks: remarks || null, cds_number: cdsNumber || null };
     try {
       if (isEdit) {
         const rows = await sbUpdateTransaction(formModal.transaction.id, payload);
-        mergeUpdated(rows);
+        if (!rows || rows.length === 0) throw new Error("Update failed – transaction may have been modified or you lack permission.");
+        setTransactions(p => p.map(t => t.id === formModal.transaction.id ? rows[0] : t));
         showToast("Transaction updated!", "success");
       } else {
         const rows = await sbInsertTransaction(payload);
@@ -336,131 +384,146 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     } catch (e) { showToast("Error: " + e.message, "error"); }
   };
 
-  // Single confirm — opens confirmation modal first
   const handleConfirm = (id, company, status) =>
     setActionModal({ action: status === "rejected" ? "confirm-rejected" : "confirm", ids: [id], company });
 
-  // Confirm single or bulk (runs after user confirms in modal)
+  // Bulk confirm (also used for single confirm via actionModal)
   const doBulkConfirm = async () => {
     const ids = actionModal?.ids;
     if (!ids?.length) return;
+
     setActionModal(null);
-    setConfirming("bulk");
+    setConfirmingIds(new Set(ids));
+
     try {
-      const updatedRows = [];
+      const updatedTransactions = [...myTransactions];
       for (const id of ids) {
-        const rows = await sbConfirmTransaction(id); // throws if 0 rows updated
-        updatedRows.push(rows[0]);
+        const rows = await sbConfirmTransaction(id);
+        if (!rows || rows.length === 0) {
+          throw new Error(`Transaction ${id} could not be confirmed. It may have been already confirmed or you no longer have permission.`);
+        }
+        const idx = updatedTransactions.findIndex(t => t.id === id);
+        if (idx !== -1) updatedTransactions[idx] = rows[0];
       }
-      mergeUpdated(updatedRows);
+      setTransactions(updatedTransactions);
       setSelected(new Set());
       showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} confirmed!`, "success");
     } catch (e) {
       showToast("Error: " + e.message, "error");
     } finally {
-      setConfirming(null);
+      setConfirmingIds(new Set());
     }
   };
 
-  // Verify single or bulk
   const handleVerify = (ids, company) => setActionModal({ action: "verify", ids, company: company || null });
 
   const doVerify = async () => {
     const ids = actionModal?.ids;
     if (!ids?.length) return;
     setActionModal(null);
-    setVerifying(true);
+    setVerifyingIds(new Set(ids));
     try {
-      const rows = await sbVerifyTransactions(ids); // batch PATCH — returns all updated rows
-      mergeUpdated(rows);
+      await sbVerifyTransactions(ids);
+      setTransactions(p => p.map(t => ids.includes(t.id) ? { ...t, status: "verified" } : t));
       setSelected(new Set());
       showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} verified!`, "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
-    finally { setVerifying(false); }
+    finally { setVerifyingIds(new Set()); }
   };
 
-  // Reject single or bulk
   const handleReject = async (comment) => {
     const ids = rejectModal?.ids;
     if (!ids?.length) return;
-    // throws on failure — bubbles up to RejectModal which shows inline error
-    const rows = await sbRejectTransactions(ids, comment);
-    mergeUpdated(rows);
-    setSelected(new Set());
-    setRejectModal(null);
-    showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} rejected.`, "error");
+    setRejectingIds(new Set(ids));
+    try {
+      await sbRejectTransactions(ids, comment);
+      setTransactions(p => p.map(t => ids.includes(t.id) ? { ...t, status: "rejected", rejection_comment: comment } : t));
+      setSelected(new Set());
+      setRejectModal(null);
+      showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} rejected.`, "error");
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    } finally {
+      setRejectingIds(new Set());
+    }
   };
 
-  // UnVerify single (SA/AD only)
   const handleUnVerify = async (id) => {
+    setUnverifyingIds(prev => new Set([...prev, id]));
     try {
-      const rows = await sbUpdateTransaction(id, {
-        status: "pending", verified_by: null, verified_at: null, rejection_comment: null,
-      });
-      mergeUpdated(rows);
+      const rows = await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
+      if (!rows || rows.length === 0) throw new Error("Unverify failed – transaction may have been modified or you lack permission.");
+      setTransactions(p => p.map(t => t.id === id ? rows[0] : t));
       showToast("Transaction unverified and returned to Pending.", "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
+    finally {
+      setUnverifyingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }
   };
 
-  // Bulk unverify (SA/AD)
+  // Bulk unverify for SA/AD
   const doBulkUnverify = async () => {
     const ids = bulkUnverifyModal?.ids;
     if (!ids?.length) return;
     setBulkUnverifyModal(null);
+    setUnverifyingIds(new Set(ids));
+
     try {
-      const updatedRows = [];
+      const updatedTransactions = [...myTransactions];
       for (const id of ids) {
-        const rows = await sbUpdateTransaction(id, {
-          status: "pending", verified_by: null, verified_at: null, rejection_comment: null,
-        });
-        updatedRows.push(rows[0]);
+        const rows = await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
+        if (!rows || rows.length === 0) throw new Error(`Transaction ${id} could not be unverified.`);
+        const idx = updatedTransactions.findIndex(t => t.id === id);
+        if (idx !== -1) updatedTransactions[idx] = rows[0];
       }
-      mergeUpdated(updatedRows);
+      setTransactions(updatedTransactions);
       setSelected(new Set());
       showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} unverified.`, "success");
     } catch (e) {
       showToast("Error: " + e.message, "error");
+    } finally {
+      setUnverifyingIds(new Set());
     }
   };
 
-  // Delete single
   const handleDelete = async () => {
     const id = deleteModal.id;
     setDeleteModal(null);
-    setDeleting(id);
+    setDeletingId(id);
     try {
-      await sbDeleteTransaction(id); // throws if RLS blocked (0 rows)
+      await sbDeleteTransaction(id);
       setTransactions(p => p.filter(t => t.id !== id));
       showToast("Transaction deleted.", "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
-    finally { setDeleting(null); }
+    finally { setDeletingId(null); }
   };
 
-  // Bulk delete (DE — pending/rejected only)
+  // Bulk delete for DE
   const doBulkDelete = async () => {
     const ids = bulkDeleteModal?.ids;
     if (!ids?.length) return;
     setBulkDeleteModal(null);
+    setBulkDeletingIds(new Set(ids));
+
     try {
       for (const id of ids) {
-        await sbDeleteTransaction(id); // throws if RLS blocked
+        await sbDeleteTransaction(id);
       }
       setTransactions(p => p.filter(t => !ids.includes(t.id)));
       setSelected(new Set());
       showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} deleted.`, "success");
     } catch (e) {
       showToast("Error: " + e.message, "error");
+    } finally {
+      setBulkDeletingIds(new Set());
     }
   };
 
-  // Import
   const handleImport = async (rows) => {
     const BATCH = 20;
     const inserted = [];
     for (let i = 0; i < rows.length; i += BATCH) {
-      const results = await Promise.all(
-        rows.slice(i, i + BATCH).map(row => sbInsertTransaction({ ...row, cds_number: cdsNumber || null }))
-      );
+      const results = await Promise.all(rows.slice(i, i + BATCH).map(row => sbInsertTransaction({ ...row, cds_number: cdsNumber || null })));
       results.forEach(r => inserted.push(r[0]));
     }
     inserted.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -496,25 +559,38 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     ];
   }, [stats, selected.size, role]);
 
-  const showActions = !isRO;
+  const showCheckbox = true;
+  const showStatus   = true;
+  const showActions  = !isRO;
 
   return (
     <div style={{ height: "calc(100vh - 118px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
+      {/* Modals */}
       {deleteModal && (
         <Modal type="confirm" title="Delete Transaction"
           message={`Delete this ${deleteModal.type} transaction for "${deleteModal.company}"? This cannot be undone.`}
           onConfirm={handleDelete} onClose={() => setDeleteModal(null)} />
       )}
       {bulkDeleteModal && (
-        <SimpleConfirmModal title="🗑️ Delete Transactions"
+        <SimpleConfirmModal
+          title="Delete Transactions"
           message={`Are you sure you want to delete ${bulkDeleteModal.ids.length} transaction(s)? This cannot be undone.`}
-          count={bulkDeleteModal.ids.length} onConfirm={doBulkDelete} onClose={() => setBulkDeleteModal(null)} />
+          count={bulkDeleteModal.ids.length}
+          loading={bulkDeletingIds.size > 0}
+          onConfirm={doBulkDelete}
+          onClose={() => setBulkDeleteModal(null)}
+        />
       )}
       {bulkUnverifyModal && (
-        <SimpleConfirmModal title="↩️ Unverify Transactions"
+        <SimpleConfirmModal
+          title="Unverify Transactions"
           message={`Are you sure you want to unverify ${bulkUnverifyModal.ids.length} transaction(s)? They will be moved back to Pending.`}
-          count={bulkUnverifyModal.ids.length} onConfirm={doBulkUnverify} onClose={() => setBulkUnverifyModal(null)} />
+          count={bulkUnverifyModal.ids.length}
+          loading={isAnyUnverifying}
+          onConfirm={doBulkUnverify}
+          onClose={() => setBulkUnverifyModal(null)}
+        />
       )}
       {formModal.open && (
         <TransactionFormModal key={formModal.transaction?.id || "new"} transaction={formModal.transaction}
@@ -524,36 +600,52 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         <ImportTransactionsModal companies={companies} onImport={handleImport} onClose={() => setImportModal(false)} />
       )}
       {actionModal && (
-        <ConfirmActionModal action={actionModal.action} count={actionModal.ids.length} company={actionModal.company}
+        <ConfirmActionModal
+          action={actionModal.action}
+          count={actionModal.ids.length}
+          company={actionModal.company}
+          loading={isAnyConfirming || isAnyVerifying}
           onConfirm={actionModal.action === "verify" ? doVerify : doBulkConfirm}
-          onClose={() => setActionModal(null)} />
+          onClose={() => setActionModal(null)}
+        />
       )}
       {rejectModal && (
-        <RejectModal count={rejectModal.ids.length} onConfirm={handleReject} onClose={() => setRejectModal(null)} />
+        <RejectModal
+          count={rejectModal.ids.length}
+          onConfirm={handleReject}
+          onClose={() => setRejectModal(null)}
+        />
       )}
 
+      {/* Stat Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 8, flexShrink: 0 }}>
         {statCards.map(s => <StatCard key={s.label} {...s} />)}
       </div>
 
+      {/* Toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap", flexShrink: 0 }}>
+        {/* Search */}
         <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
           <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: C.gray400 }}>🔍</span>
           <input value={search} onChange={e => { setSearch(e.target.value); resetPage(); }}
             placeholder="Search company, type, date, remarks..."
             style={{ width: "100%", border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "6px 10px 6px 32px", fontSize: 12, outline: "none", fontFamily: "inherit", color: C.text, boxSizing: "border-box" }}
             onFocus={e => e.target.style.borderColor = C.navy}
-            onBlur={e  => e.target.style.borderColor = C.gray200} />
+            onBlur={e  => e.target.style.borderColor = C.gray200}
+          />
         </div>
 
+        {/* Type filter */}
         {["All","Buy","Sell"].map(t => (
           <button key={t} onClick={() => { setTypeFilter(t); resetPage(); }} style={{
             padding: "5px 12px", borderRadius: 8, border: `1.5px solid ${typeFilter === t ? C.navy : C.gray200}`,
-            background: typeFilter === t ? C.navy : C.white, color: typeFilter === t ? C.white : C.gray600,
+            background: typeFilter === t ? C.navy : C.white,
+            color: typeFilter === t ? C.white : C.gray600,
             fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
           }}>{t}</button>
         ))}
 
+        {/* Status filter */}
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); resetPage(); }} style={{
           padding: "5px 10px", borderRadius: 8,
           border: `1.5px solid ${statusFilter !== "All" ? C.navy : C.gray200}`,
@@ -563,49 +655,73 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           outline: "none", background: C.white, cursor: "pointer",
         }}
           onFocus={e => e.target.style.borderColor = C.navy}
-          onBlur={e  => e.target.style.borderColor = statusFilter !== "All" ? C.navy : C.gray200}>
+          onBlur={e  => e.target.style.borderColor = statusFilter !== "All" ? C.navy : C.gray200}
+        >
           {statusOptions.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
 
+        {/* Bulk action buttons */}
         {selected.size > 0 && (
           <>
+            {/* Data Entry bulk actions */}
             {isDE && selectedPendingRejected.length > 0 && (
               <>
-                <button onClick={() => setActionModal({ action: "confirm", ids: selectedPendingRejected, company: null })}
-                  disabled={confirming === "bulk"}
-                  style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: "#1D4ED8", color: C.white, fontWeight: 700, fontSize: 12, cursor: confirming === "bulk" ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
-                  {confirming === "bulk" ? "Confirming..." : `✅ Confirm ${selectedPendingRejected.length}`}
+                <button
+                  onClick={() => setActionModal({ action: "confirm", ids: selectedPendingRejected, company: null })}
+                  disabled={isAnyConfirming}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: isAnyConfirming ? C.gray200 : "#1D4ED8", color: C.white, fontWeight: 700, fontSize: 12, cursor: isAnyConfirming ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  {isAnyConfirming ? <><Spinner size={12} color="#888" /> Confirming...</> : `✅ Confirm ${selectedPendingRejected.length}`}
                 </button>
-                <button onClick={() => setBulkDeleteModal({ ids: selectedPendingRejected })}
-                  style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                  🗑️ Delete {selectedPendingRejected.length}
+                <button
+                  onClick={() => setBulkDeleteModal({ ids: selectedPendingRejected })}
+                  disabled={isAnyDeleting}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: isAnyDeleting ? C.gray100 : C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: isAnyDeleting ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  {isAnyDeleting ? <><Spinner size={12} color={C.red} /> Deleting...</> : `🗑️ Delete ${selectedPendingRejected.length}`}
                 </button>
               </>
             )}
+
+            {/* Verifier bulk actions */}
             {(isVR || isSAAD) && selectedConfirmed.length > 0 && (
               <>
-                <button onClick={() => handleVerify(selectedConfirmed)} disabled={verifying}
-                  style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: verifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
-                  {verifying ? "Verifying..." : `✔ Verify ${selectedConfirmed.length}`}
+                <button
+                  onClick={() => handleVerify(selectedConfirmed)}
+                  disabled={isAnyVerifying}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: isAnyVerifying ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: isAnyVerifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  {isAnyVerifying ? <><Spinner size={12} color="#888" /> Verifying...</> : `✔ Verify ${selectedConfirmed.length}`}
                 </button>
-                <button onClick={() => setRejectModal({ ids: selectedConfirmed })}
-                  style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                  ✖ Reject {selectedConfirmed.length}
+                <button
+                  onClick={() => setRejectModal({ ids: selectedConfirmed })}
+                  disabled={isAnyRejecting}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: isAnyRejecting ? C.gray100 : C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: isAnyRejecting ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  {isAnyRejecting ? <><Spinner size={12} color={C.red} /> Rejecting...</> : `✖ Reject ${selectedConfirmed.length}`}
                 </button>
               </>
             )}
+
+            {/* SA/AD bulk unverify */}
             {isSAAD && selectedVerified.length > 0 && (
-              <button onClick={() => setBulkUnverifyModal({ ids: selectedVerified })}
-                style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-                ↩️ UnVerify {selectedVerified.length}
+              <button
+                onClick={() => setBulkUnverifyModal({ ids: selectedVerified })}
+                disabled={isAnyUnverifying}
+                style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: isAnyUnverifying ? C.gray100 : C.white, color: C.gray600, fontWeight: 700, fontSize: 12, cursor: isAnyUnverifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+              >
+                {isAnyUnverifying ? <><Spinner size={12} color={C.gray400} /> Unverifying...</> : `↩️ UnVerify ${selectedVerified.length}`}
               </button>
             )}
           </>
         )}
 
+        {/* Reset button */}
         {(search || typeFilter !== "All" || statusFilter !== defaultStatus) && (
           <Btn variant="secondary" onClick={() => { setSearch(""); setTypeFilter("All"); setStatusFilter(defaultStatus); resetPage(); }}>Reset</Btn>
         )}
+
+        {/* Record / Import buttons */}
         {(isDE || isSAAD) && (
           <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, transaction: null })}>Record Transaction</Btn>
         )}
@@ -614,13 +730,16 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         )}
       </div>
 
+      {/* Table */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <SectionCard title={`Transaction History (${filtered.length}${filtered.length !== stats.total ? ` of ${stats.total}` : ""})`}>
+        <SectionCard
+          title={`Transaction History (${filtered.length}${filtered.length !== stats.total ? ` of ${stats.total}` : ""})`}
+        >
           {stats.total === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>No transactions yet</div>
-              <div style={{ fontSize: 13 }}>{isDE ? 'Click "Record Transaction" to add your first buy or sell' : "Transactions will appear here once created"}</div>
+              <div style={{ fontSize: 13 }}>{isDE ? "Click \"Record Transaction\" to add your first buy or sell" : "Transactions will appear here once created"}</div>
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 20px", color: C.gray400 }}>
@@ -638,12 +757,17 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
                     <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
-                      <th style={{ padding: "7px 10px", borderBottom: `2px solid ${C.gray200}`, width: 36, background: "#f5f6fa" }}>
-                        <input type="checkbox" checked={allSelected}
-                          ref={el => el && (el.indeterminate = someSelected && !allSelected)}
-                          onChange={toggleAll}
-                          style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }} />
-                      </th>
+                      {showCheckbox && (
+                        <th style={{ padding: "7px 10px", borderBottom: `2px solid ${C.gray200}`, width: 36 }}>
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={el => el && (el.indeterminate = someSelected && !allSelected)}
+                            onChange={toggleAll}
+                            style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
+                          />
+                        </th>
+                      )}
                       {[
                         { label: "#",           align: "left"  },
                         { label: "Date",        align: "left"  },
@@ -662,6 +786,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       ))}
                     </tr>
                   </thead>
+
                   <tbody>
                     {paginated.map((t, i) => {
                       const gt          = Number(t.total || 0) + Number(t.fees || 0);
@@ -671,6 +796,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       const isVerified  = t.status === "verified";
                       const isRejected  = t.status === "rejected";
                       const globalIdx   = (safePage - 1) * pageSize + i + 1;
+
                       const canConfirm  = isDE && (isPending || isRejected);
                       const canEdit     = isSAAD || (isDE && (isPending || isRejected));
                       const canDelete   = isDE && (isPending || isRejected);
@@ -678,22 +804,46 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       const canVerify   = (isVR || isSAAD) && isConfirmed;
                       const canReject   = (isVR || isSAAD) && isConfirmed;
                       const isChecked   = selected.has(t.id);
+
+                      // Per-row loading flags
+                      const isRowConfirming  = confirmingIds.has(t.id);
+                      const isRowVerifying   = verifyingIds.has(t.id);
+                      const isRowRejecting   = rejectingIds.has(t.id);
+                      const isRowUnverifying = unverifyingIds.has(t.id);
+                      const isRowDeleting    = deletingId === t.id || bulkDeletingIds.has(t.id);
+                      const isRowBusy        = isRowConfirming || isRowVerifying || isRowRejecting || isRowUnverifying || isRowDeleting;
+
                       const rowActions = [
-                        ...(canEdit     ? [{ icon: "✏️", label: "Edit",     onClick: () => setFormModal({ open: true, transaction: t }) }] : []),
-                        ...(canVerify   ? [{ icon: "✔️", label: "Verify",   onClick: () => handleVerify([t.id], t.company_name) }] : []),
-                        ...(canReject   ? [{ icon: "✖",  label: "Reject",   danger: true, onClick: () => setRejectModal({ ids: [t.id] }) }] : []),
-                        ...(canUnVerify ? [{ icon: "↩️", label: "UnVerify", danger: true, onClick: () => handleUnVerify(t.id) }] : []),
-                        ...(canDelete   ? [{ icon: "🗑️", label: deleting === t.id ? "Deleting..." : "Delete", danger: true, onClick: () => setDeleteModal({ id: t.id, type: t.type, company: t.company_name }) }] : []),
+                        ...(canEdit      ? [{ icon: "✏️", label: "Edit",     disabled: isRowBusy, onClick: () => setFormModal({ open: true, transaction: t }) }] : []),
+                        ...(canVerify    ? [{ icon: isRowVerifying ? null : "✔️", label: isRowVerifying ? "Verifying..." : "Verify", disabled: isRowBusy, onClick: () => handleVerify([t.id], t.company_name) }] : []),
+                        ...(canReject    ? [{ icon: isRowRejecting ? null : "✖",  label: isRowRejecting ? "Rejecting..." : "Reject", danger: true, disabled: isRowBusy, onClick: () => setRejectModal({ ids: [t.id] }) }] : []),
+                        ...(canUnVerify  ? [{ icon: isRowUnverifying ? null : "↩️", label: isRowUnverifying ? "Unverifying..." : "UnVerify", danger: true, disabled: isRowBusy, onClick: () => handleUnVerify(t.id) }] : []),
+                        ...(canDelete    ? [{ icon: isRowDeleting ? null : "🗑️", label: isRowDeleting ? "Deleting..." : "Delete", danger: true, disabled: isRowBusy, onClick: () => setDeleteModal({ id: t.id, type: t.type, company: t.company_name }) }] : []),
                       ];
+
                       return (
                         <tr key={t.id}
-                          style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s", background: isRejected ? "#FFF5F5" : isVerified ? "#F9FFFB" : "transparent" }}
-                          onMouseEnter={e => e.currentTarget.style.background = isRejected ? "#FFF0F0" : isVerified ? "#F0FDF4" : C.gray50}
-                          onMouseLeave={e => e.currentTarget.style.background = isRejected ? "#FFF5F5" : isVerified ? "#F9FFFB" : "transparent"}>
-                          <td style={{ padding: "7px 10px" }}>
-                            <input type="checkbox" checked={isChecked} onChange={() => toggleOne(t.id)}
-                              style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }} />
-                          </td>
+                          style={{
+                            borderBottom: `1px solid ${C.gray100}`,
+                            transition: "background 0.15s, opacity 0.2s",
+                            background: isRejected ? "#FFF5F5" : isVerified ? "#F9FFFB" : "transparent",
+                            opacity: isRowBusy ? 0.6 : 1,
+                            pointerEvents: isRowBusy ? "none" : "auto",
+                          }}
+                          onMouseEnter={e => { if (!isRowBusy) e.currentTarget.style.background = isRejected ? "#FFF0F0" : isVerified ? "#F0FDF4" : C.gray50; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = isRejected ? "#FFF5F5" : isVerified ? "#F9FFFB" : "transparent"; }}
+                        >
+                          {showCheckbox && (
+                            <td style={{ padding: "7px 10px" }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleOne(t.id)}
+                                disabled={isRowBusy}
+                                style={{ cursor: isRowBusy ? "not-allowed" : "pointer", width: 15, height: 15, accentColor: C.navy }}
+                              />
+                            </td>
+                          )}
                           <td style={{ padding: "7px 10px", color: C.gray400, fontWeight: 600, fontSize: 12 }}>{globalIdx}</td>
                           <td style={{ padding: "7px 10px", color: C.gray600, whiteSpace: "nowrap", fontSize: 12 }}>{fmtDate(t.date)}</td>
                           <td style={{ padding: "7px 10px", minWidth: 100 }}>
@@ -731,9 +881,25 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                           {showActions && (
                             <td style={{ padding: "7px 12px", textAlign: "right", whiteSpace: "nowrap" }}>
                               {canConfirm && (
-                                <button onClick={() => handleConfirm(t.id, t.company_name, t.status)} disabled={confirming === t.id}
-                                  style={{ padding: "4px 10px", borderRadius: 7, border: "none", background: "#EFF6FF", color: "#1D4ED8", fontWeight: 700, fontSize: 11, cursor: confirming === t.id ? "not-allowed" : "pointer", fontFamily: "inherit", marginRight: rowActions.length ? 6 : 0 }}>
-                                  {confirming === t.id ? "..." : "✅ Confirm"}
+                                <button
+                                  onClick={() => handleConfirm(t.id, t.company_name, t.status)}
+                                  disabled={isRowBusy}
+                                  style={{
+                                    padding: "4px 10px", borderRadius: 7, border: "none",
+                                    background: isRowConfirming ? C.gray100 : "#EFF6FF",
+                                    color: isRowConfirming ? C.gray400 : "#1D4ED8",
+                                    fontWeight: 700, fontSize: 11,
+                                    cursor: isRowBusy ? "not-allowed" : "pointer",
+                                    fontFamily: "inherit",
+                                    marginRight: rowActions.length ? 6 : 0,
+                                    display: "inline-flex", alignItems: "center", gap: 5,
+                                    minWidth: 80, justifyContent: "center",
+                                  }}
+                                >
+                                  {isRowConfirming
+                                    ? <><Spinner size={11} color={C.gray400} /> Confirming</>
+                                    : "✅ Confirm"
+                                  }
                                 </button>
                               )}
                               {rowActions.length > 0 && <ActionMenu actions={rowActions} />}
@@ -743,9 +909,11 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       );
                     })}
                   </tbody>
+
                   <tfoot>
                     <tr style={{ background: `${C.navy}08`, borderTop: `2px solid ${C.gray200}` }}>
-                      <td colSpan={7} style={{ padding: "8px 10px", fontWeight: 700, color: C.gray600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      <td colSpan={showCheckbox ? 7 : 6}
+                        style={{ padding: "8px 10px", fontWeight: 700, color: C.gray600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         TOTALS ({filtered.length} rows{filtered.length > pageSize ? `, page shows ${paginated.length}` : ""})
                       </td>
                       <td style={{ padding: "8px 10px", textAlign: "right" }}>
@@ -757,12 +925,21 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         <div style={{ fontSize: 13, fontWeight: 800, color: C.green, display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end" }}><span style={{fontSize:10}}>▲</span>{fmt(totals.buyGrand)}</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: C.red,   display:"flex", alignItems:"center", gap: 4, justifyContent:"flex-end", marginTop: 3 }}><span style={{fontSize:10}}>▼</span>{fmt(totals.sellGrand)}</div>
                       </td>
-                      <td colSpan={2 + (showActions ? 1 : 0)} />
+                      <td colSpan={1 + 1 + (showActions ? 1 : 0)} />
                     </tr>
                   </tfoot>
                 </table>
               </div>
-              <Pagination page={safePage} totalPages={totalPages} pageSize={pageSize} setPage={setPage} setPageSize={setPageSize} total={stats.total} filtered={filtered.length} />
+
+              <Pagination
+                page={safePage}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                setPage={setPage}
+                setPageSize={setPageSize}
+                total={stats.total}
+                filtered={filtered.length}
+              />
             </>
           )}
         </SectionCard>
