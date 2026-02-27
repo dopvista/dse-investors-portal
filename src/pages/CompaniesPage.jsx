@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { sbInsert, sbUpdate, sbDelete, sbGetPortfolio, sbUpsertCdsPrice, sbGetCdsPriceHistory, sbGetAllCompanies } from "../lib/supabase";
 import { C, fmt, fmtSmart, Btn, StatCard, SectionCard, Modal, PriceHistoryModal, UpdatePriceModal, CompanyFormModal, ActionMenu } from "../components/ui";
 
-export default function CompaniesPage({ companies: globalCompanies, setCompanies, transactions, showToast, role, profile }) {
+export default function CompaniesPage({ companies: globalCompanies, setCompanies, transactions, showToast, role, profile, manageOnly = false }) {
 
   // ── Role flags ─────────────────────────────────────────────────────
   const isSA      = role === "SA";
@@ -12,7 +12,7 @@ export default function CompaniesPage({ companies: globalCompanies, setCompanies
   const currentUserId = profile?.id || null;
 
   // ── Tab (SA gets both tabs) ────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("portfolio");
+  const [activeTab, setActiveTab] = useState(manageOnly ? "manage" : "portfolio");
 
   // ── Portfolio state ────────────────────────────────────────────────
   const [portfolio,        setPortfolio]        = useState([]);
@@ -197,24 +197,7 @@ export default function CompaniesPage({ companies: globalCompanies, setCompanies
         />
       )}
 
-      {/* ── SA Tabs ── */}
-      {isSA && (
-        <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.gray100, borderRadius: 12, padding: 4, width: "fit-content" }}>
-          {[
-            { id: "portfolio", label: "📊 My Portfolio"    },
-            { id: "manage",    label: "🏢 Manage Companies" },
-          ].map(t => (
-            <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-              padding: "8px 20px", borderRadius: 9, border: "none", cursor: "pointer",
-              fontFamily: "inherit", transition: "all 0.2s",
-              background: activeTab === t.id ? C.navy : "transparent",
-              color:      activeTab === t.id ? C.white : C.gray600,
-              fontWeight: activeTab === t.id ? 700 : 500, fontSize: 13,
-              boxShadow:  activeTab === t.id ? "0 2px 8px rgba(11,31,58,0.25)" : "none",
-            }}>{t.label}</button>
-          ))}
-        </div>
-      )}
+
 
       {/* ════════════════════════════════
           PORTFOLIO VIEW (all roles)
