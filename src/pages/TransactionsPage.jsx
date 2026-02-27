@@ -272,12 +272,32 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     sellGrand:  filtered.filter(t => t.type==="Sell").reduce((s,t) => s+Number(t.total||0)+Number(t.fees||0),0),
   }), [filtered]);
 
-  // ── Selection (VR bulk verify) ────────────────────────────────────
-  const selectableIds = paginated.filter(t => t.status === "confirmed").map(t => t.id);
-  const allSelected   = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
-  const someSelected  = selectableIds.some(id => selected.has(id));
-  const toggleAll = () => allSelected ? setSelected(new Set()) : setSelected(new Set(selectableIds));
-  const toggleOne = (id) => { const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSelected(s); };
+  // ── Selection (now for all users) ─────────────────────────────────
+  const paginatedIds = paginated.map(t => t.id);
+  const allSelected  = paginatedIds.length > 0 && paginatedIds.every(id => selected.has(id));
+  const someSelected = paginatedIds.some(id => selected.has(id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      // Deselect all on current page
+      const newSelected = new Set(selected);
+      paginatedIds.forEach(id => newSelected.delete(id));
+      setSelected(newSelected);
+    } else {
+      // Select all on current page
+      const newSelected = new Set(selected);
+      paginatedIds.forEach(id => newSelected.add(id));
+      setSelected(newSelected);
+    }
+  };
+
+  const toggleOne = (id) => {
+    const s = new Set(selected);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setSelected(s);
+  };
+
+  // Eligible for bulk verify/reject (confirmed transactions)
   const selectedConfirmed = [...selected].filter(id => myTransactions.find(t => t.id === id)?.status === "confirmed");
 
   // ── Handlers ──────────────────────────────────────────────────────
@@ -404,9 +424,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   }, [stats, selected.size, role]);
 
   // ── Table visibility ──────────────────────────────────────────────
-  const showCheckbox = isVR || isSAAD;
-  const showStatus   = true;   // ALL roles see status
-  const showActions  = !isRO;
+  const showCheckbox = true;                // All users see checkboxes now
+  const showStatus   = true;                 // ALL roles see status
+  const showActions  = !isRO;                // RO has no action column
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -476,8 +496,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           {statusOptions.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
 
-        {/* VR bulk actions */}
-        {isVR && selectedConfirmed.length > 0 && (
+        {/* Bulk actions for VR and SA/AD (verify/reject) */}
+        {(isVR || isSAAD) && selectedConfirmed.length > 0 && (
           <>
             <button onClick={() => handleVerify(selectedConfirmed)} disabled={verifying}
               style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: verifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
@@ -531,13 +551,14 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
                       {showCheckbox && (
                         <th style={{ padding: "7px 10px", borderBottom: `2px solid ${C.gray200}`, width: 36 }}>
-                          {isVR && (
-                            <input type="checkbox" checked={allSelected}
-                              ref={el => el && (el.indeterminate = someSelected && !allSelected)}
-                              onChange={toggleAll}
-                              style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
-                            />
-                          )}
+                          {/* Select all checkbox for all users */}
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={el => el && (el.indeterminate = someSelected && !allSelected)}
+                            onChange={toggleAll}
+                            style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
+                          />
                         </th>
                       )}
                       {[
@@ -594,10 +615,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         >
                           {showCheckbox && (
                             <td style={{ padding: "7px 10px" }}>
-                              {isVR && isConfirmed && (
-                                <input type="checkbox" checked={isChecked} onChange={() => toggleOne(t.id)}
-                                  style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }} />
-                              )}
+                              {/* Checkbox for every row, for all users */}
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleOne(t.id)}
+                                style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
+                              />
                             </td>
                           )}
                           <td style={{ padding: "7px 10px", color: C.gray400, fontWeight: 600, fontSize: 12 }}>{globalIdx}</td>
