@@ -3,14 +3,18 @@ import { sbSignIn, sbResetPassword } from "../lib/supabase";
 import { C } from "../components/ui";
 import logo from "../assets/logo.jpg";
 
-const ADVERTS = [
-  { id: 1, title: "Market Insights",   sub: "Real-time data at your fingertips.",              color: C.navy,    image: "https://images.unsplash.com/photo-1611974717482-480928224732?auto=format&fit=crop&q=80" },
-  { id: 2, title: "Secure Investing",  sub: "Your assets are protected with DSE.",             color: "#064e3b", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80" },
-  { id: 3, title: "Digital Future",    sub: "Managing investments has never been easier.",     color: "#78350f", image: "https://images.unsplash.com/photo-1551288049-bbda38a5f9a2?auto=format&fit=crop&q=80" },
-  { id: 4, title: "Wealth Legacy",     sub: "Smart investing for generations.",                color: "#1e3a5f", image: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?auto=format&fit=crop&q=80" },
+// Fallback slides used when no settings are loaded
+const DEFAULT_SLIDES = [
+  { id: 1, title: "Market Insights",  sub: "Real-time data at your fingertips.",          color: C.navy,    image: "https://images.unsplash.com/photo-1611974717482-480928224732?auto=format&fit=crop&q=80" },
+  { id: 2, title: "Secure Investing", sub: "Your assets are protected with DSE.",          color: "#064e3b", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80" },
+  { id: 3, title: "Digital Future",   sub: "Managing investments has never been easier.",  color: "#78350f", image: "https://images.unsplash.com/photo-1551288049-bbda38a5f9a2?auto=format&fit=crop&q=80" },
 ];
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, loginSettings }) {
+  // Use settings from DB, fall back to defaults
+  const ADVERTS  = (loginSettings?.slides  || DEFAULT_SLIDES).map((s, i) => ({ ...s, id: i + 1 }));
+  const INTERVAL = loginSettings?.interval || 5000;
+
   const [view, setView]         = useState("login");
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +26,7 @@ export default function LoginPage({ onLogin }) {
 
   useEffect(() => {
     if (isHovering) return;
-    const t = setInterval(() => setActiveAd(p => (p + 1) % ADVERTS.length), 5000);
+    const t = setInterval(() => setActiveAd(p => (p + 1) % ADVERTS.length), INTERVAL);
     return () => clearInterval(t);
   }, [isHovering]);
 
@@ -103,7 +107,7 @@ export default function LoginPage({ onLogin }) {
             <div key={ad.id} className="ad-bg" style={{ position: "absolute", inset: 0, opacity: i === activeAd ? 0.25 : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
           ))}
           <div style={{ position: "relative", zIndex: 2 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>DAR ES SALAAM STOCK EXCHANGE</div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>{ADVERTS[activeAd]?.label || "DAR ES SALAAM STOCK EXCHANGE"}</div>
             {ADVERTS.map((ad, i) => (
               <div key={ad.id} style={{ display: i === activeAd ? "block" : "none", animation: "fadeIn 0.8s ease-out" }}>
                 <h2 style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 800, color: "white", margin: "0 0 6px 0", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>{ad.title}</h2>
