@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { C } from "../components/ui";
 import ImageCropModal from "../components/ImageCropModal";
 import { sbGetSiteSettings, sbSaveSiteSettings, sbUploadSlideImage } from "../lib/supabase";
+import CompaniesPage from "./CompaniesPage";
 
 const inp = (extra = {}) => ({
   width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
@@ -92,7 +93,7 @@ function SlidePreview({ slide, allSlides = [], activeIdx = 0 }) {
   );
 }
 
-export default function SystemSettingsPage({ role, session, showToast, setLoginSettings }) {
+export default function SystemSettingsPage({ role, session, showToast, setLoginSettings, companies, setCompanies, transactions }) {
   // ── ALL hooks before any early return ─────────────────────────────
   const [activeMenu,  setActiveMenu]  = useState("login_page");
   const [settings,    setSettings]    = useState(DEFAULT_SETTINGS);
@@ -233,7 +234,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       {/* ── Left sidebar ── */}
       <div style={{ width: 180, flexShrink: 0, background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, padding: 10, display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{ fontSize: 9, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.07em", padding: "6px 10px 8px" }}>Settings</div>
-        {[{ id: "login_page", icon: "🖼️", label: "Login Page" }].map(item => (
+        {[{ id: "login_page", icon: "🖼️", label: "Login Page" }, { id: "companies", icon: "🏢", label: "Companies" }].map(item => (
           <button key={item.id} onClick={() => setActiveMenu(item.id)} style={{
             display: "flex", alignItems: "center", gap: 8, padding: "9px 10px",
             borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit",
@@ -460,32 +461,54 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
           ))}
         </div>
 
-        {/* Save / Reset */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingBottom: 16, flexShrink: 0 }}>
-          <button
-            onClick={() => {
-              // Use user-saved defaults if available, else fall back to Unsplash
-              const userDefaults = settings.defaults;
-              const resetSlides = DEFAULT_SLIDES.map((s, i) =>
-                userDefaults?.[i] ? { ...userDefaults[i] } : { ...s }
-              );
-              setSettings({ ...DEFAULT_SETTINGS, slides: resetSlides, defaults: settings.defaults });
-              showToast("Reset to defaults", "success");
-            }}
-            style={{ padding: "10px 20px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
-            Reset to Defaults
-          </button>
-          <button onClick={handleSave} disabled={saving} style={{ padding: "10px 28px", borderRadius: 10, border: "none", background: saving ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 13, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: saving ? "none" : `0 2px 10px ${C.green}44`, display: "flex", alignItems: "center", gap: 8 }}>
-            {saving ? (
-              <>
-                <div style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                Saving...
-              </>
-            ) : "💾 Save Changes"}
-          </button>
-        </div>
+        {/* ── Companies panel ── */}
+        {activeMenu === "companies" && (
+          <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", flexShrink: 0 }}>
+            <div style={{ background: "linear-gradient(135deg, #0c2548 0%, #0B1F3A 60%, #080f1e 100%)", padding: "16px 22px" }}>
+              <div style={{ color: C.white, fontWeight: 800, fontSize: 15 }}>🏢 Manage Companies</div>
+              <div style={{ color: C.gold, fontSize: 11, marginTop: 3, fontWeight: 500 }}>Register, edit and manage listed companies</div>
+            </div>
+            <div style={{ padding: "16px" }}>
+              <CompaniesPage
+                companies={companies}
+                setCompanies={setCompanies}
+                transactions={transactions || []}
+                showToast={showToast}
+                role={role}
+                profile={null}
+                manageOnly={true}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Save / Reset — only shown for login_page */}
+        {activeMenu === "login_page" && (
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingBottom: 16, flexShrink: 0 }}>
+            <button
+              onClick={() => {
+                const userDefaults = settings.defaults;
+                const resetSlides = DEFAULT_SLIDES.map((s, i) =>
+                  userDefaults?.[i] ? { ...userDefaults[i] } : { ...s }
+                );
+                setSettings({ ...DEFAULT_SETTINGS, slides: resetSlides, defaults: settings.defaults });
+                showToast("Reset to defaults", "success");
+              }}
+              style={{ padding: "10px 20px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
+              Reset to Defaults
+            </button>
+            <button onClick={handleSave} disabled={saving} style={{ padding: "10px 28px", borderRadius: 10, border: "none", background: saving ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 13, cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", boxShadow: saving ? "none" : `0 2px 10px ${C.green}44`, display: "flex", alignItems: "center", gap: 8 }}>
+              {saving ? (
+                <>
+                  <div style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                  Saving...
+                </>
+              ) : "💾 Save Changes"}
+            </button>
+          </div>
+        )}
 
       </div>
 
