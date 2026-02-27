@@ -24,11 +24,12 @@ async function parseResponse(res, fallbackMsg) {
     // Auth admin API:  { code, msg }  e.g. email_exists → "User already registered"
     // Auth user API:   { error, error_description }
     // PostgREST:       { message, hint, details }
-    const msg = data.msg
+    // Check code first so our short messages take priority over Supabase's verbose ones
+    const msg = (data.code ? humanizeCode(data.code) : null)
+      || data.msg
       || data.error_description
       || data.message
       || data.error
-      || (data.code ? humanizeCode(data.code) : null)
       || fallbackMsg;
     throw new Error(msg);
   }
