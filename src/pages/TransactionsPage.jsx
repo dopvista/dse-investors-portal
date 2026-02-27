@@ -149,7 +149,7 @@ function Pagination({ page, totalPages, pageSize, setPage, setPageSize, total, f
       {/* Right: page buttons */}
       {totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <PgBtn onClick={() => setPage(1)}       disabled={page === 1}          label="«" />
+          <PgBtn onClick={() => setPage(1)}        disabled={page === 1}          label="«" />
           <PgBtn onClick={() => setPage(p => p-1)} disabled={page === 1}         label="‹" />
           {pages.map((p, i) =>
             p === "..." ? (
@@ -192,19 +192,19 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   // Status options per role
   const statusOptions = [["All","All Statuses"],["pending","🕐 Pending"],["confirmed","✅ Confirmed"],["verified","✔️ Verified"],["rejected","✖ Rejected"]];
 
-  const [search,       setSearch]      = useState("");
-  const [typeFilter,   setTypeFilter]  = useState("All");
+  const [search,        setSearch]       = useState("");
+  const [typeFilter,    setTypeFilter]   = useState("All");
   const [statusFilter, setStatusFilter]= useState(defaultStatus);
-  const [page,         setPage]        = useState(1);
-  const [pageSize,     setPageSize]    = useState(50);
-  const [selected,     setSelected]    = useState(new Set());
-  const [deleting,     setDeleting]    = useState(null);
-  const [confirming,   setConfirming]  = useState(null);
-  const [verifying,    setVerifying]   = useState(false);
+  const [page,          setPage]         = useState(1);
+  const [pageSize,      setPageSize]     = useState(50);
+  const [selected,      setSelected]     = useState(new Set());
+  const [deleting,      setDeleting]     = useState(null);
+  const [confirming,    setConfirming]   = useState(null);
+  const [verifying,     setVerifying]    = useState(false);
   const [rejectModal,  setRejectModal] = useState(null);
   const [deleteModal,  setDeleteModal] = useState(null);
   const [actionModal,  setActionModal] = useState(null);
-  const [formModal,    setFormModal]   = useState({ open: false, transaction: null });
+  const [formModal,     setFormModal]    = useState({ open: false, transaction: null });
   const [importModal,  setImportModal] = useState(false);
 
   // ── CDS-scoped base list (all roles see only their CDS) ───────────
@@ -249,8 +249,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     list = [...list].sort((a, b) => {
       const aActive = isActive(a.status);
       const bActive = isActive(b.status);
-      if (aActive !== bActive) return aActive ? -1 : 1;           // active group first
-      return (b.date || "").localeCompare(a.date || "");           // date desc within group
+      if (aActive !== bActive) return aActive ? -1 : 1;            // active group first
+      return (b.date || "").localeCompare(a.date || "");            // date desc within group
     });
     return list;
   }, [myTransactions, typeFilter, statusFilter, search]);
@@ -272,32 +272,14 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     sellGrand:  filtered.filter(t => t.type==="Sell").reduce((s,t) => s+Number(t.total||0)+Number(t.fees||0),0),
   }), [filtered]);
 
-  // ── Selection (now for all users) ─────────────────────────────────
-  const paginatedIds = paginated.map(t => t.id);
-  const allSelected  = paginatedIds.length > 0 && paginatedIds.every(id => selected.has(id));
-  const someSelected = paginatedIds.some(id => selected.has(id));
-
-  const toggleAll = () => {
-    if (allSelected) {
-      // Deselect all on current page
-      const newSelected = new Set(selected);
-      paginatedIds.forEach(id => newSelected.delete(id));
-      setSelected(newSelected);
-    } else {
-      // Select all on current page
-      const newSelected = new Set(selected);
-      paginatedIds.forEach(id => newSelected.add(id));
-      setSelected(newSelected);
-    }
-  };
-
-  const toggleOne = (id) => {
-    const s = new Set(selected);
-    s.has(id) ? s.delete(id) : s.add(id);
-    setSelected(s);
-  };
-
-  // Eligible for bulk verify/reject (confirmed transactions)
+  // ── Selection (Visible to all, Actions restricted to role) ───────
+  const selectableIds = paginated.map(t => t.id);
+  const allSelected   = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
+  const someSelected  = selectableIds.some(id => selected.has(id));
+  const toggleAll = () => allSelected ? setSelected(new Set()) : setSelected(new Set(selectableIds));
+  const toggleOne = (id) => { const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSelected(s); };
+  
+  // Confirmed specific selection (used for VR bulk actions)
   const selectedConfirmed = [...selected].filter(id => myTransactions.find(t => t.id === id)?.status === "confirmed");
 
   // ── Handlers ──────────────────────────────────────────────────────
@@ -424,9 +406,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   }, [stats, selected.size, role]);
 
   // ── Table visibility ──────────────────────────────────────────────
-  const showCheckbox = true;                // All users see checkboxes now
-  const showStatus   = true;                 // ALL roles see status
-  const showActions  = !isRO;                // RO has no action column
+  const showCheckbox = true; // ALL roles can now see and use the checkboxes
+  const showStatus   = true;   // ALL roles see status
+  const showActions  = !isRO;
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -496,8 +478,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           {statusOptions.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
 
-        {/* Bulk actions for VR and SA/AD (verify/reject) */}
-        {(isVR || isSAAD) && selectedConfirmed.length > 0 && (
+        {/* VR bulk actions */}
+        {isVR && selectedConfirmed.length > 0 && (
           <>
             <button onClick={() => handleVerify(selectedConfirmed)} disabled={verifying}
               style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: verifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
@@ -551,10 +533,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
                       {showCheckbox && (
                         <th style={{ padding: "7px 10px", borderBottom: `2px solid ${C.gray200}`, width: 36 }}>
-                          {/* Select all checkbox for all users */}
-                          <input
-                            type="checkbox"
-                            checked={allSelected}
+                          <input type="checkbox" checked={allSelected}
                             ref={el => el && (el.indeterminate = someSelected && !allSelected)}
                             onChange={toggleAll}
                             style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
@@ -600,7 +579,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       const isChecked  = selected.has(t.id);
 
                       const rowActions = [
-                        ...(canEdit      ? [{ icon: "✏️", label: "Edit",     onClick: () => setFormModal({ open: true, transaction: t }) }] : []),
+                        ...(canEdit      ? [{ icon: "✏️", label: "Edit",      onClick: () => setFormModal({ open: true, transaction: t }) }] : []),
                         ...(canVerify    ? [{ icon: "✔️", label: "Verify",   onClick: () => handleVerify([t.id], t.company_name) }] : []),
                         ...(canReject    ? [{ icon: "✖",  label: "Reject",   danger: true, onClick: () => setRejectModal({ ids: [t.id] }) }] : []),
                         ...(canUnVerify  ? [{ icon: "↩️", label: "UnVerify", danger: true, onClick: () => handleUnVerify(t.id) }] : []),
@@ -615,13 +594,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         >
                           {showCheckbox && (
                             <td style={{ padding: "7px 10px" }}>
-                              {/* Checkbox for every row, for all users */}
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => toggleOne(t.id)}
-                                style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
-                              />
+                              <input type="checkbox" checked={isChecked} onChange={() => toggleOne(t.id)}
+                                style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }} />
                             </td>
                           )}
                           <td style={{ padding: "7px 10px", color: C.gray400, fontWeight: 600, fontSize: 12 }}>{globalIdx}</td>
