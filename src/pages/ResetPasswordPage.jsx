@@ -50,9 +50,8 @@ export default function ResetPasswordPage({ onDone }) {
     setLoading(true);
     try {
       const token = localStorage.getItem("sb_recovery_token");
-      if (!token) throw new Error("Reset session expired. Please request a new reset link.");
+      if (!token) throw new Error("Reset link expired or already used. Please request a new password reset link.");
 
-      // Use the recovery token to update password via Supabase REST API
       const res = await fetch(`${BASE}/auth/v1/user`, {
         method:  "PUT",
         headers: {
@@ -63,9 +62,15 @@ export default function ResetPasswordPage({ onDone }) {
         body: JSON.stringify({ password }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error_description || data.message || "Failed to update password");
+        // Surface the real Supabase error
+        const msg = data.error_description || data.message || data.msg || data.error || null;
+        if (msg?.toLowerCase().includes("expired") || msg?.toLowerCase().includes("invalid")) {
+          throw new Error("Reset link has expired. Please go back and request a new one.");
+        }
+        throw new Error(msg || "Failed to update password — please try again.");
       }
 
       localStorage.removeItem("sb_recovery_token");
