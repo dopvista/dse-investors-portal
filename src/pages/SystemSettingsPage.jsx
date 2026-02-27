@@ -42,22 +42,51 @@ function Field({ label, children, hint }) {
 }
 
 // overlay controls the tint gradient alpha (0 = no tint, pure photo)
-function SlidePreview({ slide }) {
+// SlidePreview mirrors the exact LoginPage layout:
+// - image full width, overlay gradient, text middle-left, dot indicators
+function SlidePreview({ slide, allSlides = [], activeIdx = 0 }) {
   const overlayVal = slide.overlay ?? 0.35;
-  // Convert overlay 0-1 → hex alpha for gradient
-  const hexAlpha = Math.round(overlayVal * 255).toString(16).padStart(2, "0");
+  const hexAlpha   = Math.round(overlayVal * 255).toString(16).padStart(2, "0");
+  const dots        = allSlides.length > 0 ? allSlides : [slide];
   return (
-    <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: slide.color || "#064e3b", border: `1px solid ${C.gray200}` }}>
+    <div style={{
+      position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "16/9",
+      background: slide.color || "#064e3b", border: `1px solid ${C.gray200}`,
+    }}>
+      {/* Photo — full cover, same as login page */}
       {slide.image && (
-        <img src={slide.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${slide.image})`, backgroundSize: "cover", backgroundPosition: "center" }} />
       )}
+      {/* Color overlay gradient */}
       {overlayVal > 0 && (
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${slide.color || "#064e3b"}${hexAlpha} 0%, transparent 100%)` }} />
       )}
-      <div style={{ position: "absolute", inset: 0, padding: "12px 14px", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-        {slide.label && <div style={{ color: "#D4AF37", fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{slide.label}</div>}
-        {slide.title && <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, lineHeight: 1.2, marginBottom: 4, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>{slide.title}</div>}
-        {slide.sub   && <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 10, lineHeight: 1.5, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{slide.sub}</div>}
+      {/* Text — middle-left aligned with padding, matching login page */}
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 6%" }}>
+        {/* Label — fontSize 10, gold, uppercase, letterSpacing 1 */}
+        {slide.label && (
+          <div style={{ fontSize: "clamp(5px, 1.2%, 10px)", fontWeight: 600, color: "#D4AF37", letterSpacing: 1, marginBottom: "4%", textTransform: "uppercase" }}>
+            {slide.label}
+          </div>
+        )}
+        {/* Title — clamp(22px,3vw,30px) in real page, scaled proportionally */}
+        {slide.title && (
+          <div style={{ fontSize: "clamp(10px, 4.5%, 22px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: "3%", textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+            {slide.title}
+          </div>
+        )}
+        {/* Subtitle — fontSize 13 in real page */}
+        {slide.sub && (
+          <div style={{ fontSize: "clamp(6px, 2.2%, 13px)", color: "rgba(255,255,255,0.9)", lineHeight: 1.5, maxWidth: "80%" }}>
+            {slide.sub}
+          </div>
+        )}
+        {/* Dot indicators */}
+        <div style={{ display: "flex", gap: "3%", marginTop: "6%" }}>
+          {dots.map((_, i) => (
+            <div key={i} style={{ width: i === activeIdx ? "7%" : "2%", maxWidth: i === activeIdx ? 28 : 6, height: 4, borderRadius: 2, background: "white", opacity: i === activeIdx ? 0.8 : 0.3, transition: "all 0.3s" }} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -409,7 +438,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                   </Field>
 
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Live Preview</div>
-                  <SlidePreview slide={slide} />
+                  <SlidePreview slide={slide} allSlides={settings.slides} activeIdx={idx} />
                 </div>
 
               </div>
