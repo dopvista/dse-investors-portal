@@ -108,6 +108,24 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       slides: prev.slides.map((s, i) => i === idx ? { ...s, [field]: value } : s),
     }));
 
+  // Save current slide image as the new default for that slide
+  const handleSetAsDefault = async (idx) => {
+    const currentImage = settings.slides[idx]?.image;
+    if (!currentImage) { showToast("No image to set as default", "error"); return; }
+    const newDefaults = [...(settings.defaults || DEFAULT_SLIDES.map(s => ({ image: s.image })))];
+    newDefaults[idx] = { ...newDefaults[idx], image: currentImage };
+    const newSettings = { ...settings, defaults: newDefaults };
+    setSettings(newSettings);
+    try {
+      const tok = session?.access_token;
+      if (!tok) throw new Error("Session expired");
+      await sbSaveSiteSettings("login_page", newSettings, tok);
+      showToast(`Slide ${idx + 1} default image updated!`, "success");
+    } catch (err) {
+      showToast("Failed to save default: " + err.message, "error");
+    }
+  };
+
   const handleFileSelect = (e, idx) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -336,14 +354,31 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                   {/* Use default image */}
                   <div style={{ marginTop: 16 }}>
                     <button
-                      onClick={() => setSlideField(idx, "image", DEFAULT_SLIDES[idx]?.image || "")}
+                      onClick={() => setSlideField(idx, "image", settings.defaults?.[idx]?.image || DEFAULT_SLIDES[idx]?.image || "")}
                       style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}
                     >
                       🔄 Use Default Image
                     </button>
-                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>Restore the original stock photo for this slide</div>
+                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
+                      Restore this slide's saved default image
+                    </div>
+
+                  {/* Set as default image */}
+                  <div style={{ marginTop: 8 }}>
+                    <button
+                      onClick={() => handleSetAsDefault(idx)}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.green}40`, background: `${C.green}08`, color: C.green, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = `${C.green}15`; e.currentTarget.style.borderColor = C.green; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = `${C.green}08`; e.currentTarget.style.borderColor = `${C.green}40`; }}
+                    >
+                      ⭐ Set as Default Image
+                    </button>
+                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
+                      Save current image as default — used when resetting this slide
+                    </div>
+                  </div>
                   </div>
                 </div>
 
@@ -385,7 +420,16 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
         {/* Save / Reset */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingBottom: 16, flexShrink: 0 }}>
           <button
-            onClick={() => { setSettings(DEFAULT_SETTINGS); showToast("Reset to defaults", "success"); }}
+            onClick={() => {
+              // Use user-saved defaults if available, else fall back to Unsplash
+              const userDefaults = settings.defaults;
+              const resetSlides = DEFAULT_SLIDES.map((s, i) => ({
+                ...s,
+                image: userDefaults?.[i]?.image || s.image,
+              }));
+              setSettings({ ...DEFAULT_SETTINGS, slides: resetSlides, defaults: settings.defaults });
+              showToast("Reset to defaults", "success");
+            }}
             style={{ padding: "10px 20px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
