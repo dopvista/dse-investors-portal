@@ -210,7 +210,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const isRO   = role === "RO";
   const isSAAD = role === "SA" || role === "AD";
 
-  // Status filter defaults per role
   const defaultStatus = "All";
   const statusOptions = [["All","All Statuses"],["pending","🕐 Pending"],["confirmed","✅ Confirmed"],["verified","✔️ Verified"],["rejected","✖ Rejected"]];
 
@@ -228,17 +227,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const [actionModal,  setActionModal] = useState(null);
   const [formModal,    setFormModal]   = useState({ open: false, transaction: null });
   const [importModal,  setImportModal] = useState(false);
+  const [bulkDeleteModal, setBulkDeleteModal] = useState(null);
+  const [bulkUnverifyModal, setBulkUnverifyModal] = useState(null);
 
-  // NEW: state for bulk delete and bulk unverify modals
-  const [bulkDeleteModal, setBulkDeleteModal] = useState(null); // { ids: [] }
-  const [bulkUnverifyModal, setBulkUnverifyModal] = useState(null); // { ids: [] }
-
-  // ── CDS-scoped base list ─────────────────────────────────────────
   const myTransactions = useMemo(() =>
     cdsNumber ? transactions.filter(t => t.cds_number === cdsNumber) : transactions
   , [transactions, cdsNumber]);
 
-  // ── Stats ────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const buys  = myTransactions.filter(t => t.type === "Buy");
     const sells = myTransactions.filter(t => t.type === "Sell");
@@ -255,7 +250,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     };
   }, [myTransactions]);
 
-  // ── Filtered + sorted list ────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = myTransactions;
     if (typeFilter !== "All")   list = list.filter(t => t.type === typeFilter);
@@ -280,13 +274,11 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     return list;
   }, [myTransactions, typeFilter, statusFilter, search]);
 
-  // ── Pagination ────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage   = Math.min(page, totalPages);
   const paginated  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   const resetPage = () => setPage(1);
 
-  // ── Totals (from all filtered) ────────────────────────────────────
   const totals = useMemo(() => ({
     buyAmount:  filtered.filter(t => t.type==="Buy").reduce((s,t)  => s+Number(t.total||0),0),
     sellAmount: filtered.filter(t => t.type==="Sell").reduce((s,t) => s+Number(t.total||0),0),
@@ -295,7 +287,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     sellGrand:  filtered.filter(t => t.type==="Sell").reduce((s,t) => s+Number(t.total||0)+Number(t.fees||0),0),
   }), [filtered]);
 
-  // ── Selection (all users see checkboxes) ─────────────────────────
   const paginatedIds = paginated.map(t => t.id);
   const allSelected  = paginatedIds.length > 0 && paginatedIds.every(id => selected.has(id));
   const someSelected = paginatedIds.some(id => selected.has(id));
@@ -318,7 +309,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     setSelected(s);
   };
 
-  // ── Eligible selections for bulk actions ─────────────────────────
   const selectedPendingRejected = useMemo(() =>
     [...selected].filter(id => {
       const t = myTransactions.find(t => t.id === id);
@@ -345,7 +335,8 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     try {
       if (isEdit) {
         const rows = await sbUpdateTransaction(formModal.transaction.id, payload);
-        setTransactions(p => p.map(t => t.id === formModal.transaction.id ? (rows[0] || { ...t, ...payload }) : t));
+        if (!rows || rows.length === 0) throw new Error("Update failed – transaction may have been modified or you lack permission.");
+        setTransactions(p => p.map(t => t.id === formModal.transaction.id ? rows[0] : t));
         showToast("Transaction updated!", "success");
       } else {
         const rows = await sbInsertTransaction(payload);
@@ -359,39 +350,32 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const handleConfirm = (id, company, status) =>
     setActionModal({ action: status === "rejected" ? "confirm-rejected" : "confirm", ids: [id], company });
 
-  const doConfirm = async () => {
-    const ids = actionModal?.ids;
-    if (!ids?.length) return;
-    setActionModal(null);
-    // If bulk, we need to confirm each individually? For now, we assume the modal is for a single id only.
-    // For bulk confirm (DE), we will use a separate handler.
-    // This one is kept for single confirm.
-    const id = ids[0];
-    setConfirming(id);
-    try {
-      const rows = await sbConfirmTransaction(id);
-      setTransactions(p => p.map(t => t.id === id ? (rows[0] || { ...t, status: "confirmed" }) : t));
-      showToast("Transaction confirmed and sent to Verifier!", "success");
-    } catch (e) { showToast("Error: " + e.message, "error"); }
-    finally { setConfirming(null); }
-  };
-
-  // Bulk confirm for DE
+  // Bulk confirm (also used for single confirm via actionModal)
   const doBulkConfirm = async () => {
     const ids = actionModal?.ids;
     if (!ids?.length) return;
+
     setActionModal(null);
-    setConfirming('bulk'); // just to disable button
+    setConfirming('bulk');
+
     try {
-      // Confirm one by one
+      const updatedTransactions = [...myTransactions];
       for (const id of ids) {
-        await sbConfirmTransaction(id);
+        const rows = await sbConfirmTransaction(id);
+        if (!rows || rows.length === 0) {
+          throw new Error(`Transaction ${id} could not be confirmed. It may have been already confirmed or you no longer have permission.`);
+        }
+        const idx = updatedTransactions.findIndex(t => t.id === id);
+        if (idx !== -1) updatedTransactions[idx] = rows[0];
       }
-      setTransactions(p => p.map(t => ids.includes(t.id) ? { ...t, status: "confirmed" } : t));
+      setTransactions(updatedTransactions);
       setSelected(new Set());
       showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} confirmed!`, "success");
-    } catch (e) { showToast("Error: " + e.message, "error"); }
-    finally { setConfirming(null); }
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    } finally {
+      setConfirming(null);
+    }
   };
 
   const handleVerify = (ids, company) => setActionModal({ action: "verify", ids, company: company || null });
@@ -422,8 +406,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
   const handleUnVerify = async (id) => {
     try {
-      await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
-      setTransactions(p => p.map(t => t.id === id ? { ...t, status: "pending", verified_by: null, verified_at: null, rejection_comment: null } : t));
+      const rows = await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
+      if (!rows || rows.length === 0) throw new Error("Unverify failed – transaction may have been modified or you lack permission.");
+      setTransactions(p => p.map(t => t.id === id ? rows[0] : t));
       showToast("Transaction unverified and returned to Pending.", "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
   };
@@ -433,14 +418,23 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     const ids = bulkUnverifyModal?.ids;
     if (!ids?.length) return;
     setBulkUnverifyModal(null);
+
     try {
+      const updatedTransactions = [...myTransactions];
       for (const id of ids) {
-        await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
+        const rows = await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
+        if (!rows || rows.length === 0) {
+          throw new Error(`Transaction ${id} could not be unverified.`);
+        }
+        const idx = updatedTransactions.findIndex(t => t.id === id);
+        if (idx !== -1) updatedTransactions[idx] = rows[0];
       }
-      setTransactions(p => p.map(t => ids.includes(t.id) ? { ...t, status: "pending", verified_by: null, verified_at: null, rejection_comment: null } : t));
+      setTransactions(updatedTransactions);
       setSelected(new Set());
       showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} unverified.`, "success");
-    } catch (e) { showToast("Error: " + e.message, "error"); }
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    }
   };
 
   const handleDelete = async () => {
@@ -460,14 +454,17 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     const ids = bulkDeleteModal?.ids;
     if (!ids?.length) return;
     setBulkDeleteModal(null);
+
     try {
       for (const id of ids) {
-        await sbDeleteTransaction(id);
+        await sbDeleteTransaction(id); // throws if no rows affected
       }
       setTransactions(p => p.filter(t => !ids.includes(t.id)));
       setSelected(new Set());
       showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} deleted.`, "success");
-    } catch (e) { showToast("Error: " + e.message, "error"); }
+    } catch (e) {
+      showToast("Error: " + e.message, "error");
+    }
   };
 
   const handleImport = async (rows) => {
@@ -511,12 +508,10 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     ];
   }, [stats, selected.size, role]);
 
-  // ── Table visibility ──────────────────────────────────────────────
-  const showCheckbox = true;                // All users see checkboxes
+  const showCheckbox = true;
   const showStatus   = true;
-  const showActions  = !isRO;                // RO has no action column
+  const showActions  = !isRO;
 
-  // ── Render ────────────────────────────────────────────────────────
   return (
     <div style={{ height: "calc(100vh - 118px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
@@ -556,7 +551,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           action={actionModal.action}
           count={actionModal.ids.length}
           company={actionModal.company}
-          onConfirm={actionModal.action === "verify" ? doVerify : doBulkConfirm} // for confirm we use bulk handler if multiple
+          onConfirm={actionModal.action === "verify" ? doVerify : doBulkConfirm}
           onClose={() => setActionModal(null)}
         />
       )}
@@ -629,7 +624,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
               </>
             )}
 
-            {/* Verifier bulk actions (already present, but we ensure they appear after status filter) */}
+            {/* Verifier bulk actions */}
             {(isVR || isSAAD) && selectedConfirmed.length > 0 && (
               <>
                 <button
@@ -665,7 +660,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           <Btn variant="secondary" onClick={() => { setSearch(""); setTypeFilter("All"); setStatusFilter(defaultStatus); resetPage(); }}>Reset</Btn>
         )}
 
-        {/* Record / Import buttons (always at far right) */}
+        {/* Record / Import buttons */}
         {(isDE || isSAAD) && (
           <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, transaction: null })}>Record Transaction</Btn>
         )}
@@ -674,7 +669,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         )}
       </div>
 
-      {/* Table (unchanged except for the addition of bulk modals) */}
+      {/* Table */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <SectionCard
           title={`Transaction History (${filtered.length}${filtered.length !== stats.total ? ` of ${stats.total}` : ""})`}
@@ -741,11 +736,10 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       const isRejected  = t.status === "rejected";
                       const globalIdx   = (safePage - 1) * pageSize + i + 1;
 
-                      // Permissions
                       const canConfirm  = isDE && (isPending || isRejected);
                       const canEdit     = isSAAD || (isDE && (isPending || isRejected));
-                      const canDelete   = isDE && (isPending || isRejected); // DE: pending/rejected only; SA/AD: NO delete
-                      const canUnVerify = isSAAD && isVerified;              // SA/AD: reset verified → pending
+                      const canDelete   = isDE && (isPending || isRejected);
+                      const canUnVerify = isSAAD && isVerified;
                       const canVerify   = (isVR || isSAAD) && isConfirmed;
                       const canReject   = (isVR || isSAAD) && isConfirmed;
                       const isChecked  = selected.has(t.id);
@@ -824,7 +818,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     })}
                   </tbody>
 
-                  {/* Totals footer */}
                   <tfoot>
                     <tr style={{ background: `${C.navy}08`, borderTop: `2px solid ${C.gray200}` }}>
                       <td colSpan={showCheckbox ? 7 : 6}
