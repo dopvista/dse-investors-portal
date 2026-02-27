@@ -444,9 +444,13 @@ export async function sbUpdateTransaction(id, data) {
 export async function sbDeleteTransaction(id) {
   const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
     method:  "DELETE",
-    headers: { ...headers(token()), "Prefer": "return=minimal" },
+    headers: { ...headers(token()), "Prefer": "count=exact" },
   });
   if (!res.ok) throw new Error(await res.text());
+  // Content-Range: */0 means RLS silently blocked the delete — no rows affected
+  const range = res.headers.get("Content-Range") || "";
+  const affected = parseInt(range.split("/")[1] ?? "0", 10);
+  if (affected === 0) throw new Error("Delete was not permitted. You may not have permission to delete this transaction.");
   return true;
 }
 
