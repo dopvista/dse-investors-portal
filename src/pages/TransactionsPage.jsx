@@ -122,6 +122,32 @@ function ConfirmActionModal({ action, count = 1, company, onConfirm, onClose }) 
   );
 }
 
+// ── Simple confirmation modal for bulk delete / unverify ──────────
+function SimpleConfirmModal({ title, message, count, onConfirm, onClose }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(10,31,58,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: 20, backdropFilter: "blur(2px)" }}>
+      <div style={{ background: C.white, borderRadius: 16, width: "100%", maxWidth: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflow: "hidden" }}>
+        <div style={{ background: `linear-gradient(135deg, ${C.navy}, #1e3a5f)`, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ color: C.white, fontWeight: 700, fontSize: 15 }}>{title}</div>
+            <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, marginTop: 2 }}>{count} transaction{count > 1 ? "s" : ""} selected</div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: C.white, width: 28, height: 28, borderRadius: "50%", cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        <div style={{ padding: "20px" }}>
+          <div style={{ fontSize: 14, color: C.text, marginBottom: 16 }}>{message}</div>
+        </div>
+        <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "11px", borderRadius: 10, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={onConfirm} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: C.red, color: C.white, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Pagination component ───────────────────────────────────────────
 function Pagination({ page, totalPages, pageSize, setPage, setPageSize, total, filtered }) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -133,7 +159,6 @@ function Pagination({ page, totalPages, pageSize, setPage, setPageSize, total, f
   }
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderTop: `1px solid ${C.gray200}`, flexShrink: 0, background: `${C.navy}04` }}>
-      {/* Left: count + page size */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <span style={{ fontSize: 12, color: C.gray400 }}>
           Showing <strong style={{ color: C.text }}>{from}–{to}</strong> of <strong style={{ color: C.text }}>{filtered}</strong>
@@ -146,10 +171,9 @@ function Pagination({ page, totalPages, pageSize, setPage, setPageSize, total, f
           <option value={200}>200 / page</option>
         </select>
       </div>
-      {/* Right: page buttons */}
       {totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <PgBtn onClick={() => setPage(1)}        disabled={page === 1}          label="«" />
+          <PgBtn onClick={() => setPage(1)}       disabled={page === 1}          label="«" />
           <PgBtn onClick={() => setPage(p => p-1)} disabled={page === 1}         label="‹" />
           {pages.map((p, i) =>
             p === "..." ? (
@@ -188,31 +212,33 @@ export default function TransactionsPage({ companies, transactions, setTransacti
 
   // Status filter defaults per role
   const defaultStatus = "All";
-
-  // Status options per role
   const statusOptions = [["All","All Statuses"],["pending","🕐 Pending"],["confirmed","✅ Confirmed"],["verified","✔️ Verified"],["rejected","✖ Rejected"]];
 
-  const [search,        setSearch]       = useState("");
-  const [typeFilter,    setTypeFilter]   = useState("All");
+  const [search,       setSearch]      = useState("");
+  const [typeFilter,   setTypeFilter]  = useState("All");
   const [statusFilter, setStatusFilter]= useState(defaultStatus);
-  const [page,          setPage]         = useState(1);
-  const [pageSize,      setPageSize]     = useState(50);
-  const [selected,      setSelected]     = useState(new Set());
-  const [deleting,      setDeleting]     = useState(null);
-  const [confirming,    setConfirming]   = useState(null);
-  const [verifying,     setVerifying]    = useState(false);
+  const [page,         setPage]        = useState(1);
+  const [pageSize,     setPageSize]    = useState(50);
+  const [selected,     setSelected]    = useState(new Set());
+  const [deleting,     setDeleting]    = useState(null);
+  const [confirming,   setConfirming]  = useState(null);
+  const [verifying,    setVerifying]   = useState(false);
   const [rejectModal,  setRejectModal] = useState(null);
   const [deleteModal,  setDeleteModal] = useState(null);
   const [actionModal,  setActionModal] = useState(null);
-  const [formModal,     setFormModal]    = useState({ open: false, transaction: null });
+  const [formModal,    setFormModal]   = useState({ open: false, transaction: null });
   const [importModal,  setImportModal] = useState(false);
 
-  // ── CDS-scoped base list (all roles see only their CDS) ───────────
+  // NEW: state for bulk delete and bulk unverify modals
+  const [bulkDeleteModal, setBulkDeleteModal] = useState(null); // { ids: [] }
+  const [bulkUnverifyModal, setBulkUnverifyModal] = useState(null); // { ids: [] }
+
+  // ── CDS-scoped base list ─────────────────────────────────────────
   const myTransactions = useMemo(() =>
     cdsNumber ? transactions.filter(t => t.cds_number === cdsNumber) : transactions
   , [transactions, cdsNumber]);
 
-  // ── Stats — from full CDS-scoped list ────────────────────────────
+  // ── Stats ────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const buys  = myTransactions.filter(t => t.type === "Buy");
     const sells = myTransactions.filter(t => t.type === "Sell");
@@ -244,13 +270,12 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         t.status?.toLowerCase().includes(q)
       );
     }
-    // Sort: Pending / Confirmed / Rejected first (date desc), then Verified (date desc)
     const isActive = s => s === "pending" || s === "confirmed" || s === "rejected";
     list = [...list].sort((a, b) => {
       const aActive = isActive(a.status);
       const bActive = isActive(b.status);
-      if (aActive !== bActive) return aActive ? -1 : 1;            // active group first
-      return (b.date || "").localeCompare(a.date || "");            // date desc within group
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      return (b.date || "").localeCompare(a.date || "");
     });
     return list;
   }, [myTransactions, typeFilter, statusFilter, search]);
@@ -259,11 +284,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage   = Math.min(page, totalPages);
   const paginated  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
-
-  // Reset to page 1 when filters change
   const resetPage = () => setPage(1);
 
-  // ── Totals (from all filtered, not just current page) ─────────────
+  // ── Totals (from all filtered) ────────────────────────────────────
   const totals = useMemo(() => ({
     buyAmount:  filtered.filter(t => t.type==="Buy").reduce((s,t)  => s+Number(t.total||0),0),
     sellAmount: filtered.filter(t => t.type==="Sell").reduce((s,t) => s+Number(t.total||0),0),
@@ -272,15 +295,47 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     sellGrand:  filtered.filter(t => t.type==="Sell").reduce((s,t) => s+Number(t.total||0)+Number(t.fees||0),0),
   }), [filtered]);
 
-  // ── Selection (Visible to all, Actions restricted to role) ───────
-  const selectableIds = paginated.map(t => t.id);
-  const allSelected   = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
-  const someSelected  = selectableIds.some(id => selected.has(id));
-  const toggleAll = () => allSelected ? setSelected(new Set()) : setSelected(new Set(selectableIds));
-  const toggleOne = (id) => { const s = new Set(selected); s.has(id) ? s.delete(id) : s.add(id); setSelected(s); };
-  
-  // Confirmed specific selection (used for VR bulk actions)
-  const selectedConfirmed = [...selected].filter(id => myTransactions.find(t => t.id === id)?.status === "confirmed");
+  // ── Selection (all users see checkboxes) ─────────────────────────
+  const paginatedIds = paginated.map(t => t.id);
+  const allSelected  = paginatedIds.length > 0 && paginatedIds.every(id => selected.has(id));
+  const someSelected = paginatedIds.some(id => selected.has(id));
+
+  const toggleAll = () => {
+    if (allSelected) {
+      const newSelected = new Set(selected);
+      paginatedIds.forEach(id => newSelected.delete(id));
+      setSelected(newSelected);
+    } else {
+      const newSelected = new Set(selected);
+      paginatedIds.forEach(id => newSelected.add(id));
+      setSelected(newSelected);
+    }
+  };
+
+  const toggleOne = (id) => {
+    const s = new Set(selected);
+    s.has(id) ? s.delete(id) : s.add(id);
+    setSelected(s);
+  };
+
+  // ── Eligible selections for bulk actions ─────────────────────────
+  const selectedPendingRejected = useMemo(() =>
+    [...selected].filter(id => {
+      const t = myTransactions.find(t => t.id === id);
+      return t && (t.status === 'pending' || t.status === 'rejected');
+    }), [selected, myTransactions]);
+
+  const selectedConfirmed = useMemo(() =>
+    [...selected].filter(id => {
+      const t = myTransactions.find(t => t.id === id);
+      return t && t.status === 'confirmed';
+    }), [selected, myTransactions]);
+
+  const selectedVerified = useMemo(() =>
+    [...selected].filter(id => {
+      const t = myTransactions.find(t => t.id === id);
+      return t && t.status === 'verified';
+    }), [selected, myTransactions]);
 
   // ── Handlers ──────────────────────────────────────────────────────
   const handleFormConfirm = async ({ date, companyId, type, qty, price, fees, remarks, total }) => {
@@ -305,14 +360,36 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     setActionModal({ action: status === "rejected" ? "confirm-rejected" : "confirm", ids: [id], company });
 
   const doConfirm = async () => {
-    const id = actionModal?.ids?.[0];
-    if (!id) return;
+    const ids = actionModal?.ids;
+    if (!ids?.length) return;
     setActionModal(null);
+    // If bulk, we need to confirm each individually? For now, we assume the modal is for a single id only.
+    // For bulk confirm (DE), we will use a separate handler.
+    // This one is kept for single confirm.
+    const id = ids[0];
     setConfirming(id);
     try {
       const rows = await sbConfirmTransaction(id);
       setTransactions(p => p.map(t => t.id === id ? (rows[0] || { ...t, status: "confirmed" }) : t));
       showToast("Transaction confirmed and sent to Verifier!", "success");
+    } catch (e) { showToast("Error: " + e.message, "error"); }
+    finally { setConfirming(null); }
+  };
+
+  // Bulk confirm for DE
+  const doBulkConfirm = async () => {
+    const ids = actionModal?.ids;
+    if (!ids?.length) return;
+    setActionModal(null);
+    setConfirming('bulk'); // just to disable button
+    try {
+      // Confirm one by one
+      for (const id of ids) {
+        await sbConfirmTransaction(id);
+      }
+      setTransactions(p => p.map(t => ids.includes(t.id) ? { ...t, status: "confirmed" } : t));
+      setSelected(new Set());
+      showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} confirmed!`, "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
     finally { setConfirming(null); }
   };
@@ -343,12 +420,26 @@ export default function TransactionsPage({ companies, transactions, setTransacti
     showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} rejected.`, "error");
   };
 
-  // ── UnVerify (SA/AD only) — resets verified → pending ─────────────
   const handleUnVerify = async (id) => {
     try {
       await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
       setTransactions(p => p.map(t => t.id === id ? { ...t, status: "pending", verified_by: null, verified_at: null, rejection_comment: null } : t));
       showToast("Transaction unverified and returned to Pending.", "success");
+    } catch (e) { showToast("Error: " + e.message, "error"); }
+  };
+
+  // Bulk unverify for SA/AD
+  const doBulkUnverify = async () => {
+    const ids = bulkUnverifyModal?.ids;
+    if (!ids?.length) return;
+    setBulkUnverifyModal(null);
+    try {
+      for (const id of ids) {
+        await sbUpdateTransaction(id, { status: "pending", verified_by: null, verified_at: null, rejection_comment: null });
+      }
+      setTransactions(p => p.map(t => ids.includes(t.id) ? { ...t, status: "pending", verified_by: null, verified_at: null, rejection_comment: null } : t));
+      setSelected(new Set());
+      showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} unverified.`, "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
   };
 
@@ -362,6 +453,21 @@ export default function TransactionsPage({ companies, transactions, setTransacti
       showToast("Transaction deleted.", "success");
     } catch (e) { showToast("Error: " + e.message, "error"); }
     finally { setDeleting(null); }
+  };
+
+  // Bulk delete for DE
+  const doBulkDelete = async () => {
+    const ids = bulkDeleteModal?.ids;
+    if (!ids?.length) return;
+    setBulkDeleteModal(null);
+    try {
+      for (const id of ids) {
+        await sbDeleteTransaction(id);
+      }
+      setTransactions(p => p.filter(t => !ids.includes(t.id)));
+      setSelected(new Set());
+      showToast(`${ids.length} transaction${ids.length > 1 ? "s" : ""} deleted.`, "success");
+    } catch (e) { showToast("Error: " + e.message, "error"); }
   };
 
   const handleImport = async (rows) => {
@@ -406,9 +512,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
   }, [stats, selected.size, role]);
 
   // ── Table visibility ──────────────────────────────────────────────
-  const showCheckbox = true; // ALL roles can now see and use the checkboxes
-  const showStatus   = true;   // ALL roles see status
-  const showActions  = !isRO;
+  const showCheckbox = true;                // All users see checkboxes
+  const showStatus   = true;
+  const showActions  = !isRO;                // RO has no action column
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -420,6 +526,24 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           message={`Delete this ${deleteModal.type} transaction for "${deleteModal.company}"? This cannot be undone.`}
           onConfirm={handleDelete} onClose={() => setDeleteModal(null)} />
       )}
+      {bulkDeleteModal && (
+        <SimpleConfirmModal
+          title="Delete Transactions"
+          message={`Are you sure you want to delete ${bulkDeleteModal.ids.length} transaction(s)? This cannot be undone.`}
+          count={bulkDeleteModal.ids.length}
+          onConfirm={doBulkDelete}
+          onClose={() => setBulkDeleteModal(null)}
+        />
+      )}
+      {bulkUnverifyModal && (
+        <SimpleConfirmModal
+          title="Unverify Transactions"
+          message={`Are you sure you want to unverify ${bulkUnverifyModal.ids.length} transaction(s)? They will be moved back to Pending.`}
+          count={bulkUnverifyModal.ids.length}
+          onConfirm={doBulkUnverify}
+          onClose={() => setBulkUnverifyModal(null)}
+        />
+      )}
       {formModal.open && (
         <TransactionFormModal key={formModal.transaction?.id || "new"} transaction={formModal.transaction}
           companies={companies} onConfirm={handleFormConfirm} onClose={() => setFormModal({ open: false, transaction: null })} />
@@ -428,8 +552,13 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         <ImportTransactionsModal companies={companies} onImport={handleImport} onClose={() => setImportModal(false)} />
       )}
       {actionModal && (
-        <ConfirmActionModal action={actionModal.action} count={actionModal.ids.length} company={actionModal.company}
-          onConfirm={actionModal.action === "verify" ? doVerify : doConfirm} onClose={() => setActionModal(null)} />
+        <ConfirmActionModal
+          action={actionModal.action}
+          count={actionModal.ids.length}
+          company={actionModal.company}
+          onConfirm={actionModal.action === "verify" ? doVerify : doBulkConfirm} // for confirm we use bulk handler if multiple
+          onClose={() => setActionModal(null)}
+        />
       )}
       {rejectModal && (
         <RejectModal count={rejectModal.ids.length} onConfirm={handleReject} onClose={() => setRejectModal(null)} />
@@ -463,7 +592,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           }}>{t}</button>
         ))}
 
-        {/* Status filter — all roles */}
+        {/* Status filter */}
         <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); resetPage(); }} style={{
           padding: "5px 10px", borderRadius: 8,
           border: `1.5px solid ${statusFilter !== "All" ? C.navy : C.gray200}`,
@@ -478,24 +607,65 @@ export default function TransactionsPage({ companies, transactions, setTransacti
           {statusOptions.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
 
-        {/* VR bulk actions */}
-        {isVR && selectedConfirmed.length > 0 && (
+        {/* Bulk action buttons - appear only when at least one checkbox checked */}
+        {selected.size > 0 && (
           <>
-            <button onClick={() => handleVerify(selectedConfirmed)} disabled={verifying}
-              style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: verifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
-              {verifying ? "Verifying..." : `✔ Verify ${selectedConfirmed.length}`}
-            </button>
-            <button onClick={() => setRejectModal({ ids: selectedConfirmed })}
-              style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>
-              ✖ Reject {selectedConfirmed.length}
-            </button>
+            {/* Data Entry bulk actions */}
+            {isDE && selectedPendingRejected.length > 0 && (
+              <>
+                <button
+                  onClick={() => setActionModal({ action: "confirm", ids: selectedPendingRejected, company: null })}
+                  disabled={confirming === 'bulk'}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: "#1D4ED8", color: C.white, fontWeight: 700, fontSize: 12, cursor: confirming === 'bulk' ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}
+                >
+                  {confirming === 'bulk' ? "Confirming..." : `✅ Confirm ${selectedPendingRejected.length}`}
+                </button>
+                <button
+                  onClick={() => setBulkDeleteModal({ ids: selectedPendingRejected })}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  🗑️ Delete {selectedPendingRejected.length}
+                </button>
+              </>
+            )}
+
+            {/* Verifier bulk actions (already present, but we ensure they appear after status filter) */}
+            {(isVR || isSAAD) && selectedConfirmed.length > 0 && (
+              <>
+                <button
+                  onClick={() => handleVerify(selectedConfirmed)}
+                  disabled={verifying}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: "none", background: C.green, color: C.white, fontWeight: 700, fontSize: 12, cursor: verifying ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}
+                >
+                  {verifying ? "Verifying..." : `✔ Verify ${selectedConfirmed.length}`}
+                </button>
+                <button
+                  onClick={() => setRejectModal({ ids: selectedConfirmed })}
+                  style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid #FECACA`, background: C.redBg, color: C.red, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  ✖ Reject {selectedConfirmed.length}
+                </button>
+              </>
+            )}
+
+            {/* SA/AD bulk unverify */}
+            {isSAAD && selectedVerified.length > 0 && (
+              <button
+                onClick={() => setBulkUnverifyModal({ ids: selectedVerified })}
+                style={{ padding: "5px 14px", borderRadius: 8, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray600, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                ↩️ UnVerify {selectedVerified.length}
+              </button>
+            )}
           </>
         )}
 
+        {/* Reset button always at the end */}
         {(search || typeFilter !== "All" || statusFilter !== defaultStatus) && (
           <Btn variant="secondary" onClick={() => { setSearch(""); setTypeFilter("All"); setStatusFilter(defaultStatus); resetPage(); }}>Reset</Btn>
         )}
 
+        {/* Record / Import buttons (always at far right) */}
         {(isDE || isSAAD) && (
           <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, transaction: null })}>Record Transaction</Btn>
         )}
@@ -504,7 +674,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
         )}
       </div>
 
-      {/* Table */}
+      {/* Table (unchanged except for the addition of bulk modals) */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <SectionCard
           title={`Transaction History (${filtered.length}${filtered.length !== stats.total ? ` of ${stats.total}` : ""})`}
@@ -533,7 +703,9 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
                       {showCheckbox && (
                         <th style={{ padding: "7px 10px", borderBottom: `2px solid ${C.gray200}`, width: 36 }}>
-                          <input type="checkbox" checked={allSelected}
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
                             ref={el => el && (el.indeterminate = someSelected && !allSelected)}
                             onChange={toggleAll}
                             style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
@@ -579,7 +751,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                       const isChecked  = selected.has(t.id);
 
                       const rowActions = [
-                        ...(canEdit      ? [{ icon: "✏️", label: "Edit",      onClick: () => setFormModal({ open: true, transaction: t }) }] : []),
+                        ...(canEdit      ? [{ icon: "✏️", label: "Edit",     onClick: () => setFormModal({ open: true, transaction: t }) }] : []),
                         ...(canVerify    ? [{ icon: "✔️", label: "Verify",   onClick: () => handleVerify([t.id], t.company_name) }] : []),
                         ...(canReject    ? [{ icon: "✖",  label: "Reject",   danger: true, onClick: () => setRejectModal({ ids: [t.id] }) }] : []),
                         ...(canUnVerify  ? [{ icon: "↩️", label: "UnVerify", danger: true, onClick: () => handleUnVerify(t.id) }] : []),
@@ -594,8 +766,12 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                         >
                           {showCheckbox && (
                             <td style={{ padding: "7px 10px" }}>
-                              <input type="checkbox" checked={isChecked} onChange={() => toggleOne(t.id)}
-                                style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }} />
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => toggleOne(t.id)}
+                                style={{ cursor: "pointer", width: 15, height: 15, accentColor: C.navy }}
+                              />
                             </td>
                           )}
                           <td style={{ padding: "7px 10px", color: C.gray400, fontWeight: 600, fontSize: 12 }}>{globalIdx}</td>
@@ -648,7 +824,7 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                     })}
                   </tbody>
 
-                  {/* Totals footer — shows totals for ALL filtered rows, not just current page */}
+                  {/* Totals footer */}
                   <tfoot>
                     <tr style={{ background: `${C.navy}08`, borderTop: `2px solid ${C.gray200}` }}>
                       <td colSpan={showCheckbox ? 7 : 6}
@@ -670,7 +846,6 @@ export default function TransactionsPage({ companies, transactions, setTransacti
                 </table>
               </div>
 
-              {/* Pagination */}
               <Pagination
                 page={safePage}
                 totalPages={totalPages}
