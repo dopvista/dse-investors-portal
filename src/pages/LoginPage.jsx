@@ -104,7 +104,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
         overflow: "hidden",
         position: "relative",
       }}>
-        {/* LEFT: Image slider */}
+        {/* LEFT: Image slider — ultra-soft blurred separation */}
         <div style={{ 
           position: "relative", 
           background: ADVERTS[activeAd].color, 
@@ -112,9 +112,9 @@ export default function LoginPage({ onLogin, loginSettings }) {
           overflow: "hidden",
           aspectRatio: "4/3.07",
           height: "auto",
-          /* ── Ultra-soft, barely visible separation (exactly as requested) ── */
-          borderRight: "1px solid rgba(255,255,255,0.065)",
-          boxShadow: "2px 0 9px -4px rgba(0,0,0,0.18)"
+          /* ── Blurred & almost invisible separation (75%+ transparency + heavy blur) ── */
+          borderRight: "none",
+          boxShadow: "3px 0 35px -14px rgba(0,0,0,0.09)"
         }}>
           {ADVERTS.map((ad, i) => (
             <div 
