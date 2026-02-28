@@ -14,6 +14,8 @@ export default function LoginPage({ onLogin, loginSettings }) {
   // Use settings from DB, fall back to defaults
   const ADVERTS  = (loginSettings?.slides  || DEFAULT_SLIDES).map((s, i) => ({ ...s, id: i + 1 }));
   const INTERVAL = loginSettings?.interval || 5000;
+  // FIX 3: read animated flag (default true = animated)
+  const ANIMATED = loginSettings?.animated ?? true;
 
   const [view, setView]         = useState("login");
   const [email, setEmail]       = useState("");
@@ -85,14 +87,13 @@ export default function LoginPage({ onLogin, loginSettings }) {
         @keyframes fadeIn  { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
         @keyframes kenBurns { 0% { transform:scale(1); } 100% { transform:scale(1.1); } }
         @keyframes spin    { to { transform:rotate(360deg); } }
-        .ad-bg { animation: kenBurns 8s ease-in-out infinite alternate; }
+        ${ANIMATED ? ".ad-bg { animation: kenBurns 8s ease-in-out infinite alternate; }" : ""}
         input:focus { border-color: ${C.green} !important; }
         input::placeholder { color: #9ca3af; }
       `}</style>
 
       <div style={{
         width: "min(860px, 85vw)",
-        height: "min(420px, 80vh)",      /* ← fixed height instead of aspect ratio */
         background: "white",
         borderRadius: 28,
         boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)",
@@ -101,27 +102,31 @@ export default function LoginPage({ onLogin, loginSettings }) {
         overflow: "hidden",
       }}>
 
-        {/* ── LEFT: Photo slider ── */}
-        <div style={{ position: "relative", background: ADVERTS[activeAd].color, transition: "background 1s ease", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px" }}>
+        {/* ── LEFT: Photo slider — FIX 2: aspectRatio 16/9 matches settings preview */}
+        <div style={{ position: "relative", background: ADVERTS[activeAd].color, transition: "background 1s ease", overflow: "hidden", aspectRatio: "16/9" }}>
+          {/* FIX 3: conditionally apply ad-bg class for ken burns */}
           {ADVERTS.map((ad, i) => (
-            <div key={ad.id} className="ad-bg" style={{ position: "absolute", inset: 0, opacity: i === activeAd ? 1 : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
+            <div key={ad.id} className={ANIMATED ? "ad-bg" : ""} style={{ position: "absolute", inset: 0, opacity: i === activeAd ? 1 : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
           ))}
-          {/* Dynamic color overlay — 0 = no overlay */}
+          {/* Dynamic color overlay */}
           <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${ADVERTS[activeAd]?.color || "#064e3b"}${Math.round(((ADVERTS[activeAd]?.overlay ?? 0.35)) * 255).toString(16).padStart(2,"0")} 0%, transparent 100%)`, transition: "background 1s ease", pointerEvents: "none" }} />
-          <div style={{ position: "relative", zIndex: 2 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: C.gold, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>{ADVERTS[activeAd]?.label || "DSE Investors Portal"}</div>
+
+          {/* FIX 1: label div removed — only title + subtitle, vertically centered */}
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px", zIndex: 2 }}>
             {ADVERTS.map((ad, i) => (
               <div key={ad.id} style={{ display: i === activeAd ? "block" : "none", animation: "fadeIn 0.8s ease-out" }}>
                 <h2 style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 800, color: "white", margin: "0 0 6px 0", lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>{ad.title}</h2>
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", lineHeight: 1.5, maxWidth: 280, margin: 0 }}>{ad.sub}</p>
               </div>
             ))}
-            <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
-              {ADVERTS.map((_, i) => (
-                <button key={i} onClick={() => setActiveAd(i)} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}
-                  style={{ width: i === activeAd ? 28 : 6, height: 4, borderRadius: 2, background: "white", opacity: i === activeAd ? 0.8 : 0.3, transition: "all 0.3s", cursor: "pointer", border: "none", padding: 0 }} />
-              ))}
-            </div>
+          </div>
+
+          {/* FIX 4: dots pinned to bottom of image */}
+          <div style={{ position: "absolute", bottom: 20, left: 28, zIndex: 2, display: "flex", gap: 8 }}>
+            {ADVERTS.map((_, i) => (
+              <button key={i} onClick={() => setActiveAd(i)} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}
+                style={{ width: i === activeAd ? 28 : 6, height: 4, borderRadius: 2, background: "white", opacity: i === activeAd ? 0.8 : 0.3, transition: "all 0.3s", cursor: "pointer", border: "none", padding: 0 }} />
+            ))}
           </div>
         </div>
 
