@@ -95,15 +95,15 @@ export default function LoginPage({ onLogin, loginSettings }) {
       `}</style>
 
       <div style={{
-        width: "min(900px, 88vw)",
+        width: "min(950px, 91vw)",           // slightly wider card so picture gets extra space
         background: "white",
         borderRadius: 28,
         boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
         display: "grid",
-        gridTemplateColumns: "1.48fr 1fr",
+        gridTemplateColumns: "1.72fr 0.82fr",   // ← reduced login width + added to picture (image now has much more horizontal space)
         overflow: "hidden",
       }}>
-        {/* LEFT: Image slider — 100% fill, no margins, no extra movement */}
+        {/* LEFT: Image slider — now wider, so cover fills width perfectly with zero gaps */}
         <div style={{ 
           position: "relative", 
           background: ADVERTS[activeAd].color, 
@@ -178,15 +178,15 @@ export default function LoginPage({ onLogin, loginSettings }) {
           </div>
         </div>
 
-        {/* RIGHT: Form — original white background, original fonts, colors, wording, slightly reduced spacing for perfect fit */}
+        {/* RIGHT: Form — narrower now, still perfectly centered and readable */}
         <div style={{ 
           background: "white", 
           display: "flex", 
           flexDirection: "column", 
           justifyContent: "center", 
-          padding: "0 30px" 
+          padding: "0 26px" 
         }}>
-          <div style={{ width: "100%", maxWidth: "328px", margin: "0 auto" }}>
+          <div style={{ width: "100%", maxWidth: "312px", margin: "0 auto" }}>
             {/* Header */}
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <img src={logo} alt="DSE" style={{ width: 48, height: 48, borderRadius: 13, objectFit: "cover", marginBottom: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }} />
