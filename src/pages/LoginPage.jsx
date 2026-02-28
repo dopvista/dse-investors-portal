@@ -78,10 +78,10 @@ export default function LoginPage({ onLogin, loginSettings }) {
       fontFamily: "'Inter', sans-serif", padding: 16, boxSizing: "border-box", position: "relative", overflow: "hidden",
       background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)"
     }}>
-      {/* Subtle dot grid overlay (kept very light, no movement) */}
+      {/* Subtle dot grid overlay */}
       <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
 
-      {/* Glow orbs — kept soft and static */}
+      {/* Glow orbs */}
       <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
       <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
 
@@ -95,21 +95,22 @@ export default function LoginPage({ onLogin, loginSettings }) {
       `}</style>
 
       <div style={{
-        width: "min(950px, 91vw)",           // slightly wider card so picture gets extra space
+        width: "min(960px, 92vw)",
         background: "white",
         borderRadius: 28,
         boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
         display: "grid",
-        gridTemplateColumns: "1.72fr 0.82fr",   // ← reduced login width + added to picture (image now has much more horizontal space)
+        gridTemplateColumns: "1.68fr 0.85fr",
         overflow: "hidden",
       }}>
-        {/* LEFT: Image slider — now wider, so cover fills width perfectly with zero gaps */}
+        {/* LEFT: Image slider — now using 4:3 aspect ratio for better visual balance (taller, less wide) */}
         <div style={{ 
           position: "relative", 
           background: ADVERTS[activeAd].color, 
           transition: "background 1s ease", 
           overflow: "hidden",
-          height: "100%" 
+          aspectRatio: "4/3",           // ← CHANGED TO 4:3 as requested (more square/taller look)
+          height: "auto"                // lets the aspect ratio control the height naturally
         }}>
           {ADVERTS.map((ad, i) => (
             <div 
@@ -178,7 +179,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
           </div>
         </div>
 
-        {/* RIGHT: Form — narrower now, still perfectly centered and readable */}
+        {/* RIGHT: Form — kept narrow and clean */}
         <div style={{ 
           background: "white", 
           display: "flex", 
