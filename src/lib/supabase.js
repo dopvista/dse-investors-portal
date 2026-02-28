@@ -494,10 +494,54 @@ export async function sbDeleteTransaction(id) {
  * Returns companies where the given CDS has at least one transaction,
  * joined with that CDS group's own price from cds_prices.
  */
+/**
+ * sbGetPortfolio(cdsNumber)
+ *
+ * FAST PATH  — uses the get_cds_portfolio RPC (1 round-trip, DB-side DISTINCT + JOIN).
+ *              Run the SQL in supabase_indexes_and_rpc.sql to enable this path.
+ * FALLBACK   — if RPC is not yet deployed, falls back to 2 parallel round-trips
+ *              (companies + prices fetched concurrently after getting unique IDs).
+ *
+ * At scale (5 yr / 1000 investors):
+ *   Without RPC : Step 1 returns ~9 K tx rows to extract ~50 unique IDs — grows yearly.
+ *   With RPC    : 1 indexed JOIN returns exactly the portfolio rows needed — stays fast.
+ */
 export async function sbGetPortfolio(cdsNumber) {
   if (!cdsNumber) return [];
 
-  // Step 1 — fetch only company_id (drop unused company_name column)
+  // ── FAST PATH: single RPC call (DB does DISTINCT + JOIN) ──────────
+  try {
+    const rpcRes = await fetch(`${BASE}/rest/v1/rpc/get_cds_portfolio`, {
+      method:  "POST",
+      headers: headers(token()),
+      body:    JSON.stringify({ p_cds_number: cdsNumber }),
+    });
+
+    if (rpcRes.ok) {
+      const rows = await rpcRes.json();
+      // RPC returns shaped rows — map to the same structure the UI expects
+      return rows.map(r => ({
+        id:                      r.id,
+        name:                    r.name,
+        remarks:                 r.remarks,
+        created_at:              r.created_at,
+        cds_price:               r.cds_price               ?? null,
+        cds_previous_price:      r.cds_previous_price       ?? null,
+        cds_updated_by:          r.cds_updated_by           ?? null,
+        cds_updated_at:          r.cds_updated_at           ?? null,
+        cds_price_id:            r.cds_price_id             ?? null,
+        cds_price_created_by_id: r.cds_price_created_by_id  ?? null,
+      }));
+    }
+    // If RPC returns 404 (not deployed yet) fall through to fallback silently
+    if (rpcRes.status !== 404) throw new Error(await rpcRes.text());
+  } catch (e) {
+    // Network error or unexpected — fall through to fallback
+    if (!e.message?.includes("404")) console.warn("[sbGetPortfolio] RPC unavailable, using fallback:", e.message);
+  }
+
+  // ── FALLBACK: 2 parallel round-trips ─────────────────────────────
+  // Step 1 — fetch only company_id (minimal payload)
   const txRes = await fetch(
     `${BASE}/rest/v1/transactions?cds_number=eq.${encodeURIComponent(cdsNumber)}&select=company_id`,
     { headers: headers(token()) }
@@ -505,24 +549,23 @@ export async function sbGetPortfolio(cdsNumber) {
   if (!txRes.ok) throw new Error(await txRes.text());
   const txRows = await txRes.json();
 
-  // Deduplicate with Set — O(n), one-liner
+  // Deduplicate in JS — O(n) one-liner
   const ids = [...new Set(txRows.map(t => t.company_id).filter(Boolean))];
   if (!ids.length) return [];
 
   const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
 
-  // Step 2 — companies + prices fetched in PARALLEL (was sequential)
+  // Step 2 — companies + prices in PARALLEL
   const [coRes, prRes] = await Promise.all([
-    fetch(`${BASE}/rest/v1/companies?id=in.${idList}&order=name.asc`, { headers: headers(token()) }),
-    fetch(`${BASE}/rest/v1/cds_prices?cds_number=eq.${encodeURIComponent(cdsNumber)}`,  { headers: headers(token()) }),
+    fetch(`${BASE}/rest/v1/companies?id=in.${idList}&order=name.asc`,                     { headers: headers(token()) }),
+    fetch(`${BASE}/rest/v1/cds_prices?cds_number=eq.${encodeURIComponent(cdsNumber)}`,    { headers: headers(token()) }),
   ]);
   if (!coRes.ok) throw new Error(await coRes.text());
   if (!prRes.ok) throw new Error(await prRes.text());
 
-  // Parse both payloads in parallel too
   const [companies, prices] = await Promise.all([coRes.json(), prRes.json()]);
 
-  // O(n) lookup map via Object.fromEntries
+  // O(n) lookup map
   const priceMap = Object.fromEntries(prices.map(p => [p.company_id, p]));
 
   return companies.map(c => ({
