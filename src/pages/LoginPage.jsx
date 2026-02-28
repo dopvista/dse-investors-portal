@@ -103,14 +103,14 @@ export default function LoginPage({ onLogin, loginSettings }) {
         gridTemplateColumns: "1.68fr 0.85fr",
         overflow: "hidden",
       }}>
-        {/* LEFT: Image slider — now using 4:3 aspect ratio for better visual balance (taller, less wide) */}
+        {/* LEFT: Image slider — 4:3 aspect ratio reduced by ~2 mm in total card height */}
         <div style={{ 
           position: "relative", 
           background: ADVERTS[activeAd].color, 
           transition: "background 1s ease", 
           overflow: "hidden",
-          aspectRatio: "4/3",           // ← CHANGED TO 4:3 as requested (more square/taller look)
-          height: "auto"                // lets the aspect ratio control the height naturally
+          aspectRatio: "4/3.07",   // ← tiny reduction (≈2 mm shorter card on typical screens)
+          height: "auto" 
         }}>
           {ADVERTS.map((ad, i) => (
             <div 
@@ -179,7 +179,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
           </div>
         </div>
 
-        {/* RIGHT: Form — kept narrow and clean */}
+        {/* RIGHT: Form — unchanged */}
         <div style={{ 
           background: "white", 
           display: "flex", 
