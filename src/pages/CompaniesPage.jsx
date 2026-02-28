@@ -332,20 +332,10 @@ export default function CompaniesPage({ companies: globalCompanies, setCompanies
                           </td>
 
                           <td style={{ padding: "10px 16px", textAlign: "right" }}>
-                            {(() => {
-                              const priceLockedToOther = hasCdsPrice && c.cds_price_created_by_id && c.cds_price_created_by_id !== currentUserId && !isSAAD;
-                              return (
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
-                                  {priceLockedToOther && (
-                                    <span title={`Price set by ${c.cds_updated_by} — only they can change it`} style={{ fontSize: 12, color: C.gray400, cursor: "help" }}>🔒</span>
-                                  )}
-                                  <ActionMenu actions={[
-                                    ...(!priceLockedToOther ? [{ icon: "💰", label: updating === c.id ? "Updating..." : hasCdsPrice ? "Update Price" : "Set Price", onClick: () => setUpdateModal({ open: true, company: c }) }] : []),
-                                    { icon: "📈", label: loadingHistory === c.id ? "Loading..." : "Price History", onClick: () => viewHistory(c) },
-                                  ]} />
-                                </div>
-                              );
-                            })()}
+                            <ActionMenu actions={[
+                              { icon: "💰", label: updating === c.id ? "Updating..." : hasCdsPrice ? "Update Price" : "Set Price", onClick: () => setUpdateModal({ open: true, company: c }) },
+                              { icon: "📈", label: loadingHistory === c.id ? "Loading..." : "Price History", onClick: () => viewHistory(c) },
+                            ]} />
                           </td>
                         </tr>
                       );
