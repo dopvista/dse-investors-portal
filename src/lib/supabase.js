@@ -312,6 +312,11 @@ export async function sbAdminCreateUser(email, password, cdsNumber) {
 
 // ── TRANSACTIONS (workflow) ────────────────────────────────────────
 
+/**
+ * sbGetTransactions()
+ * Fetches all transactions visible to the current user.
+ * RLS on the DB scopes DE to their own rows automatically.
+ */
 export async function sbGetTransactions() {
   const url = `${BASE}/rest/v1/transactions?order=date.desc,created_at.desc`;
   const res = await fetch(url, { headers: headers(token()) });
@@ -319,6 +324,10 @@ export async function sbGetTransactions() {
   return res.json();
 }
 
+/**
+ * sbInsertTransaction(data)
+ * Creates a new transaction with status=pending and created_by=current user.
+ */
 export async function sbInsertTransaction(data) {
   const uid = getSession()?.user?.id;
   const res = await fetch(`${BASE}/rest/v1/transactions`, {
@@ -334,6 +343,11 @@ export async function sbInsertTransaction(data) {
   return res.json();
 }
 
+/**
+ * sbConfirmTransaction(id)
+ * DE confirms a pending or rejected transaction → status becomes confirmed.
+ * Requires RLS policy: DE can UPDATE own rows where status IN ('pending','rejected').
+ */
 export async function sbConfirmTransaction(id) {
   const uid  = getSession()?.user?.id;
   const body = { status: "confirmed" };
@@ -360,6 +374,12 @@ export async function sbConfirmTransaction(id) {
   return res.json();
 }
 
+/**
+ * sbVerifyTransactions(ids)
+ * VR/SA/AD verifies one or more confirmed transactions → status becomes verified.
+ * ids: array of transaction UUIDs.
+ * Requires RLS policy: VR/SA/AD can UPDATE rows where status = 'confirmed'.
+ */
 export async function sbVerifyTransactions(ids) {
   const uid    = getSession()?.user?.id;
   const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
@@ -387,6 +407,13 @@ export async function sbVerifyTransactions(ids) {
   return res.json();
 }
 
+/**
+ * sbRejectTransactions(ids, comment)
+ * VR/SA/AD rejects one or more confirmed transactions → status becomes rejected.
+ * ids:     array of transaction UUIDs.
+ * comment: required rejection reason (enforced by NOT NULL check in policy).
+ * Requires RLS policy: VR/SA/AD can UPDATE rows where status = 'confirmed'.
+ */
 export async function sbRejectTransactions(ids, comment) {
   const uid    = getSession()?.user?.id;
   const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
@@ -417,6 +444,12 @@ export async function sbRejectTransactions(ids, comment) {
   return res.json();
 }
 
+/**
+ * sbUpdateTransaction(id, data)
+ * General-purpose update — used by DE to edit pending/rejected transactions,
+ * and by SA/AD for unverify (status → pending) or any field correction.
+ * Requires appropriate RLS UPDATE policy for the caller's role.
+ */
 export async function sbUpdateTransaction(id, data) {
   const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
     method:  "PATCH",
@@ -436,12 +469,18 @@ export async function sbUpdateTransaction(id, data) {
   return res.json();
 }
 
+/**
+ * sbDeleteTransaction(id)
+ * Only allowed for SA/AD (any status) or DE (pending only).
+ * RLS enforces this server-side.
+ */
 export async function sbDeleteTransaction(id) {
   const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
     method:  "DELETE",
     headers: { ...headers(token()), "Prefer": "count=exact" },
   });
   if (!res.ok) throw new Error(await res.text());
+  // Content-Range: */0 means RLS silently blocked the delete — no rows affected
   const range    = res.headers.get("Content-Range") || "";
   const affected = parseInt(range.split("/")[1] ?? "0", 10);
   if (affected === 0) throw new Error("Delete was not permitted. You may not have permission to delete this transaction.");
@@ -452,14 +491,13 @@ export async function sbDeleteTransaction(id) {
 
 /**
  * sbGetPortfolio(cdsNumber)
- * OPTIMIZED: companies + prices fetched in parallel after getting IDs.
- * Previously made 3 sequential requests; now 2 round-trips total.
+ * Returns companies where the given CDS has at least one transaction,
+ * joined with that CDS group's own price from cds_prices.
  */
 export async function sbGetPortfolio(cdsNumber) {
   if (!cdsNumber) return [];
 
-  // Step 1 — get unique company IDs from transactions for this CDS
-  // Select only company_id to minimise payload size
+  // Step 1 — fetch only company_id (drop unused company_name column)
   const txRes = await fetch(
     `${BASE}/rest/v1/transactions?cds_number=eq.${encodeURIComponent(cdsNumber)}&select=company_id`,
     { headers: headers(token()) }
@@ -467,25 +505,24 @@ export async function sbGetPortfolio(cdsNumber) {
   if (!txRes.ok) throw new Error(await txRes.text());
   const txRows = await txRes.json();
 
-  // Deduplicate in JS — faster than asking DB to do it for small sets
+  // Deduplicate with Set — O(n), one-liner
   const ids = [...new Set(txRows.map(t => t.company_id).filter(Boolean))];
   if (!ids.length) return [];
 
   const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
 
-  // Step 2 — companies + prices in PARALLEL (key optimisation)
+  // Step 2 — companies + prices fetched in PARALLEL (was sequential)
   const [coRes, prRes] = await Promise.all([
     fetch(`${BASE}/rest/v1/companies?id=in.${idList}&order=name.asc`, { headers: headers(token()) }),
-    fetch(`${BASE}/rest/v1/cds_prices?cds_number=eq.${encodeURIComponent(cdsNumber)}`, { headers: headers(token()) }),
+    fetch(`${BASE}/rest/v1/cds_prices?cds_number=eq.${encodeURIComponent(cdsNumber)}`,  { headers: headers(token()) }),
   ]);
-
   if (!coRes.ok) throw new Error(await coRes.text());
   if (!prRes.ok) throw new Error(await prRes.text());
 
-  // Parse both responses in parallel too
+  // Parse both payloads in parallel too
   const [companies, prices] = await Promise.all([coRes.json(), prRes.json()]);
 
-  // O(n) lookup map — faster than array.find() in the map below
+  // O(n) lookup map via Object.fromEntries
   const priceMap = Object.fromEntries(prices.map(p => [p.company_id, p]));
 
   return companies.map(c => ({
@@ -501,6 +538,8 @@ export async function sbGetPortfolio(cdsNumber) {
 
 /**
  * sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newPrice, oldPrice, reason, updatedBy })
+ * Creates or updates the CDS-scoped price for a company.
+ * Also writes to cds_price_history for a full audit trail.
  */
 export async function sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newPrice, oldPrice, reason, updatedBy, datetime }) {
   const changeAmount  = oldPrice != null ? newPrice - oldPrice : null;
@@ -548,6 +587,7 @@ export async function sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newP
 
 /**
  * sbGetCdsPriceHistory(companyId, cdsNumber)
+ * Returns price history for a specific company scoped to a CDS number.
  */
 export async function sbGetCdsPriceHistory(companyId, cdsNumber) {
   const res = await fetch(
@@ -560,6 +600,7 @@ export async function sbGetCdsPriceHistory(companyId, cdsNumber) {
 
 /**
  * sbGetAllCompanies()
+ * SA-only: returns the full master company list for the register/manage view.
  */
 export async function sbGetAllCompanies() {
   const res = await fetch(`${BASE}/rest/v1/companies?order=name.asc`, {
@@ -573,6 +614,11 @@ export async function sbGetAllCompanies() {
 // SITE SETTINGS
 // ═══════════════════════════════════════════════════════
 
+/**
+ * sbGetSiteSettings(key)
+ * Reads one row from site_settings by key.
+ * Returns the parsed value object, or null if not found.
+ */
 export async function sbGetSiteSettings(key = "login_page") {
   const res = await fetch(
     `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}&select=value&limit=1`,
@@ -583,6 +629,10 @@ export async function sbGetSiteSettings(key = "login_page") {
   return rows[0]?.value ?? null;
 }
 
+/**
+ * sbSaveSiteSettings(key, value, userId)
+ * Upserts a site_settings row. Requires SA/AD session token.
+ */
 export async function sbSaveSiteSettings(key = "login_page", value, accessToken) {
   const tok = accessToken || token();
 
@@ -635,6 +685,11 @@ export async function sbSaveSiteSettings(key = "login_page", value, accessToken)
   return patched;
 }
 
+/**
+ * sbUploadSlideImage(blob, slideIndex, session)
+ * Uploads a slide image blob to the login-slides bucket.
+ * Returns the public URL.
+ */
 export async function sbUploadSlideImage(blob, slideIndex, session) {
   const tok      = session?.access_token || KEY;
   const filename = `slide-${slideIndex}.jpg`;
