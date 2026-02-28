@@ -42,7 +42,7 @@ function Field({ label, children, hint }) {
   );
 }
 
-// Updated to 4:3 (matches login page + crop modal)
+// 4:3 preview (matches login page)
 function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true }) {
   const overlayVal = slide.overlay ?? 0.35;
   const hexAlpha   = Math.round(overlayVal * 255).toString(16).padStart(2, "0");
@@ -52,7 +52,6 @@ function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true })
       position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3",
       background: slide.color || "#064e3b", border: `1px solid ${C.gray200}`,
     }}>
-      {/* Photo — full cover */}
       {slide.image && (
         <div style={{
           position: "absolute", inset: 0,
@@ -61,11 +60,9 @@ function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true })
           animation: animated ? "kenBurnsPreview 8s ease-in-out infinite alternate" : "none",
         }} />
       )}
-      {/* Color overlay gradient */}
       {overlayVal > 0 && (
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${slide.color || "#064e3b"}${hexAlpha} 0%, transparent 100%)` }} />
       )}
-      {/* Title + subtitle, vertically centered */}
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 6%", zIndex: 2 }}>
         {slide.title && (
           <div style={{ fontSize: "clamp(10px, 4.5%, 22px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: "3%", textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
@@ -78,7 +75,6 @@ function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true })
           </div>
         )}
       </div>
-      {/* Dots pinned to bottom — matches login page exactly */}
       <div style={{ position: "absolute", bottom: "8%", left: "6%", display: "flex", gap: 6, zIndex: 2 }}>
         {dots.map((_, i) => (
           <div key={i} style={{ width: i === activeIdx ? 28 : 6, height: 4, borderRadius: 2, background: "white", opacity: i === activeIdx ? 0.8 : 0.3, transition: "all 0.3s" }} />
@@ -317,11 +313,11 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
             <div key={idx} style={{ padding: "20px", animation: "fadeIn 0.2s ease" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
 
-                {/* Left column */}
+                {/* Left column — Slide Image with icons restored */}
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Slide Image</div>
 
-                  {/* Image upload box — now 4:3 */}
+                  {/* Image upload box with camera icon + text (restored exactly as original) */}
                   <div
                     onClick={() => !uploading && fileRefs[idx].current?.click()}
                     style={{ 
@@ -335,7 +331,14 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     onMouseLeave={e => e.currentTarget.style.borderColor = C.gray200}
                   >
                     {slide.image && <img src={slide.image} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} />}
-                    <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", opacity: uploading === idx ? 1 : 0, transition: "opacity 0.2s" }}>
+
+                    {/* Overlay with camera icon + text — always visible when not uploading */}
+                    <div style={{ 
+                      position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", 
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", 
+                      opacity: uploading === idx ? 1 : 0.85, 
+                      transition: "opacity 0.2s" 
+                    }}>
                       {uploading === idx ? (
                         <>
                           <div style={{ width: 24, height: 24, border: "3px solid rgba(255,255,255,0.3)", borderTop: "3px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite", marginBottom: 8 }} />
@@ -343,19 +346,20 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                         </>
                       ) : (
                         <>
-                          <div style={{ fontSize: 24, marginBottom: 6 }}>📷</div>
-                          <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>Click to change image</span>
-                          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, marginTop: 3 }}>JPG, PNG, WEBP — max 15MB</span>
+                          <div style={{ fontSize: 28, marginBottom: 8 }}>📷</div>
+                          <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>Click to change image</span>
+                          <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 10, marginTop: 4 }}>JPG, PNG, WEBP — max 15MB</span>
                         </>
                       )}
                     </div>
                   </div>
+
                   <input ref={fileRefs[idx]} type="file" accept="image/*" style={{ display: "none" }} onChange={e => handleFileSelect(e, idx)} />
                   <div style={{ fontSize: 11, color: C.gray400, marginTop: 6 }}>
                     Click to upload. Will be cropped to 4:3 (1280×960px).
                   </div>
 
-                  {/* Overlay color, intensity, default buttons — unchanged */}
+                  {/* Overlay color */}
                   <div style={{ marginTop: 16 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Overlay Color</div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -372,6 +376,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     </div>
                   </div>
 
+                  {/* Overlay intensity, default buttons, etc. (unchanged) */}
                   <div style={{ marginTop: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em" }}>Overlay Intensity</div>
