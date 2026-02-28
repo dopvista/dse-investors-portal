@@ -14,14 +14,13 @@ const inp = (extra = {}) => ({
 const focusGreen = e => e.target.style.borderColor = C.green;
 const blurGray   = e => e.target.style.borderColor = C.gray200;
 
-// overlay = 0 means NO color overlay (pure photo, useful for text-heavy slides)
-// overlay = 0.35 is default (subtle tint)
 const DEFAULT_SLIDES = [
   { label: "DSE Investors Portal", title: "Secure Investing",   sub: "Your assets are protected with DSE.",          image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1280&q=80", color: "#064e3b", overlay: 0.35 },
   { label: "DSE Investors Portal", title: "Smart Portfolio",    sub: "Track all your holdings in one place.",        image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1280&q=80", color: "#1e3a5f", overlay: 0.35 },
   { label: "DSE Investors Portal", title: "Real-time Data",     sub: "Stay ahead of the market with live insights.", image: "https://images.unsplash.com/photo-1642790551116-18a150d248c6?auto=format&fit=crop&w=1280&q=80", color: "#3b1f5e", overlay: 0.35 },
 ];
-const DEFAULT_SETTINGS = { interval: 5000, slides: DEFAULT_SLIDES };
+// FIX 3: animated added to DEFAULT_SETTINGS
+const DEFAULT_SETTINGS = { interval: 5000, animated: true, slides: DEFAULT_SLIDES };
 
 const COLOR_PRESETS = [
   { label: "Forest", value: "#064e3b" },
@@ -42,59 +41,57 @@ function Field({ label, children, hint }) {
   );
 }
 
-// overlay controls the tint gradient alpha (0 = no tint, pure photo)
-// SlidePreview mirrors the exact LoginPage layout:
-// - image full width, overlay gradient, text middle-left, dot indicators
-function SlidePreview({ slide, allSlides = [], activeIdx = 0 }) {
+// FIX 1: label removed from preview
+// FIX 2: aspectRatio 16/9 already correct (matches login page)
+// FIX 3: animated prop controls ken burns in preview
+// FIX 4: dots moved to absolute bottom
+function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true }) {
   const overlayVal = slide.overlay ?? 0.35;
   const hexAlpha   = Math.round(overlayVal * 255).toString(16).padStart(2, "0");
-  const dots        = allSlides.length > 0 ? allSlides : [slide];
+  const dots       = allSlides.length > 0 ? allSlides : [slide];
   return (
     <div style={{
       position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "16/9",
       background: slide.color || "#064e3b", border: `1px solid ${C.gray200}`,
     }}>
-      {/* Photo — full cover, same as login page */}
+      {/* Photo — full cover */}
       {slide.image && (
-        <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${slide.image})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `url(${slide.image})`,
+          backgroundSize: "cover", backgroundPosition: "center",
+          // FIX 3: ken burns only when animated
+          animation: animated ? "kenBurnsPreview 8s ease-in-out infinite alternate" : "none",
+        }} />
       )}
       {/* Color overlay gradient */}
       {overlayVal > 0 && (
         <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${slide.color || "#064e3b"}${hexAlpha} 0%, transparent 100%)` }} />
       )}
-      {/* Text — middle-left aligned with padding, matching login page */}
-      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 6%" }}>
-        {/* Label — fontSize 10, gold, uppercase, letterSpacing 1 */}
-        {slide.label && (
-          <div style={{ fontSize: "clamp(5px, 1.2%, 10px)", fontWeight: 600, color: "#D4AF37", letterSpacing: 1, marginBottom: "4%", textTransform: "uppercase" }}>
-            {slide.label}
-          </div>
-        )}
-        {/* Title — clamp(22px,3vw,30px) in real page, scaled proportionally */}
+      {/* FIX 1: label removed — only title + subtitle, vertically centered */}
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 6%", zIndex: 2 }}>
         {slide.title && (
           <div style={{ fontSize: "clamp(10px, 4.5%, 22px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: "3%", textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
             {slide.title}
           </div>
         )}
-        {/* Subtitle — fontSize 13 in real page */}
         {slide.sub && (
           <div style={{ fontSize: "clamp(6px, 2.2%, 13px)", color: "rgba(255,255,255,0.9)", lineHeight: 1.5, maxWidth: "80%" }}>
             {slide.sub}
           </div>
         )}
-        {/* Dot indicators */}
-        <div style={{ display: "flex", gap: "3%", marginTop: "6%" }}>
-          {dots.map((_, i) => (
-            <div key={i} style={{ width: i === activeIdx ? "7%" : "2%", maxWidth: i === activeIdx ? 28 : 6, height: 4, borderRadius: 2, background: "white", opacity: i === activeIdx ? 0.8 : 0.3, transition: "all 0.3s" }} />
-          ))}
-        </div>
+      </div>
+      {/* FIX 4: dots pinned to bottom — matches login page exactly */}
+      <div style={{ position: "absolute", bottom: "8%", left: "6%", display: "flex", gap: 6, zIndex: 2 }}>
+        {dots.map((_, i) => (
+          <div key={i} style={{ width: i === activeIdx ? 28 : 6, height: 4, borderRadius: 2, background: "white", opacity: i === activeIdx ? 0.8 : 0.3, transition: "all 0.3s" }} />
+        ))}
       </div>
     </div>
   );
 }
 
 export default function SystemSettingsPage({ role, session, showToast, setLoginSettings, companies, setCompanies, transactions }) {
-  // ── ALL hooks before any early return ─────────────────────────────
   const [activeMenu,  setActiveMenu]  = useState("companies");
   const [settings,    setSettings]    = useState(DEFAULT_SETTINGS);
   const [loading,     setLoading]     = useState(true);
@@ -112,7 +109,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
     (async () => {
       try {
         const data = await sbGetSiteSettings("login_page");
-        if (data) setSettings(data);
+        if (data) setSettings(prev => ({ ...DEFAULT_SETTINGS, ...data }));
       } catch (e) {
         showToast("Failed to load settings: " + e.message, "error");
       } finally {
@@ -121,7 +118,6 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
     })();
   }, []);
 
-  // Access guard AFTER hooks
   if (!["SA"].includes(role)) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
       <div style={{ textAlign: "center" }}>
@@ -138,12 +134,11 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       slides: prev.slides.map((s, i) => i === idx ? { ...s, [field]: value } : s),
     }));
 
-  // Save current slide image as the new default for that slide
   const handleSetAsDefault = async (idx) => {
     const currentImage = settings.slides[idx]?.image;
     if (!currentImage) { showToast("No image to set as default", "error"); return; }
     const newDefaults = [...(settings.defaults || DEFAULT_SLIDES.map(s => ({ ...s })))];
-    newDefaults[idx] = { ...settings.slides[idx] }; // save full slide as default
+    newDefaults[idx] = { ...settings.slides[idx] };
     const newSettings = { ...settings, defaults: newDefaults };
     setSettings(newSettings);
     try {
@@ -191,7 +186,6 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       if (!tok) throw new Error("Session expired — please refresh the page.");
       await sbSaveSiteSettings("login_page", settings, tok);
       if (setLoginSettings) setLoginSettings({ ...settings });
-      // Broadcast to all open tabs instantly — no refresh needed
       try {
         const bc = new BroadcastChannel("dse_site_settings");
         bc.postMessage({ key: "login_page", value: { ...settings } });
@@ -206,6 +200,8 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
   };
 
   const intervalSec = (settings.interval / 1000).toFixed(0);
+  // FIX 3: animated state
+  const animated = settings.animated ?? true;
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "40vh" }}>
@@ -220,8 +216,9 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
   return (
     <div style={{ height: "calc(100vh - 118px)", display: "flex", gap: 14, overflow: "hidden" }}>
       <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes spin   { to { transform: rotate(360deg); } }
+        @keyframes fadeIn          { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin            { to { transform: rotate(360deg); } }
+        @keyframes kenBurnsPreview { 0% { transform:scale(1); } 100% { transform:scale(1.08); } }
         .ss-scroll::-webkit-scrollbar { width: 4px; }
         .ss-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
         .ss-scroll { scrollbar-width: thin; scrollbar-color: #e5e7eb transparent; }
@@ -252,7 +249,6 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
       {/* ── Right content ── */}
       <div className="ss-scroll" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, paddingRight: 2 }}>
 
-        {/* ── Login Page sections ── */}
         {activeMenu === "login_page" && <>
 
         {/* Header */}
@@ -263,7 +259,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
           </div>
         </div>
 
-        {/* Rotation speed */}
+        {/* Rotation speed + FIX 3: animation toggle */}
         <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, padding: "18px 20px", flexShrink: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, marginBottom: 14 }}>⏱ Slide Rotation Speed</div>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -277,6 +273,27 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
             </div>
           </div>
           <div style={{ fontSize: 11, color: C.gray400, marginTop: 8 }}>Each slide stays visible for {intervalSec} seconds before rotating</div>
+
+          {/* FIX 3: Animation toggle */}
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.gray100}` }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.navy }}>🎬 Image Animation</div>
+                <div style={{ fontSize: 11, color: C.gray400, marginTop: 3 }}>
+                  {animated ? "Ken Burns — images slowly zoom in/out" : "Static — images stay fixed"}
+                </div>
+              </div>
+              <div
+                onClick={() => setSettings(prev => ({ ...prev, animated: !prev.animated }))}
+                style={{ width: 44, height: 24, borderRadius: 12, cursor: "pointer", background: animated ? C.green : C.gray200, position: "relative", transition: "background 0.25s", flexShrink: 0 }}
+              >
+                <div style={{ position: "absolute", top: 3, left: animated ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.25s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+              </div>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 11, color: animated ? C.green : C.gray400, fontWeight: 600 }}>
+              {animated ? "✓ Animated (Ken Burns on)" : "✗ Static (Ken Burns off)"}
+            </div>
+          </div>
         </div>
 
         {/* Slide tabs + editor */}
@@ -354,23 +371,17 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     </div>
                   </div>
 
-                  {/* Overlay intensity + no-overlay toggle */}
+                  {/* Overlay intensity */}
                   <div style={{ marginTop: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em" }}>Overlay Intensity</div>
-                      {/* No overlay checkbox */}
                       <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 11, color: (slide.overlay ?? 0.35) === 0 ? C.green : C.gray400, fontWeight: (slide.overlay ?? 0.35) === 0 ? 700 : 500 }}>
-                        <input
-                          type="checkbox"
-                          className="no-overlay-check"
+                        <input type="checkbox" className="no-overlay-check"
                           checked={(slide.overlay ?? 0.35) === 0}
-                          onChange={e => setSlideField(idx, "overlay", e.target.checked ? 0 : 0.35)}
-                        />
+                          onChange={e => setSlideField(idx, "overlay", e.target.checked ? 0 : 0.35)} />
                         No overlay
                       </label>
                     </div>
-
-                    {/* Slider — disabled when no-overlay is on */}
                     <div style={{ display: "flex", alignItems: "center", gap: 10, opacity: (slide.overlay ?? 0.35) === 0 ? 0.35 : 1, transition: "opacity 0.2s" }}>
                       <span style={{ fontSize: 11, color: C.gray400, whiteSpace: "nowrap" }}>0%</span>
                       <input type="range" min="0.05" max="1" step="0.05"
@@ -408,24 +419,19 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     >
                       🔄 Use Default Image
                     </button>
-                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
-                      Restore this slide's saved default image
-                    </div>
+                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>Restore this slide's saved default image</div>
 
-                  {/* Set as default image */}
-                  <div style={{ marginTop: 8 }}>
-                    <button
-                      onClick={() => handleSetAsDefault(idx)}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.green}40`, background: `${C.green}08`, color: C.green, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = `${C.green}15`; e.currentTarget.style.borderColor = C.green; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = `${C.green}08`; e.currentTarget.style.borderColor = `${C.green}40`; }}
-                    >
-                      ⭐ Set as Default Image
-                    </button>
-                    <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
-                      Save current image as default — used when resetting this slide
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        onClick={() => handleSetAsDefault(idx)}
+                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.green}40`, background: `${C.green}08`, color: C.green, fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = `${C.green}15`; e.currentTarget.style.borderColor = C.green; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = `${C.green}08`; e.currentTarget.style.borderColor = `${C.green}40`; }}
+                      >
+                        ⭐ Set as Default Image
+                      </button>
+                      <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>Save current image as default — used when resetting this slide</div>
                     </div>
-                  </div>
                   </div>
                 </div>
 
@@ -456,7 +462,8 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                   </Field>
 
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Live Preview</div>
-                  <SlidePreview slide={slide} allSlides={settings.slides} activeIdx={idx} />
+                  {/* FIX 3: pass animated to SlidePreview */}
+                  <SlidePreview slide={slide} allSlides={settings.slides} activeIdx={idx} animated={animated} />
                 </div>
 
               </div>
@@ -487,7 +494,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
           </div>
         )}
 
-        {/* Save / Reset — only shown for login_page */}
+        {/* Save / Reset */}
         {activeMenu === "login_page" && (
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, paddingBottom: 16, flexShrink: 0 }}>
             <button
@@ -517,7 +524,6 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
 
       </div>
 
-      {/* Crop modal */}
       {cropSrc && (
         <ImageCropModal
           imageSrc={cropSrc}
