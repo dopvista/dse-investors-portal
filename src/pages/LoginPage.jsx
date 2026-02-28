@@ -101,13 +101,13 @@ export default function LoginPage({ onLogin, loginSettings }) {
         gridTemplateColumns: "1.45fr 1fr",
         overflow: "hidden",
       }}>
-        {/* ── LEFT: Photo slider — 16:9 retained + reinforced full-bleed fill */}
+        {/* ── LEFT: Photo slider — FULL BLEED, ZERO MARGIN (aspectRatio removed) */}
         <div style={{ 
           position: "relative", 
           background: ADVERTS[activeAd].color, 
           transition: "background 1s ease", 
-          overflow: "hidden", 
-          aspectRatio: "16/10"   // ← CHANGED from 16/9 → this is the new size that makes your picture fill the entire area with zero margins/gaps (taller panel = less top/bottom cropping on most financial/chart images)
+          overflow: "hidden",
+          height: "100%"   // ← This + inset:0 + cover = image fills 100% of the card height with zero gaps
         }}>
           {ADVERTS.map((ad, i) => (
             <div 
@@ -177,7 +177,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
           </div>
         </div>
 
-        {/* ── RIGHT: Form — unchanged (perfectly aligned as before) */}
+        {/* ── RIGHT: Form — unchanged */}
         <div style={{ 
           background: "white", 
           display: "flex", 
