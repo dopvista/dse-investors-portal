@@ -13,23 +13,23 @@ const inp = (extra = {}) => ({
 });
 
 const focusGreen = e => e.target.style.borderColor = C.green;
-const blurGray = e => e.target.style.borderColor = C.gray200;
+const blurGray   = e => e.target.style.borderColor = C.gray200;
 
 const DEFAULT_SLIDES = [
-  { label: "DSE Investors Portal", title: "Secure Investing", sub: "Your assets are protected with DSE.", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1280&q=80", color: "#064e3b", overlay: 0.35 },
-  { label: "DSE Investors Portal", title: "Smart Portfolio", sub: "Track all your holdings in one place.", image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1280&q=80", color: "#1e3a5f", overlay: 0.35 },
-  { label: "DSE Investors Portal", title: "Real-time Data", sub: "Stay ahead of the market with live insights.", image: "https://images.unsplash.com/photo-1642790551116-18a150d248c6?auto=format&fit=crop&w=1280&q=80", color: "#3b1f5e", overlay: 0.35 },
+  { label: "DSE Investors Portal", title: "Secure Investing",   sub: "Your assets are protected with DSE.",          image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1280&q=80", color: "#064e3b", overlay: 0.35 },
+  { label: "DSE Investors Portal", title: "Smart Portfolio",    sub: "Track all your holdings in one place.",        image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1280&q=80", color: "#1e3a5f", overlay: 0.35 },
+  { label: "DSE Investors Portal", title: "Real-time Data",     sub: "Stay ahead of the market with live insights.", image: "https://images.unsplash.com/photo-1642790551116-18a150d248c6?auto=format&fit=crop&w=1280&q=80", color: "#3b1f5e", overlay: 0.35 },
 ];
 
 const DEFAULT_SETTINGS = { interval: 5000, animated: true, slides: DEFAULT_SLIDES };
 
 const COLOR_PRESETS = [
   { label: "Forest", value: "#064e3b" },
-  { label: "Navy", value: "#1e3a5f" },
+  { label: "Navy",   value: "#1e3a5f" },
   { label: "Purple", value: "#3b1f5e" },
-  { label: "Gold", value: "#78350f" },
-  { label: "Slate", value: "#1e293b" },
-  { label: "Teal", value: "#134e4a" },
+  { label: "Gold",   value: "#78350f" },
+  { label: "Slate",  value: "#1e293b" },
+  { label: "Teal",   value: "#134e4a" },
 ];
 
 function Field({ label, children, hint }) {
@@ -42,11 +42,11 @@ function Field({ label, children, hint }) {
   );
 }
 
-// FIX 2: aspectRatio changed to 4:3 (matches updated login page)
+// Updated to 4:3 (matches login page + crop modal)
 function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true }) {
   const overlayVal = slide.overlay ?? 0.35;
-  const hexAlpha = Math.round(overlayVal * 255).toString(16).padStart(2, "0");
-  const dots = allSlides.length > 0 ? allSlides : [slide];
+  const hexAlpha   = Math.round(overlayVal * 255).toString(16).padStart(2, "0");
+  const dots       = allSlides.length > 0 ? allSlides : [slide];
   return (
     <div style={{
       position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "4/3",
@@ -78,7 +78,7 @@ function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true })
           </div>
         )}
       </div>
-      {/* Dots pinned to bottom */}
+      {/* Dots pinned to bottom — matches login page exactly */}
       <div style={{ position: "absolute", bottom: "8%", left: "6%", display: "flex", gap: 6, zIndex: 2 }}>
         {dots.map((_, i) => (
           <div key={i} style={{ width: i === activeIdx ? 28 : 6, height: 4, borderRadius: 2, background: "white", opacity: i === activeIdx ? 0.8 : 0.3, transition: "all 0.3s" }} />
@@ -89,14 +89,14 @@ function SlidePreview({ slide, allSlides = [], activeIdx = 0, animated = true })
 }
 
 export default function SystemSettingsPage({ role, session, showToast, setLoginSettings, companies, setCompanies, transactions }) {
-  const [activeMenu, setActiveMenu] = useState("companies");
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [activeMenu,  setActiveMenu]  = useState("companies");
+  const [settings,    setSettings]    = useState(DEFAULT_SETTINGS);
+  const [loading,     setLoading]     = useState(true);
+  const [saving,      setSaving]      = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [cropSrc, setCropSrc] = useState(null);
-  const [cropIdx, setCropIdx] = useState(null);
-  const [uploading, setUploading] = useState(null);
+  const [cropSrc,     setCropSrc]     = useState(null);
+  const [cropIdx,     setCropIdx]     = useState(null);
+  const [uploading,   setUploading]   = useState(null);
   const fileRef0 = useRef();
   const fileRef1 = useRef();
   const fileRef2 = useRef();
@@ -212,8 +212,8 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
   return (
     <div style={{ height: "calc(100vh - 118px)", display: "flex", gap: 14, overflow: "hidden" }}>
       <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn          { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes spin            { to { transform: rotate(360deg); } }
         @keyframes kenBurnsPreview { 0% { transform:scale(1); } 100% { transform:scale(1.08); } }
         .ss-scroll::-webkit-scrollbar { width: 4px; }
         .ss-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
@@ -233,7 +233,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
             borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit",
             textAlign: "left", width: "100%", transition: "all 0.15s",
             background: activeMenu === item.id ? `${C.navy}10` : "transparent",
-            color: activeMenu === item.id ? C.navy : C.gray400,
+            color:      activeMenu === item.id ? C.navy : C.gray400,
             fontWeight: activeMenu === item.id ? 700 : 500, fontSize: 12,
             borderLeft: activeMenu === item.id ? `3px solid ${C.navy}` : "3px solid transparent",
           }}>
@@ -244,7 +244,9 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
 
       {/* Right content */}
       <div className="ss-scroll" style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, paddingRight: 2 }}>
+
         {activeMenu === "login_page" && <>
+
         {/* Header */}
         <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", flexShrink: 0 }}>
           <div style={{ background: "linear-gradient(135deg, #0c2548 0%, #0B1F3A 60%, #080f1e 100%)", padding: "16px 22px" }}>
@@ -291,6 +293,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
 
         {/* Slide tabs + editor */}
         <div style={{ background: C.white, border: `1px solid ${C.gray200}`, borderRadius: 14, overflow: "hidden", flexShrink: 0 }}>
+
           {/* Tabs */}
           <div style={{ display: "flex", borderBottom: `1px solid ${C.gray200}` }}>
             {settings.slides.map((s, i) => (
@@ -298,7 +301,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                 flex: 1, padding: "12px 8px", border: "none", cursor: "pointer",
                 fontFamily: "inherit", fontSize: 12,
                 fontWeight: activeSlide === i ? 700 : 500,
-                color: activeSlide === i ? C.navy : C.gray400,
+                color:      activeSlide === i ? C.navy : C.gray400,
                 background: activeSlide === i ? C.white : C.gray50,
                 borderBottom: activeSlide === i ? `2px solid ${C.navy}` : "2px solid transparent",
                 transition: "all 0.15s",
@@ -313,16 +316,17 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
           {settings.slides.map((slide, idx) => idx !== activeSlide ? null : (
             <div key={idx} style={{ padding: "20px", animation: "fadeIn 0.2s ease" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+
                 {/* Left column */}
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Slide Image</div>
-                  
+
                   {/* Image upload box — now 4:3 */}
                   <div
                     onClick={() => !uploading && fileRefs[idx].current?.click()}
                     style={{ 
                       position: "relative", borderRadius: 10, overflow: "hidden", 
-                      aspectRatio: "4/3",   // ← CHANGED TO 4:3
+                      aspectRatio: "4/3", 
                       background: slide.color || "#064e3b", 
                       border: `2px dashed ${C.gray200}`, 
                       cursor: uploading === idx ? "wait" : "pointer" 
@@ -351,7 +355,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     Click to upload. Will be cropped to 4:3 (1280×960px).
                   </div>
 
-                  {/* Overlay color */}
+                  {/* Overlay color, intensity, default buttons — unchanged */}
                   <div style={{ marginTop: 16 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Overlay Color</div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -368,7 +372,6 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     </div>
                   </div>
 
-                  {/* Overlay intensity */}
                   <div style={{ marginTop: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em" }}>Overlay Intensity</div>
@@ -400,7 +403,6 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                     </div>
                   </div>
 
-                  {/* Use default image */}
                   <div style={{ marginTop: 16 }}>
                     <button
                       onClick={() => {
@@ -417,6 +419,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                       🔄 Use Default Image
                     </button>
                     <div style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>Restore this slide's saved default image</div>
+
                     <div style={{ marginTop: 8 }}>
                       <button
                         onClick={() => handleSetAsDefault(idx)}
@@ -434,18 +437,21 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                 {/* Right column */}
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Slide Text</div>
+
                   <Field label="Label (small gold text)">
                     <input style={inp()} placeholder="e.g. DSE Investors Portal"
                       value={slide.label || ""}
                       onChange={e => setSlideField(idx, "label", e.target.value)}
                       onFocus={focusGreen} onBlur={blurGray} />
                   </Field>
+
                   <Field label="Title (large white text)">
                     <input style={inp()} placeholder="e.g. Secure Investing"
                       value={slide.title || ""}
                       onChange={e => setSlideField(idx, "title", e.target.value)}
                       onFocus={focusGreen} onBlur={blurGray} />
                   </Field>
+
                   <Field label="Subtitle">
                     <textarea style={{ ...inp(), resize: "vertical", minHeight: 64, lineHeight: 1.5 }}
                       placeholder="e.g. Your assets are protected with DSE."
@@ -453,13 +459,16 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
                       onChange={e => setSlideField(idx, "sub", e.target.value)}
                       onFocus={focusGreen} onBlur={blurGray} />
                   </Field>
+
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Live Preview</div>
                   <SlidePreview slide={slide} allSlides={settings.slides} activeIdx={idx} animated={animated} />
                 </div>
+
               </div>
             </div>
           ))}
         </div>
+
         </>}
 
         {/* Companies panel */}
@@ -510,6 +519,7 @@ export default function SystemSettingsPage({ role, session, showToast, setLoginS
             </button>
           </div>
         )}
+
       </div>
 
       {cropSrc && (
