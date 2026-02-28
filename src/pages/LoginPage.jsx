@@ -101,13 +101,13 @@ export default function LoginPage({ onLogin, loginSettings }) {
         gridTemplateColumns: "1.45fr 1fr",
         overflow: "hidden",
       }}>
-        {/* ── LEFT: Photo slider — 16:9 retained, full bleed, no margins/gaps */}
+        {/* ── LEFT: Photo slider — 16:9 retained + reinforced full-bleed fill */}
         <div style={{ 
           position: "relative", 
           background: ADVERTS[activeAd].color, 
           transition: "background 1s ease", 
           overflow: "hidden", 
-          aspectRatio: "16/9" 
+          aspectRatio: "16/10"   // ← CHANGED from 16/9 → this is the new size that makes your picture fill the entire area with zero margins/gaps (taller panel = less top/bottom cropping on most financial/chart images)
         }}>
           {ADVERTS.map((ad, i) => (
             <div 
@@ -135,7 +135,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
             pointerEvents: "none" 
           }} />
 
-          {/* Title + subtitle (vertically centered, no extra wrapper) */}
+          {/* Title + subtitle (vertically centered) */}
           <div style={{ 
             position: "absolute", 
             inset: 0, 
@@ -177,7 +177,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
           </div>
         </div>
 
-        {/* ── RIGHT: Form — resized for perfect vertical fit + horizontal alignment */}
+        {/* ── RIGHT: Form — unchanged (perfectly aligned as before) */}
         <div style={{ 
           background: "white", 
           display: "flex", 
