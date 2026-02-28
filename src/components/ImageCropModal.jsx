@@ -1,374 +1,258 @@
-// ── src/components/ImageCropModal.jsx ────────────────────────────
-// Updated: 4:3 crop tool for login slide images (matches login page + settings preview)
-// Output: 1280×960 JPEG
-import { useState, useRef, useEffect, useCallback } from "react";
-import { C } from "./ui";
+import { useState, useEffect } from "react";
+import { sbSignIn, sbResetPassword } from "../lib/supabase";
+import { C } from "../components/ui";
+import logo from "../assets/logo.jpg";
 
-const CANVAS_W = 560;
-const CANVAS_H = 420;          // ← 4:3
-const OUT_W = 1280;
-const OUT_H = 960;             // ← 4:3
-const ASPECT = 4 / 3;
+// Fallback slides used when no settings are loaded
+const DEFAULT_SLIDES = [
+  { id: 1, title: "Market Insights", sub: "Real-time data at your fingertips.", color: C.navy, image: "https://images.unsplash.com/photo-1611974717482-480928224732?auto=format&fit=crop&q=80" },
+  { id: 2, title: "Secure Investing", sub: "Your assets are protected with DSE.", color: "#064e3b", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80" },
+  { id: 3, title: "Digital Future", sub: "Managing investments has never been easier.", color: "#78350f", image: "https://images.unsplash.com/photo-1551288049-bbda38a5f9a2?auto=format&fit=crop&q=80" },
+];
 
-// Initial crop rect as fraction of canvas
-const INIT_FRAC = 0.82;
+export default function LoginPage({ onLogin, loginSettings }) {
+  // Use settings from DB, fall back to defaults
+  const ADVERTS = (loginSettings?.slides || DEFAULT_SLIDES).map((s, i) => ({ ...s, id: i + 1 }));
+  const INTERVAL = loginSettings?.interval || 5000;
+  const ANIMATED = loginSettings?.animated ?? true;
 
-export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCancel }) {
-  const canvasRef = useRef();
-  const imgRef = useRef(new Image());
-  const dragging = useRef(false);
-  const resizing = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0, rx: 0, ry: 0, rw: 0, rh: 0 });
-  const lastPinchDist = useRef(null);
+  const [view, setView] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [activeAd, setActiveAd] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
 
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [processing, setProcessing] = useState(false);
-  const [naturalSize, setNaturalSize] = useState({ w: 1, h: 1 });
-  const [layout, setLayout] = useState({ drawX: 0, drawY: 0, drawW: 0, drawH: 0, baseScale: 1 });
-
-  // Crop rect in canvas coords { x, y, w, h }
-  const [crop, setCrop] = useState({
-    x: CANVAS_W * (1 - INIT_FRAC) / 2,
-    y: CANVAS_H * (1 - INIT_FRAC) / 2,
-    w: CANVAS_W * INIT_FRAC,
-    h: CANVAS_W * INIT_FRAC / ASPECT,
-  });
-
-  // ── Load image ─────────────────────────────────────────────────
   useEffect(() => {
-    const img = imgRef.current;
-    img.onload = () => {
-      const baseScale = Math.min(CANVAS_W / img.naturalWidth, CANVAS_H / img.naturalHeight);
-      const drawW = img.naturalWidth * baseScale;
-      const drawH = img.naturalHeight * baseScale;
-      setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-      setLayout({ drawX: (CANVAS_W - drawW) / 2, drawY: (CANVAS_H - drawH) / 2, drawW, drawH, baseScale });
+    if (isHovering) return;
+    const t = setInterval(() => setActiveAd(p => (p + 1) % ADVERTS.length), INTERVAL);
+    return () => clearInterval(t);
+  }, [isHovering, INTERVAL, ADVERTS.length]);
 
-      // Init crop centered, 82% of canvas width, 4:3
-      const cw = Math.min(drawW * 0.92, CANVAS_W * INIT_FRAC);
-      const ch = cw / ASPECT;
-      setCrop({
-        x: (CANVAS_W - cw) / 2,
-        y: (CANVAS_H - ch) / 2,
-        w: cw,
-        h: ch,
-      });
-      setImgLoaded(true);
-    };
-    img.src = imageSrc;
-  }, [imageSrc]);
-
-  // ── Computed zoomed image dimensions ───────────────────────────
-  const currentScale = layout.baseScale * zoom;
-  const currentW = naturalSize.w * currentScale;
-  const currentH = naturalSize.h * currentScale;
-  const currentX = (CANVAS_W - currentW) / 2;
-  const currentY = (CANVAS_H - currentH) / 2;
-
-  // ── Clamp crop rect within image bounds, enforce 4:3 ───────────
-  const clampCrop = useCallback((x, y, w) => {
-    const minW = 80;
-    const maxW = currentW;
-    const safeW = Math.min(Math.max(w, minW), maxW);
-    const safeH = safeW / ASPECT;
-    const safeX = Math.max(currentX, Math.min(currentX + currentW - safeW, x));
-    const safeY = Math.max(currentY, Math.min(currentY + currentH - safeH, y));
-    return { x: safeX, y: safeY, w: safeW, h: safeH };
-  }, [currentW, currentH, currentX, currentY]);
-
-  // ── Corner handle positions ─────────────────────────────────────
-  const handles = (c) => [
-    { id: "tl", x: c.x, y: c.y },
-    { id: "tr", x: c.x + c.w, y: c.y },
-    { id: "bl", x: c.x, y: c.y + c.h },
-    { id: "br", x: c.x + c.w, y: c.y + c.h },
-  ];
-
-  // ── Mouse wheel zoom ───────────────────────────────────────────
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const handleWheel = (e) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.08 : 0.08;
-      setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 3));
-    };
-    canvas.addEventListener("wheel", handleWheel, { passive: false });
-    return () => canvas.removeEventListener("wheel", handleWheel);
-  }, []);
-
-  // Re-clamp crop when zoom changes
-  useEffect(() => {
-    setCrop(c => clampCrop(c.x, c.y, c.w));
-  }, [zoom, clampCrop]);
-
-  // ── Reset ──────────────────────────────────────────────────────
-  const handleReset = () => {
-    setZoom(1);
-    const cw = Math.min(layout.drawW * 0.92, CANVAS_W * INIT_FRAC);
-    const ch = cw / ASPECT;
-    setCrop({
-      x: (CANVAS_W - cw) / 2,
-      y: (CANVAS_H - ch) / 2,
-      w: cw, h: ch,
-    });
+  const inpStyle = {
+    width: "100%", padding: "9px 12px", borderRadius: 9, fontSize: 13,
+    border: `1.5px solid ${C.gray200}`, outline: "none", fontFamily: "'Inter', sans-serif",
+    background: C.gray50, color: C.text, transition: "border 0.2s", boxSizing: "border-box",
   };
 
-  // ── Draw ───────────────────────────────────────────────────────
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !imgLoaded) return;
-    const ctx = canvas.getContext("2d");
-    const c = crop;
+  const Label = ({ text }) => (
+    <label style={{ fontSize: 12, fontWeight: 600, color: C.text, display: "block", marginBottom: 5 }}>{text}</label>
+  );
 
-    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-
-    // Dark background
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-    // Dimmed full image
-    ctx.globalAlpha = 0.3;
-    ctx.drawImage(imgRef.current, currentX, currentY, currentW, currentH);
-    ctx.globalAlpha = 1.0;
-
-    // Dark overlay outside crop
-    ctx.fillStyle = "rgba(10,37,64,0.55)";
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-    // Bright image inside crop rect
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(c.x, c.y, c.w, c.h);
-    ctx.clip();
-    ctx.drawImage(imgRef.current, currentX, currentY, currentW, currentH);
-    ctx.restore();
-
-    // Crop border
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(c.x, c.y, c.w, c.h);
-
-    // Rule-of-thirds grid lines
-    ctx.save();
-    ctx.setLineDash([3, 3]);
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
-    ctx.lineWidth = 1;
-    for (let i = 1; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(c.x + (c.w / 3) * i, c.y);
-      ctx.lineTo(c.x + (c.w / 3) * i, c.y + c.h);
-      ctx.stroke();
-    }
-    for (let i = 1; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(c.x, c.y + (c.h / 3) * i);
-      ctx.lineTo(c.x + c.w, c.y + (c.h / 3) * i);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // Corner handles
-    handles(c).forEach(h => {
-      ctx.beginPath();
-      ctx.arc(h.x, h.y, 7, 0, Math.PI * 2);
-      ctx.fillStyle = C.green;
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2;
-      ctx.fill();
-      ctx.stroke();
-    });
-  }, [imgLoaded, crop, currentX, currentY, currentW, currentH]);
-
-  useEffect(() => { draw(); }, [draw]);
-
-  // ── Hit test helpers ───────────────────────────────────────────
-  const hitHandle = (px, py, c) => {
-    return handles(c).find(h => Math.hypot(px - h.x, py - h.y) < 14)?.id || null;
-  };
-  const hitInside = (px, py, c) =>
-    px >= c.x && px <= c.x + c.w && py >= c.y && py <= c.y + c.h;
-
-  // ── Pointer events ─────────────────────────────────────────────
-  const getPos = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const scaleX = CANVAS_W / rect.width;
-    const scaleY = CANVAS_H / rect.height;
-    const touch = e.touches ? e.touches[0] : e;
-    return {
-      x: (touch.clientX - rect.left) * scaleX,
-      y: (touch.clientY - rect.top) * scaleY,
-    };
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(""); setSuccess("");
+    if (!email.trim() || !password.trim()) return setError("Email and password are required");
+    setLoading(true);
+    try { const data = await sbSignIn(email.trim(), password); onLogin(data); }
+    catch (err) { setError(err.message || "Invalid email or password"); }
+    finally { setLoading(false); }
   };
 
-  const handlePointerDown = (e) => {
-    if (e.touches?.length === 2) {
-      lastPinchDist.current = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      return;
-    }
-    const { x, y } = getPos(e);
-    const handle = hitHandle(x, y, crop);
-    if (handle) {
-      resizing.current = handle;
-      dragStart.current = { x, y, rx: crop.x, ry: crop.y, rw: crop.w, rh: crop.h };
-    } else if (hitInside(x, y, crop)) {
-      dragging.current = true;
-      dragStart.current = { x, y, rx: crop.x, ry: crop.y, rw: crop.w, rh: crop.h };
-    }
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setError(""); setSuccess("");
+    if (!email.trim()) return setError("Enter your email address");
+    setLoading(true);
+    try { await sbResetPassword(email.trim()); setSuccess("Password reset email sent. Check your inbox."); }
+    catch (err) { setError(err.message || "Password reset failed"); }
+    finally { setLoading(false); }
   };
 
-  const handlePointerMove = (e) => {
-    if (e.touches?.length === 2 && lastPinchDist.current !== null) {
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const delta = (dist - lastPinchDist.current) / 200;
-      setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 3));
-      lastPinchDist.current = dist;
-      return;
-    }
-    if (!dragging.current && !resizing.current) return;
-
-    const { x, y } = getPos(e);
-    const dx = x - dragStart.current.x;
-    const dy = y - dragStart.current.y;
-    const { rx, ry, rw, rh } = dragStart.current;
-
-    if (dragging.current) {
-      setCrop(clampCrop(rx + dx, ry + dy, rw));
-    } else {
-      // Resize from corner — maintain 4:3 by driving width
-      const h = resizing.current;
-      let newW = rw;
-      if (h === "br") newW = rw + dx;
-      if (h === "bl") newW = rw - dx;
-      if (h === "tr") newW = rw + dx;
-      if (h === "tl") newW = rw - dx;
-      newW = Math.max(80, newW);
-      const newH = newW / ASPECT;
-      let newX = rx;
-      let newY = ry;
-      if (h === "bl" || h === "tl") newX = rx + rw - newW;
-      if (h === "tr" || h === "tl") newY = ry + rh - newH;
-      setCrop(clampCrop(newX, newY, newW));
-    }
-  };
-
-  const handlePointerUp = () => {
-    dragging.current = false;
-    resizing.current = false;
-    lastPinchDist.current = null;
-  };
-
-  // ── Confirm — extract crop to 1280×960 ────────────────────────
-  const handleConfirm = () => {
-    setProcessing(true);
-    const c = crop;
-
-    const srcX = (c.x - currentX) / currentScale;
-    const srcY = (c.y - currentY) / currentScale;
-    const srcW = c.w / currentScale;
-    const srcH = c.h / currentScale;
-
-    const out = document.createElement("canvas");
-    out.width = OUT_W;
-    out.height = OUT_H;
-    const ctx = out.getContext("2d");
-    ctx.drawImage(imgRef.current, srcX, srcY, srcW, srcH, 0, 0, OUT_W, OUT_H);
-    out.toBlob(blob => onConfirm(blob), "image/jpeg", 0.92);
-  };
+  const SubmitBtn = ({ label, loadingLabel }) => (
+    <button type="submit" disabled={loading} style={{
+      width: "100%", padding: "10px", borderRadius: 9, border: "none",
+      background: loading ? C.gray200 : C.green, color: C.white,
+      fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer",
+      fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+    }}>
+      {loading ? <><div style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />{loadingLabel}</> : label}
+    </button>
+  );
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(10,37,64,0.75)",
-      zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
-      backdropFilter: "blur(3px)",
+    <div style={{ 
+      minHeight: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", 
+      fontFamily: "'Inter', sans-serif", padding: 16, boxSizing: "border-box", position: "relative", overflow: "hidden",
+      background: "radial-gradient(ellipse at 60% 40%, #0c2548 0%, #0B1F3A 50%, #080f1e 100%)"
     }}>
+      {/* Subtle dot grid overlay */}
+      <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)", backgroundSize: "28px 28px", pointerEvents: "none" }} />
+
+      {/* Glow orbs */}
+      <div style={{ position: "absolute", top: "-80px", right: "-80px", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,132,61,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: "-100px", left: "-60px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)", pointerEvents: "none" }} />
+
       <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .img-zoom-slider { -webkit-appearance: none; width: 100%; height: 5px; background: ${C.gray200}; border-radius: 5px; outline: none; }
-        .img-zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: ${C.green}; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes kenBurns { 0% { transform:scale(1); } 100% { transform:scale(1.08); } }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        ${ANIMATED ? ".ad-bg { animation: kenBurns 12s ease-in-out infinite alternate; }" : ""}
+        input:focus { border-color: ${C.green} !important; }
+        input::placeholder { color: #9ca3af; }
       `}</style>
 
       <div style={{
-        background: C.white, borderRadius: 18, overflow: "hidden",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.45)", animation: "fadeIn 0.22s ease",
-        width: CANVAS_W,
+        width: "min(960px, 92vw)",
+        background: "white",
+        borderRadius: 28,
+        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+        display: "grid",
+        gridTemplateColumns: "1.68fr 0.85fr",
+        overflow: "hidden",
       }}>
-        {/* Header */}
-        <div style={{ background: "linear-gradient(135deg, #0c2548 0%, #0B1F3A 60%, #080f1e 100%)", padding: "16px 22px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ color: C.white, fontWeight: 800, fontSize: 15 }}>
-              Crop Slide {slideIndex} Image
-            </div>
-            <div style={{ color: C.gold, fontSize: 11, marginTop: 2, fontWeight: 500 }}>
-              Drag to reposition · Corner handles to resize · Scroll to zoom · Output: 1280×960
-            </div>
+        {/* LEFT: Image slider — 4:3 aspect ratio reduced by ~2 mm in total card height */}
+        <div style={{ 
+          position: "relative", 
+          background: ADVERTS[activeAd].color, 
+          transition: "background 1s ease", 
+          overflow: "hidden",
+          aspectRatio: "4/3.07",   // ← tiny reduction (≈2 mm shorter card on typical screens)
+          height: "auto" 
+        }}>
+          {ADVERTS.map((ad, i) => (
+            <div 
+              key={ad.id} 
+              className={ANIMATED ? "ad-bg" : ""} 
+              style={{ 
+                position: "absolute", 
+                inset: 0, 
+                opacity: i === activeAd ? 1 : 0, 
+                backgroundImage: `url(${ad.image})`, 
+                backgroundSize: "cover", 
+                backgroundPosition: "center", 
+                backgroundRepeat: "no-repeat",
+                transition: "opacity 1.2s ease" 
+              }} 
+            />
+          ))}
+
+          {/* Simple color overlay */}
+          <div style={{ 
+            position: "absolute", 
+            inset: 0, 
+            background: `linear-gradient(135deg, ${ADVERTS[activeAd]?.color || "#064e3b"}${Math.round(((ADVERTS[activeAd]?.overlay ?? 0.35)) * 255).toString(16).padStart(2,"0")} 0%, transparent 100%)`, 
+            pointerEvents: "none" 
+          }} />
+
+          {/* Title + subtitle */}
+          <div style={{ 
+            position: "absolute", 
+            inset: 0, 
+            display: "flex", 
+            flexDirection: "column", 
+            justifyContent: "center", 
+            padding: "0 28px", 
+            zIndex: 2 
+          }}>
+            {ADVERTS.map((ad, i) => (
+              <div key={ad.id} style={{ display: i === activeAd ? "block" : "none", animation: "fadeIn 0.8s ease-out" }}>
+                <h2 style={{ fontSize: "clamp(22px, 3vw, 29px)", fontWeight: 800, color: "white", margin: "0 0 6px 0", lineHeight: 1.2 }}>{ad.title}</h2>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", lineHeight: 1.5, maxWidth: 270, margin: 0 }}>{ad.sub}</p>
+              </div>
+            ))}
           </div>
-          <button onClick={onCancel} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: C.white, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+
+          {/* Dots */}
+          <div style={{ position: "absolute", bottom: 20, left: 28, zIndex: 2, display: "flex", gap: 8 }}>
+            {ADVERTS.map((_, i) => (
+              <button 
+                key={i} 
+                onClick={() => setActiveAd(i)} 
+                onMouseEnter={() => setIsHovering(true)} 
+                onMouseLeave={() => setIsHovering(false)}
+                style={{ 
+                  width: i === activeAd ? 28 : 6, 
+                  height: 4, 
+                  borderRadius: 2, 
+                  background: "white", 
+                  opacity: i === activeAd ? 0.85 : 0.35, 
+                  transition: "all 0.3s", 
+                  cursor: "pointer", 
+                  border: "none", 
+                  padding: 0 
+                }} 
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Canvas */}
-        <div style={{ background: "#111827", lineHeight: 0, position: "relative" }}>
-          {imgLoaded ? (
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_W} height={CANVAS_H}
-              onMouseDown={handlePointerDown}
-              onMouseMove={handlePointerMove}
-              onMouseUp={handlePointerUp}
-              onMouseLeave={handlePointerUp}
-              onTouchStart={handlePointerDown}
-              onTouchMove={handlePointerMove}
-              onTouchEnd={handlePointerUp}
-              style={{ display: "block", cursor: "crosshair", touchAction: "none", width: "100%" }}
-            />
-          ) : (
-            <div style={{ width: CANVAS_W, height: CANVAS_H, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div style={{ color: "#9ca3af", fontSize: 13 }}>Loading image...</div>
+        {/* RIGHT: Form — unchanged */}
+        <div style={{ 
+          background: "white", 
+          display: "flex", 
+          flexDirection: "column", 
+          justifyContent: "center", 
+          padding: "0 26px" 
+        }}>
+          <div style={{ width: "100%", maxWidth: "312px", margin: "0 auto" }}>
+            {/* Header */}
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <img src={logo} alt="DSE" style={{ width: 48, height: 48, borderRadius: 13, objectFit: "cover", marginBottom: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }} />
+              <div style={{ fontWeight: 800, fontSize: 16, color: C.text }}>DSE Investors Portal</div>
+              <div style={{ fontSize: 12, color: C.gray400, marginTop: 3 }}>{view === "login" ? "Sign in to your account" : "Reset your password"}</div>
+              {view === "reset" && (
+                <div style={{ marginTop: 8, background: `${C.gold}18`, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: "8px 10px", fontSize: 11, color: C.gold, fontWeight: 600 }}>
+                  Enter your email to receive a password reset link
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div style={{ padding: "14px 22px", borderTop: `1px solid ${C.gray100}` }}>
-          {/* Zoom slider */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
-              🔍 Zoom
-            </span>
-            <input
-              type="range" min="0.5" max="3" step="0.01"
-              value={zoom} className="img-zoom-slider"
-              onChange={e => setZoom(parseFloat(e.target.value))}
-            />
-            <span style={{ fontSize: 11, color: C.gray400, minWidth: 32 }}>{Math.round(zoom * 100)}%</span>
-            <button onClick={handleReset} style={{ background: "none", border: "none", color: C.green, fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline", padding: 0, whiteSpace: "nowrap", fontFamily: "inherit" }}>Reset</button>
-          </div>
+            {/* Messages */}
+            {error && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: 10, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{error}</div>}
+            {success && <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", borderRadius: 10, padding: "8px 12px", fontSize: 12, marginBottom: 12 }}>{success}</div>}
 
-          {/* Buttons */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 11, color: C.gray400 }}>4:3 · JPEG 1280×960</span>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={onCancel} style={{ padding: "9px 18px", borderRadius: 9, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#ef4444"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
-                Cancel
-              </button>
-              <button onClick={handleConfirm} disabled={!imgLoaded || processing} style={{ padding: "9px 22px", borderRadius: 9, border: "none", background: !imgLoaded || processing ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 13, cursor: !imgLoaded || processing ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8, boxShadow: !imgLoaded || processing ? "none" : `0 4px 12px ${C.green}44` }}>
-                {processing ? (
-                  <>
-                    <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                    Processing...
-                  </>
-                ) : "✓ Use This Image"}
-              </button>
+            {/* Login form */}
+            {view === "login" && (
+              <form onSubmit={handleLogin}>
+                <div style={{ marginBottom: 12 }}>
+                  <Label text="Email Address" />
+                  <input style={inpStyle} type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: C.text }}>Password</label>
+                    <button type="button" onClick={() => { setView("reset"); setError(""); setSuccess(""); }}
+                      style={{ fontSize: 11, color: C.green, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, padding: 0 }}>
+                      Forgot password?
+                    </button>
+                  </div>
+                  <input style={inpStyle} type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+                </div>
+                <SubmitBtn label="Sign In →" loadingLabel="Signing in..." />
+              </form>
+            )}
+
+            {/* Reset form */}
+            {view === "reset" && (
+              <form onSubmit={handleReset}>
+                <div style={{ marginBottom: 16 }}>
+                  <Label text="Email Address" />
+                  <input style={inpStyle} type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+                </div>
+                <div style={{ marginBottom: 8 }}>
+                  <SubmitBtn label="Send Reset Email" loadingLabel="Sending..." />
+                </div>
+                <button type="button" onClick={() => { setView("login"); setError(""); setSuccess(""); }}
+                  style={{ width: "100%", padding: "9px", borderRadius: 9, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.navy; e.currentTarget.style.color = C.navy; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
+                  ← Back to Sign In
+                </button>
+              </form>
+            )}
+
+            {/* Footer */}
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.gray200}` }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 6 }}>
+                <div style={{ width: 6, height: 6, background: C.green, borderRadius: "50%", flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: C.gray400, fontWeight: 500 }}>Manage Your Investments Digitally</span>
+              </div>
+              <div style={{ textAlign: "center", fontSize: 10, color: C.gray400, fontWeight: 500, letterSpacing: "0.03em" }}>
+                © 2026 <span style={{ color: C.navy, fontWeight: 700 }}>Dopvista Creative Hub</span>. All rights reserved.
+              </div>
             </div>
           </div>
         </div>
