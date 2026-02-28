@@ -197,7 +197,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
               <div style={{ fontSize: 12, color: C.gray400, marginTop: 3 }}>{view === "login" ? "Sign in to your account" : "Reset your password"}</div>
               {view === "reset" && (
                 <div style={{ marginTop: 8, background: `${C.gold}18`, border: `1px solid ${C.gold}55`, borderRadius: 8, padding: "8px 10px", fontSize: 11, color: C.gold, fontWeight: 600 }}>
-                  Enter your email to receive a password reset link
+                  Enter email to receive a password reset link
                 </div>
               )}
             </div>
