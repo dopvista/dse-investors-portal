@@ -1,438 +1,715 @@
-// ── src/pages/CompaniesPage.jsx ───────────────────────────────────
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { sbInsert, sbUpdate, sbDelete, sbGetPortfolio, sbUpsertCdsPrice, sbGetCdsPriceHistory, sbGetAllCompanies } from "../lib/supabase";
-import { C, fmt, fmtSmart, Btn, StatCard, SectionCard, Modal, PriceHistoryModal, UpdatePriceModal, CompanyFormModal, ActionMenu } from "../components/ui";
+// ── src/lib/supabase.js ────────────────────────────────────────────
 
-export default function CompaniesPage({ companies: globalCompanies, setCompanies, transactions, showToast, role, profile, manageOnly = false }) {
+const BASE = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
+const KEY  = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  // ── Role flags ─────────────────────────────────────────────────────
-  const isSA      = role === "SA";
-  const isSAAD    = role === "SA" || role === "AD";
-  const cdsNumber = profile?.cds_number || null;
-  const currentUserId = profile?.id || null;
+if (!BASE || !KEY) {
+  console.error("❌ Missing Supabase env vars. BASE:", BASE, "KEY:", KEY ? "set" : "missing");
+} else {
+  console.log("✅ Supabase connected to:", BASE);
+}
 
-  // ── Tab (SA gets both tabs) ────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState(manageOnly ? "manage" : "portfolio");
+// ── Safe response parser ───────────────────────────────────────────
+async function parseResponse(res, fallbackMsg) {
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    if (!res.ok) throw new Error(fallbackMsg + (text.length < 200 ? ": " + text : ""));
+    throw new Error(fallbackMsg);
+  }
+  if (!res.ok) {
+    const msg = (data.code ? humanizeCode(data.code) : null)
+      || data.msg
+      || data.error_description
+      || data.message
+      || data.error
+      || fallbackMsg;
+    throw new Error(msg);
+  }
+  return data;
+}
 
-  // ── Portfolio state ────────────────────────────────────────────────
-  const [portfolio,        setPortfolio]        = useState([]);
-  const [portfolioLoading, setPortfolioLoading] = useState(true);
-  const [portfolioError,   setPortfolioError]   = useState(null);
-
-  // ── Master list state (SA only) ────────────────────────────────────
-  const [masterList,    setMasterList]    = useState([]);
-  const [masterLoading, setMasterLoading] = useState(false);
-
-  // ── UI state ──────────────────────────────────────────────────────
-  const [search,         setSearch]         = useState("");
-  const [deleting,       setDeleting]       = useState(null);
-  const [updating,       setUpdating]       = useState(null);
-  const [loadingHistory, setLoadingHistory] = useState(null);
-  const [deleteModal,    setDeleteModal]    = useState(null);
-  const [historyModal,   setHistoryModal]   = useState({ open: false, company: null, history: [] });
-  const [updateModal,    setUpdateModal]    = useState({ open: false, company: null });
-  const [formModal,      setFormModal]      = useState({ open: false, company: null });
-
-  // ── Load portfolio on mount ────────────────────────────────────────
-  const loadPortfolio = useCallback(async () => {
-    if (!cdsNumber) { setPortfolioLoading(false); return; }
-    setPortfolioLoading(true);
-    setPortfolioError(null);
-    try {
-      const data = await sbGetPortfolio(cdsNumber);
-      setPortfolio(data);
-    } catch (e) {
-      setPortfolioError(e.message);
-    } finally {
-      setPortfolioLoading(false);
-    }
-  }, [cdsNumber]);
-
-  useEffect(() => { loadPortfolio(); }, [loadPortfolio]);
-
-  // ── Load master list when SA switches to Manage tab ───────────────
-  useEffect(() => {
-    if (!isSA || activeTab !== "manage") return;
-    (async () => {
-      setMasterLoading(true);
-      try {
-        const data = await sbGetAllCompanies();
-        setMasterList(data);
-      } catch (e) {
-        showToast("Error loading companies: " + e.message, "error");
-      } finally {
-        setMasterLoading(false);
-      }
-    })();
-  }, [isSA, activeTab]);
-
-  // ── Portfolio stats ────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const priced   = portfolio.filter(c => c.cds_price != null);
-    const avgPrice = priced.length ? priced.reduce((s, c) => s + Number(c.cds_price), 0) / priced.length : 0;
-    const highest  = priced.length ? Math.max(...priced.map(c => Number(c.cds_price))) : 0;
-    return { total: portfolio.length, avgPrice, highest, unpriced: portfolio.length - priced.length };
-  }, [portfolio]);
-
-  // ── Search (portfolio) ────────────────────────────────────────────
-  const filtered = useMemo(() =>
-    search.trim()
-      ? portfolio.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
-      : portfolio,
-    [portfolio, search]);
-
-  // ── Update Price (CDS-scoped) ─────────────────────────────────────
-  const confirmUpdatePrice = async ({ newPrice, datetime, reason }) => {
-    const company  = updateModal.company;
-    const oldPrice = company.cds_price != null ? Number(company.cds_price) : null;
-    setUpdateModal({ open: false, company: null });
-    setUpdating(company.id);
-    try {
-      await sbUpsertCdsPrice({
-        companyId:   company.id,
-        companyName: company.name,
-        cdsNumber,
-        newPrice,
-        oldPrice,
-        reason,
-        updatedBy: profile?.full_name || "Unknown",
-        datetime,
-      });
-      setPortfolio(prev => prev.map(c => c.id === company.id
-        ? { ...c, cds_price: newPrice, cds_previous_price: oldPrice, cds_updated_by: profile?.full_name, cds_updated_at: datetime ? new Date(datetime).toISOString() : new Date().toISOString() }
-        : c
-      ));
-      showToast("Price updated for your portfolio!", "success");
-    } catch (e) {
-      showToast("Error: " + e.message, "error");
-    } finally {
-      setUpdating(null);
-    }
+// Convert Supabase error codes to readable messages
+function humanizeCode(code) {
+  const map = {
+    email_exists:               "Email already registered.",
+    phone_exists:               "Phone number already registered.",
+    bad_jwt:                    "Session expired. Please log in again.",
+    not_admin:                  "Admin access required.",
+    user_not_found:             "User not found.",
+    email_not_confirmed:        "Email not confirmed.",
+    invalid_credentials:        "Wrong email or password.",
+    email_address_invalid:      "Invalid email address.",
+    weak_password:              "Password too weak. Use at least 8 characters.",
+    over_request_rate_limit:    "Too many requests. Try again shortly.",
+    over_email_send_rate_limit: "Email limit reached. Try again later.",
+    "42501":                    "Permission denied by database security policy.",
   };
+  return map[code] || null;
+}
 
-  // ── Price History (CDS-scoped) ────────────────────────────────────
-  const viewHistory = async (company) => {
-    setLoadingHistory(company.id);
-    try {
-      const history = await sbGetCdsPriceHistory(company.id, cdsNumber);
-      setHistoryModal({ open: true, company, history });
-    } catch (e) {
-      showToast("Error loading history: " + e.message, "error");
-    } finally {
-      setLoadingHistory(null);
+// ── Shared error extractor ─────────────────────────────────────────
+async function extractError(res, rlsMessage) {
+  const errText = await res.text();
+  let msg = errText;
+  try {
+    const j = JSON.parse(errText);
+    if (j.code === "42501") {
+      msg = rlsMessage || "Permission denied: your role is not allowed to perform this action. Ensure the correct RLS UPDATE policy exists in Supabase.";
+    } else {
+      msg = j.message || j.hint || j.details || errText;
     }
+  } catch { /* keep raw text */ }
+  return msg;
+}
+
+// ── Headers ────────────────────────────────────────────────────────
+const headers = (token) => ({
+  "Content-Type":  "application/json",
+  "apikey":        KEY,
+  "Authorization": `Bearer ${token || KEY}`,
+  "Prefer":        "return=representation",
+});
+
+// ── Session helpers ────────────────────────────────────────────────
+export function getSession() {
+  try { return JSON.parse(localStorage.getItem("sb_session") || "null"); }
+  catch { return null; }
+}
+function saveSession(s) { localStorage.setItem("sb_session", JSON.stringify(s)); }
+function clearSession()  { localStorage.removeItem("sb_session"); }
+function token()         { return getSession()?.access_token || KEY; }
+
+// ── Auto-refresh expired token ─────────────────────────────────────
+async function refreshSession() {
+  const session      = getSession();
+  const refreshToken = session?.refresh_token;
+  if (!refreshToken) { clearSession(); return null; }
+  const res = await fetch(`${BASE}/auth/v1/token?grant_type=refresh_token`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json", "apikey": KEY },
+    body:    JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (!res.ok) { clearSession(); return null; }
+  const data = await res.json();
+  saveSession(data);
+  return data.access_token;
+}
+
+// ── AUTH ───────────────────────────────────────────────────────────
+
+export async function sbSignUp(email, password) {
+  const res = await fetch(`${BASE}/auth/v1/signup`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json", "apikey": KEY },
+    body:    JSON.stringify({ email, password }),
+  });
+  const data = await parseResponse(res, "Sign up failed");
+  if (data.access_token) saveSession(data);
+  return data;
+}
+
+export async function sbSignIn(email, password) {
+  const res = await fetch(`${BASE}/auth/v1/token?grant_type=password`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json", "apikey": KEY },
+    body:    JSON.stringify({ email, password }),
+  });
+  const data = await parseResponse(res, "Invalid email or password");
+  saveSession(data);
+  return data;
+}
+
+export async function sbSignOut() {
+  const t = getSession()?.access_token;
+  if (t) {
+    await fetch(`${BASE}/auth/v1/logout`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "apikey": KEY, "Authorization": `Bearer ${t}` },
+    }).catch(() => {});
+  }
+  clearSession();
+}
+
+export async function sbResetPassword(email) {
+  const res = await fetch(`${BASE}/auth/v1/recover`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json", "apikey": KEY },
+    body:    JSON.stringify({ email }),
+  });
+  await parseResponse(res, "Password reset failed");
+  return true;
+}
+
+// ── DATA ───────────────────────────────────────────────────────────
+
+export async function sbGet(table, params = {}) {
+  const q = new URLSearchParams(params).toString();
+  let res = await fetch(`${BASE}/rest/v1/${table}${q ? "?" + q : ""}`, {
+    headers: headers(token()),
+  });
+  if (res.status === 401) {
+    const newToken = await refreshSession();
+    if (!newToken) throw new Error("Session expired. Please log in again.");
+    res = await fetch(`${BASE}/rest/v1/${table}${q ? "?" + q : ""}`, {
+      headers: headers(newToken),
+    });
+  }
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function sbInsert(table, data) {
+  const res = await fetch(`${BASE}/rest/v1/${table}`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function sbUpdate(table, id, data) {
+  const res = await fetch(`${BASE}/rest/v1/${table}?id=eq.${id}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function sbDelete(table, id) {
+  const res = await fetch(`${BASE}/rest/v1/${table}?id=eq.${id}`, {
+    method:  "DELETE",
+    headers: { ...headers(token()), "Prefer": "return=minimal" },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return true;
+}
+
+// ── PROFILE ────────────────────────────────────────────────────────
+
+export async function sbGetProfile(sessionToken) {
+  const session = sessionToken ? null : getSession();
+  const uid     = sessionToken
+    ? JSON.parse(atob(sessionToken.split(".")[1])).sub
+    : session?.user?.id;
+  if (!uid) return null;
+  const tok = sessionToken || token();
+  const res = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
+    headers: headers(tok),
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows[0] || null;
+}
+
+export async function sbUpsertProfile(data) {
+  const uid = getSession()?.user?.id;
+  const res = await fetch(`${BASE}/rest/v1/profiles?id=eq.${uid}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const res2 = await fetch(`${BASE}/rest/v1/profiles`, {
+      method:  "POST",
+      headers: headers(token()),
+      body:    JSON.stringify({ ...data, id: uid }),
+    });
+    if (!res2.ok) throw new Error(await res2.text());
+    const rows = await res2.json();
+    return rows[0];
+  }
+  const rows = await res.json();
+  return rows[0];
+}
+
+// ── ROLES ──────────────────────────────────────────────────────────
+
+export async function sbGetMyRole(sessionToken) {
+  const tok = sessionToken || token();
+  const res = await fetch(`${BASE}/rest/v1/rpc/get_my_role`, {
+    method:  "POST",
+    headers: headers(tok),
+    body:    JSON.stringify({}),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data || null;
+}
+
+export async function sbGetRoles() {
+  const res = await fetch(`${BASE}/rest/v1/roles?order=id.asc`, {
+    headers: headers(token()),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function sbGetAllUsers() {
+  const res = await fetch(`${BASE}/rest/v1/rpc/get_all_users`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to fetch users");
+  }
+  return res.json();
+}
+
+export async function sbAssignRole(userId, roleId) {
+  const res = await fetch(`${BASE}/rest/v1/rpc/assign_user_role`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify({
+      target_user_id: userId,
+      target_role_id: roleId,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to assign role");
+  }
+  return true;
+}
+
+export async function sbDeactivateRole(userId) {
+  const res = await fetch(`${BASE}/rest/v1/rpc/deactivate_user_role`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify({ target_user_id: userId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to deactivate user");
+  }
+  return true;
+}
+
+export async function sbAdminCreateUser(email, password, cdsNumber) {
+  const res = await fetch(`${BASE}/functions/v1/create-user`, {
+    method:  "POST",
+    headers: {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${token()}`,
+      "apikey":        KEY,
+    },
+    body: JSON.stringify({
+      email,
+      password,
+      cds_number: cdsNumber || null,
+    }),
+  });
+  const data = await parseResponse(res, "Failed to create user");
+  return data;
+}
+
+// ── TRANSACTIONS (workflow) ────────────────────────────────────────
+
+/**
+ * sbGetTransactions()
+ * Fetches all transactions visible to the current user.
+ * RLS on the DB scopes DE to their own rows automatically.
+ */
+export async function sbGetTransactions() {
+  const url = `${BASE}/rest/v1/transactions?order=date.desc,created_at.desc`;
+  const res = await fetch(url, { headers: headers(token()) });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbInsertTransaction(data)
+ * Creates a new transaction with status=pending and created_by=current user.
+ */
+export async function sbInsertTransaction(data) {
+  const uid = getSession()?.user?.id;
+  const res = await fetch(`${BASE}/rest/v1/transactions`, {
+    method:  "POST",
+    headers: headers(token()),
+    body:    JSON.stringify({
+      ...data,
+      status:     "pending",
+      created_by: uid,
+    }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbConfirmTransaction(id)
+ * DE confirms a pending or rejected transaction → status becomes confirmed.
+ * Requires RLS policy: DE can UPDATE own rows where status IN ('pending','rejected').
+ */
+export async function sbConfirmTransaction(id) {
+  const uid  = getSession()?.user?.id;
+  const body = { status: "confirmed" };
+  if (uid) {
+    body.confirmed_by = uid;
+    body.confirmed_at = new Date().toISOString();
+  }
+
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: only the Data Entrant who created this transaction can confirm it. " +
+      "Ensure the RLS UPDATE policy for 'DE can confirm own transactions' exists in Supabase."
+    );
+    throw new Error(msg);
+  }
+
+  return res.json();
+}
+
+/**
+ * sbVerifyTransactions(ids)
+ * VR/SA/AD verifies one or more confirmed transactions → status becomes verified.
+ * ids: array of transaction UUIDs.
+ * Requires RLS policy: VR/SA/AD can UPDATE rows where status = 'confirmed'.
+ */
+export async function sbVerifyTransactions(ids) {
+  const uid    = getSession()?.user?.id;
+  const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+  const body   = { status: "verified" };
+  if (uid) {
+    body.verified_by = uid;
+    body.verified_at = new Date().toISOString();
+  }
+
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=in.${idList}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: only a Verifier, SA, or AD can verify transactions. " +
+      "Ensure the RLS UPDATE policy for 'VR can verify confirmed transactions' exists in Supabase."
+    );
+    throw new Error(msg);
+  }
+
+  return res.json();
+}
+
+/**
+ * sbRejectTransactions(ids, comment)
+ * VR/SA/AD rejects one or more confirmed transactions → status becomes rejected.
+ * ids:     array of transaction UUIDs.
+ * comment: required rejection reason (enforced by NOT NULL check in policy).
+ * Requires RLS policy: VR/SA/AD can UPDATE rows where status = 'confirmed'.
+ */
+export async function sbRejectTransactions(ids, comment) {
+  const uid    = getSession()?.user?.id;
+  const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+  const body   = {
+    status:            "rejected",
+    rejection_comment: comment,
   };
+  if (uid) {
+    body.rejected_by = uid;
+    body.rejected_at = new Date().toISOString();
+  }
 
-  // ── SA: Register / Edit company ───────────────────────────────────
-  const handleFormConfirm = async ({ name, price, remarks }) => {
-    const isEdit = !!formModal.company;
-    try {
-      if (isEdit) {
-        const rows = await sbUpdate("companies", formModal.company.id, { name, remarks });
-        setMasterList(p => p.map(c => c.id === formModal.company.id ? rows[0] : c));
-        showToast("Company updated!", "success");
-      } else {
-        const rows = await sbInsert("companies", { name, price, remarks });
-        setMasterList(p => [rows[0], ...p]);
-        if (setCompanies) setCompanies(p => [rows[0], ...p]);
-        showToast("Company registered!", "success");
-      }
-      setFormModal({ open: false, company: null });
-    } catch (e) {
-      showToast("Error: " + e.message, "error");
-    }
-  };
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=in.${idList}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(body),
+  });
 
-  // ── SA: Delete company ────────────────────────────────────────────
-  const confirmDelete = async () => {
-    const { id } = deleteModal;
-    setDeleteModal(null);
-    setDeleting(id);
-    try {
-      await sbDelete("companies", id);
-      setMasterList(p => p.filter(c => c.id !== id));
-      if (setCompanies) setCompanies(p => p.filter(c => c.id !== id));
-      showToast("Company deleted.", "success");
-    } catch (e) {
-      showToast("Error: " + e.message, "error");
-    } finally {
-      setDeleting(null);
-    }
-  };
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: only a Verifier, SA, or AD can reject transactions. " +
+      "Ensure the RLS UPDATE policy for 'VR can reject confirmed transactions' exists in Supabase."
+    );
+    throw new Error(msg);
+  }
 
-  // ─────────────────────────────────────────────────────────────────
-  return (
-    <div>
-      {/* ── Modals ── */}
-      {deleteModal && (
-        <Modal
-          type="confirm"
-          title="Delete Company"
-          message={`Are you sure you want to delete "${deleteModal.name}"? This cannot be undone.`}
-          onConfirm={confirmDelete}
-          onClose={() => setDeleteModal(null)}
-        />
-      )}
-      {historyModal.open && (
-        <PriceHistoryModal
-          company={historyModal.company ? { ...historyModal.company, price: historyModal.company.cds_price } : null}
-          history={historyModal.history}
-          onClose={() => setHistoryModal({ open: false, company: null, history: [] })}
-        />
-      )}
-      {updateModal.open && (
-        <UpdatePriceModal
-          key={updateModal.company?.id}
-          company={updateModal.company ? { ...updateModal.company, price: updateModal.company.cds_price ?? 0 } : null}
-          onConfirm={confirmUpdatePrice}
-          onClose={() => setUpdateModal({ open: false, company: null })}
-        />
-      )}
-      {formModal.open && (
-        <CompanyFormModal
-          key={formModal.company?.id || "new"}
-          company={formModal.company}
-          onConfirm={handleFormConfirm}
-          onClose={() => setFormModal({ open: false, company: null })}
-        />
-      )}
+  return res.json();
+}
 
+/**
+ * sbUpdateTransaction(id, data)
+ * General-purpose update — used by DE to edit pending/rejected transactions,
+ * and by SA/AD for unverify (status → pending) or any field correction.
+ * Requires appropriate RLS UPDATE policy for the caller's role.
+ */
+export async function sbUpdateTransaction(id, data) {
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
+    method:  "PATCH",
+    headers: headers(token()),
+    body:    JSON.stringify(data),
+  });
 
+  if (!res.ok) {
+    const msg = await extractError(
+      res,
+      "Permission denied: your role is not allowed to update this transaction. " +
+      "Check that the correct RLS UPDATE policy exists in Supabase for your role."
+    );
+    throw new Error(msg);
+  }
 
-      {/* ════════════════════════════════
-          PORTFOLIO VIEW (all roles)
-      ════════════════════════════════ */}
-      {activeTab === "portfolio" && (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 24 }}>
-            <StatCard label="Holdings"      value={stats.total}     sub="Companies with transactions"   icon="🏢" color={C.navy}  />
-            <StatCard label="Avg. Price"    value={stats.avgPrice ? `TZS ${fmtSmart(stats.avgPrice)}` : "—"} sub="Across priced holdings" icon="📊" color={C.green} />
-            <StatCard label="Highest Price" value={stats.highest   ? `TZS ${fmtSmart(stats.highest)}`  : "—"} sub="Top priced holding"     icon="🏆" color={C.gold}  />
-            <StatCard label="Not Priced"    value={stats.unpriced}  sub="Tap ⋯ → Set Price to track"   icon="💰" color={stats.unpriced > 0 ? C.red : C.gray400} />
-          </div>
+  return res.json();
+}
 
+/**
+ * sbDeleteTransaction(id)
+ * Only allowed for SA/AD (any status) or DE (pending only).
+ * RLS enforces this server-side.
+ */
+export async function sbDeleteTransaction(id) {
+  const res = await fetch(`${BASE}/rest/v1/transactions?id=eq.${id}`, {
+    method:  "DELETE",
+    headers: { ...headers(token()), "Prefer": "count=exact" },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  // Content-Range: */0 means RLS silently blocked the delete — no rows affected
+  const range    = res.headers.get("Content-Range") || "";
+  const affected = parseInt(range.split("/")[1] ?? "0", 10);
+  if (affected === 0) throw new Error("Delete was not permitted. You may not have permission to delete this transaction.");
+  return true;
+}
 
+// ── PORTFOLIO & CDS PRICES ─────────────────────────────────────────
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <div style={{ flex: 1, position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: C.gray400 }}>🔍</span>
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search your holdings..."
-                style={{ width: "100%", border: `1.5px solid ${C.gray200}`, borderRadius: 8, padding: "9px 12px 9px 36px", fontSize: 14, outline: "none", fontFamily: "inherit", color: C.text, boxSizing: "border-box" }}
-                onFocus={e => e.target.style.borderColor = C.green}
-                onBlur={e  => e.target.style.borderColor = C.gray200}
-              />
-            </div>
-            {search && <Btn variant="secondary" onClick={() => setSearch("")}>Clear</Btn>}
-            <Btn variant="secondary" icon="🔄" onClick={loadPortfolio}>Refresh</Btn>
-          </div>
+/**
+ * sbGetPortfolio(cdsNumber)
+ * Returns companies where the given CDS has at least one transaction,
+ * joined with that CDS group's own price from cds_prices.
+ */
+export async function sbGetPortfolio(cdsNumber) {
+  if (!cdsNumber) return [];
 
-          <SectionCard
-            title={`Portfolio Holdings (${filtered.length}${search ? ` of ${portfolio.length}` : ""})`}
-            subtitle="Prices are your own CDS analysis prices — not shared with other users"
-          >
-            {portfolioLoading ? (
-              <div style={{ textAlign: "center", padding: "50px 20px", color: C.gray400 }}>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                <div style={{ width: 28, height: 28, border: `3px solid ${C.gray200}`, borderTop: `3px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
-                <div style={{ fontSize: 13 }}>Loading your portfolio...</div>
-              </div>
-            ) : portfolioError ? (
-              <div style={{ textAlign: "center", padding: "40px 20px", color: C.red }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
-                <div style={{ fontWeight: 600 }}>Failed to load portfolio</div>
-                <div style={{ fontSize: 13, marginTop: 4, color: C.gray400 }}>{portfolioError}</div>
-              </div>
-            ) : portfolio.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>No holdings yet</div>
-                <div style={{ fontSize: 13 }}>Record transactions to see companies appear here automatically</div>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 20px", color: C.gray400 }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}>🔍</div>
-                <div style={{ fontWeight: 600 }}>No results for "{search}"</div>
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-                  <thead>
-                    <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
-                      {[
-                        { label: "#",                    align: "left"  },
-                        { label: "Company",              align: "left"  },
-                        { label: "My Price (TZS)",       align: "right" },
-                        { label: "Change",               align: "right" },
-                        { label: "Previous Price (TZS)", align: "right" },
-                        { label: "Last Updated",         align: "left"  },
-                        { label: "Updated By",           align: "left"  },
-                        { label: "Actions",              align: "right" },
-                      ].map(h => (
-                        <th key={h.label} style={{ padding: "10px 16px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `2px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((c, i) => {
-                      const hasCdsPrice = c.cds_price != null;
-                      const priceUp     = hasCdsPrice && c.cds_previous_price != null ? Number(c.cds_price) >= Number(c.cds_previous_price) : null;
-                      const changePct   = hasCdsPrice && c.cds_previous_price != null && Number(c.cds_previous_price) !== 0
-                        ? ((Number(c.cds_price) - Number(c.cds_previous_price)) / Number(c.cds_previous_price)) * 100
-                        : null;
-
-                      return (
-                        <tr key={c.id}
-                          style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s", background: !hasCdsPrice ? "#FFFBEB" : "transparent" }}
-                          onMouseEnter={e => e.currentTarget.style.background = !hasCdsPrice ? "#FFF8DC" : C.gray50}
-                          onMouseLeave={e => e.currentTarget.style.background = !hasCdsPrice ? "#FFFBEB" : "transparent"}
-                        >
-                          <td style={{ padding: "10px 16px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
-
-                          <td style={{ padding: "10px 16px", minWidth: 140 }}>
-                            <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
-                            {c.remarks && <div style={{ fontSize: 11, color: C.gray400, marginTop: 2 }}>{c.remarks}</div>}
-                          </td>
-
-                          <td style={{ padding: "10px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
-                            {hasCdsPrice
-                              ? <span style={{ background: C.greenBg, color: C.green, padding: "3px 10px", borderRadius: 20, fontSize: 13, fontWeight: 700 }}>{fmt(c.cds_price)}</span>
-                              : <span style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>💰 Set price</span>
-                            }
-                          </td>
-
-                          <td style={{ padding: "10px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
-                            {priceUp !== null && changePct !== null
-                              ? <span style={{ background: priceUp ? C.greenBg : C.redBg, color: priceUp ? C.green : C.red, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1px solid ${priceUp ? "#BBF7D0" : "#FECACA"}` }}>
-                                  {priceUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
-                                </span>
-                              : <span style={{ color: C.gray400 }}>—</span>}
-                          </td>
-
-                          <td style={{ padding: "10px 16px", textAlign: "right", whiteSpace: "nowrap" }}>
-                            {c.cds_previous_price != null
-                              ? <span style={{ color: C.gray500, fontSize: 13 }}>{fmt(c.cds_previous_price)}</span>
-                              : <span style={{ color: C.gray400 }}>—</span>}
-                          </td>
-
-                          <td style={{ padding: "10px 16px", whiteSpace: "nowrap" }}>
-                            {c.cds_updated_at
-                              ? <span style={{ fontSize: 12, color: C.gray600 }}>
-                                  {new Date(c.cds_updated_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                                  <span style={{ color: C.gray400, margin: "0 5px" }}>|</span>
-                                  {new Date(c.cds_updated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                              : <span style={{ color: C.gray400 }}>—</span>}
-                          </td>
-
-                          <td style={{ padding: "10px 16px" }}>
-                            {c.cds_updated_by
-                              ? <span style={{ fontSize: 11, color: C.gray600, background: C.gray50, border: `1px solid ${C.gray200}`, borderRadius: 6, padding: "2px 8px" }}>{c.cds_updated_by}</span>
-                              : <span style={{ color: C.gray400 }}>—</span>}
-                          </td>
-
-                          <td style={{ padding: "10px 16px", textAlign: "right" }}>
-                            <ActionMenu actions={[
-                              { icon: "💰", label: updating === c.id ? "Updating..." : hasCdsPrice ? "Update Price" : "Set Price", onClick: () => setUpdateModal({ open: true, company: c }) },
-                              { icon: "📈", label: loadingHistory === c.id ? "Loading..." : "Price History", onClick: () => viewHistory(c) },
-                            ]} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-        </>
-      )}
-
-      {/* ════════════════════════════════
-          MANAGE COMPANIES (SA only)
-      ════════════════════════════════ */}
-      {activeTab === "manage" && isSA && (
-        <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
-            <StatCard label="Total Companies" value={masterList.length} sub="In master registry" icon="🏢" color={C.navy}  />
-            <StatCard label="Registered Today" value={masterList.filter(c => c.created_at?.startsWith(new Date().toISOString().split("T")[0])).length} sub="Added today" icon="✅" color={C.green} />
-            <StatCard label="Visible To"       value="All Users"        sub="Based on their transactions" icon="👁️" color={C.gold} />
-          </div>
-
-          <div style={{ background: "linear-gradient(135deg, #EFF6FF, #DBEAFE)", border: `1px solid #BFDBFE`, borderRadius: 12, padding: "12px 18px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 18 }}>🔒</span>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#1D4ED8" }}>Super Admin — Master Registry</div>
-                <div style={{ fontSize: 12, color: "#3B82F6" }}>Only you can register or delete companies. Companies appear in users' Holdings automatically once they have a transaction for them.</div>
-              </div>
-            </div>
-            <Btn variant="navy" icon="+" onClick={() => setFormModal({ open: true, company: null })}>Register Company</Btn>
-          </div>
-
-          <SectionCard title={`Master Company Registry (${masterList.length})`} subtitle="All DSE-listed companies available in the system">
-            {masterLoading ? (
-              <div style={{ textAlign: "center", padding: "50px 20px", color: C.gray400 }}>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                <div style={{ width: 28, height: 28, border: `3px solid ${C.gray200}`, borderTop: `3px solid ${C.navy}`, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
-                <div style={{ fontSize: 13 }}>Loading master registry...</div>
-              </div>
-            ) : masterList.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 20px", color: C.gray400 }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
-                <div style={{ fontWeight: 600, marginBottom: 4 }}>No companies registered yet</div>
-                <div style={{ fontSize: 13 }}>Click "Register Company" to add the first one</div>
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-                  <thead>
-                    <tr style={{ background: `linear-gradient(135deg, ${C.navy}08, ${C.navy}04)` }}>
-                      {[
-                        { label: "#",            align: "left"  },
-                        { label: "Company Name", align: "left"  },
-                        { label: "Remarks",      align: "left"  },
-                        { label: "Registered",   align: "left"  },
-                        { label: "Actions",      align: "right" },
-                      ].map(h => (
-                        <th key={h.label} style={{ padding: "10px 18px", textAlign: h.align, color: C.gray400, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `2px solid ${C.gray200}`, whiteSpace: "nowrap" }}>{h.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {masterList.map((c, i) => (
-                      <tr key={c.id}
-                        style={{ borderBottom: `1px solid ${C.gray100}`, transition: "background 0.15s" }}
-                        onMouseEnter={e => e.currentTarget.style.background = C.gray50}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                      >
-                        <td style={{ padding: "10px 18px", color: C.gray400, fontWeight: 600, width: 36 }}>{i + 1}</td>
-                        <td style={{ padding: "10px 18px", minWidth: 160 }}>
-                          <div style={{ fontWeight: 700, color: C.text }}>{c.name}</div>
-                        </td>
-                        <td style={{ padding: "10px 18px", color: C.gray500, fontSize: 13 }}>
-                          {c.remarks || <span style={{ color: C.gray400 }}>—</span>}
-                        </td>
-                        <td style={{ padding: "10px 18px", color: C.gray500, fontSize: 13, whiteSpace: "nowrap" }}>
-                          {c.created_at
-                            ? new Date(c.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-                            : "—"}
-                        </td>
-                        <td style={{ padding: "10px 18px", textAlign: "right" }}>
-                          <ActionMenu actions={[
-                            { icon: "✏️", label: "Edit Company", onClick: () => setFormModal({ open: true, company: c }) },
-                            { icon: "🗑️", label: deleting === c.id ? "Deleting..." : "Delete", danger: true, onClick: () => setDeleteModal({ id: c.id, name: c.name }) },
-                          ]} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-        </>
-      )}
-    </div>
+  // Step 1 — fetch only company_id (drop unused company_name column)
+  const txRes = await fetch(
+    `${BASE}/rest/v1/transactions?cds_number=eq.${encodeURIComponent(cdsNumber)}&select=company_id`,
+    { headers: headers(token()) }
   );
+  if (!txRes.ok) throw new Error(await txRes.text());
+  const txRows = await txRes.json();
+
+  // Deduplicate with Set — O(n), one-liner
+  const ids = [...new Set(txRows.map(t => t.company_id).filter(Boolean))];
+  if (!ids.length) return [];
+
+  const idList = `(${ids.map(id => `"${id}"`).join(",")})`;
+
+  // Step 2 — companies + prices fetched in PARALLEL (was sequential)
+  const [coRes, prRes] = await Promise.all([
+    fetch(`${BASE}/rest/v1/companies?id=in.${idList}&order=name.asc`, { headers: headers(token()) }),
+    fetch(`${BASE}/rest/v1/cds_prices?cds_number=eq.${encodeURIComponent(cdsNumber)}`,  { headers: headers(token()) }),
+  ]);
+  if (!coRes.ok) throw new Error(await coRes.text());
+  if (!prRes.ok) throw new Error(await prRes.text());
+
+  // Parse both payloads in parallel too
+  const [companies, prices] = await Promise.all([coRes.json(), prRes.json()]);
+
+  // O(n) lookup map via Object.fromEntries
+  const priceMap = Object.fromEntries(prices.map(p => [p.company_id, p]));
+
+  return companies.map(c => ({
+    ...c,
+    cds_price:               priceMap[c.id]?.price             ?? null,
+    cds_previous_price:      priceMap[c.id]?.previous_price    ?? null,
+    cds_updated_by:          priceMap[c.id]?.updated_by        ?? null,
+    cds_updated_at:          priceMap[c.id]?.updated_at        ?? null,
+    cds_price_id:            priceMap[c.id]?.id                ?? null,
+    cds_price_created_by_id: priceMap[c.id]?.created_by_id     ?? null,
+  }));
+}
+
+/**
+ * sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newPrice, oldPrice, reason, updatedBy })
+ * Creates or updates the CDS-scoped price for a company.
+ * Also writes to cds_price_history for a full audit trail.
+ */
+export async function sbUpsertCdsPrice({ companyId, companyName, cdsNumber, newPrice, oldPrice, reason, updatedBy, datetime }) {
+  const changeAmount  = oldPrice != null ? newPrice - oldPrice : null;
+  const changePct     = oldPrice != null && oldPrice !== 0 ? (changeAmount / oldPrice) * 100 : null;
+  const ts            = datetime ? new Date(datetime).toISOString() : new Date().toISOString();
+  const currentUserId = getSession()?.user?.id;
+
+  const upsertRes = await fetch(`${BASE}/rest/v1/cds_prices?on_conflict=company_id,cds_number`, {
+    method:  "POST",
+    headers: { ...headers(token()), "Prefer": "return=representation,resolution=merge-duplicates" },
+    body: JSON.stringify({
+      company_id:     companyId,
+      cds_number:     cdsNumber,
+      price:          newPrice,
+      previous_price: oldPrice ?? null,
+      updated_by:     updatedBy,
+      notes:          reason || null,
+      updated_at:     ts,
+      created_by_id:  currentUserId,
+    }),
+  });
+  if (!upsertRes.ok) throw new Error(await upsertRes.text());
+  const upserted = await upsertRes.json();
+
+  const histRes = await fetch(`${BASE}/rest/v1/cds_price_history`, {
+    method:  "POST",
+    headers: headers(token()),
+    body: JSON.stringify({
+      company_id:     companyId,
+      company_name:   companyName,
+      cds_number:     cdsNumber,
+      old_price:      oldPrice ?? null,
+      new_price:      newPrice,
+      change_amount:  changeAmount,
+      change_percent: changePct,
+      notes:          reason || null,
+      updated_by:     updatedBy,
+      created_at:     ts,
+    }),
+  });
+  if (!histRes.ok) throw new Error(await histRes.text());
+
+  return upserted[0] || upserted;
+}
+
+/**
+ * sbGetCdsPriceHistory(companyId, cdsNumber)
+ * Returns price history for a specific company scoped to a CDS number.
+ */
+export async function sbGetCdsPriceHistory(companyId, cdsNumber) {
+  const res = await fetch(
+    `${BASE}/rest/v1/cds_price_history?company_id=eq.${companyId}&cds_number=eq.${encodeURIComponent(cdsNumber)}&order=created_at.desc`,
+    { headers: headers(token()) }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/**
+ * sbGetAllCompanies()
+ * SA-only: returns the full master company list for the register/manage view.
+ */
+export async function sbGetAllCompanies() {
+  const res = await fetch(`${BASE}/rest/v1/companies?order=name.asc`, {
+    headers: headers(token()),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════
+// SITE SETTINGS
+// ═══════════════════════════════════════════════════════
+
+/**
+ * sbGetSiteSettings(key)
+ * Reads one row from site_settings by key.
+ * Returns the parsed value object, or null if not found.
+ */
+export async function sbGetSiteSettings(key = "login_page") {
+  const res = await fetch(
+    `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}&select=value&limit=1`,
+    { headers: headers(KEY) }
+  );
+  if (!res.ok) throw new Error(await res.text());
+  const rows = await res.json();
+  return rows[0]?.value ?? null;
+}
+
+/**
+ * sbSaveSiteSettings(key, value, userId)
+ * Upserts a site_settings row. Requires SA/AD session token.
+ */
+export async function sbSaveSiteSettings(key = "login_page", value, accessToken) {
+  const tok = accessToken || token();
+
+  const patchRes = await fetch(
+    `${BASE}/rest/v1/site_settings?key=eq.${encodeURIComponent(key)}`,
+    {
+      method:  "PATCH",
+      headers: {
+        "apikey":        KEY,
+        "Authorization": `Bearer ${tok}`,
+        "Content-Type":  "application/json",
+        "Prefer":        "return=representation",
+      },
+      body: JSON.stringify({ value, updated_at: new Date().toISOString() }),
+    }
+  );
+
+  if (!patchRes.ok) {
+    let msg = `PATCH failed HTTP ${patchRes.status}`;
+    try { const j = await patchRes.json(); msg = j.message || j.hint || JSON.stringify(j); }
+    catch { msg = await patchRes.text().catch(() => msg); }
+    throw new Error(msg);
+  }
+
+  const patched = await patchRes.json();
+
+  if (!patched || patched.length === 0) {
+    const insertRes = await fetch(
+      `${BASE}/rest/v1/site_settings`,
+      {
+        method:  "POST",
+        headers: {
+          "apikey":        KEY,
+          "Authorization": `Bearer ${tok}`,
+          "Content-Type":  "application/json",
+          "Prefer":        "return=representation",
+        },
+        body: JSON.stringify({ key, value, updated_at: new Date().toISOString() }),
+      }
+    );
+    if (!insertRes.ok) {
+      let msg = `INSERT failed HTTP ${insertRes.status}`;
+      try { const j = await insertRes.json(); msg = j.message || j.hint || JSON.stringify(j); }
+      catch { msg = await insertRes.text().catch(() => msg); }
+      throw new Error(msg);
+    }
+    return insertRes.json();
+  }
+
+  return patched;
+}
+
+/**
+ * sbUploadSlideImage(blob, slideIndex, session)
+ * Uploads a slide image blob to the login-slides bucket.
+ * Returns the public URL.
+ */
+export async function sbUploadSlideImage(blob, slideIndex, session) {
+  const tok      = session?.access_token || KEY;
+  const filename = `slide-${slideIndex}.jpg`;
+
+  const uploadRes = await fetch(
+    `${BASE}/storage/v1/object/login-slides/${filename}`,
+    {
+      method:  "POST",
+      headers: {
+        "Authorization": `Bearer ${tok}`,
+        "Content-Type":  "image/jpeg",
+        "x-upsert":      "true",
+      },
+      body: blob,
+    }
+  );
+  if (!uploadRes.ok) {
+    const err = await uploadRes.json().catch(() => ({}));
+    throw new Error(err.message || "Image upload failed");
+  }
+
+  return `${BASE}/storage/v1/object/public/login-slides/${filename}?t=${Date.now()}`;
 }
