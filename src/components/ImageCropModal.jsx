@@ -1,14 +1,16 @@
 // ── src/components/ImageCropModal.jsx ────────────────────────────
-// 4:3 crop tool with FREE PANNING (drag anywhere when zoomed)
-// Output: 1280×960 JPEG — matches login page perfectly
+// Updated: 4:3 crop tool for login slide images (matches login page + settings preview)
+// Output: 1280×960 JPEG
 import { useState, useRef, useEffect, useCallback } from "react";
 import { C } from "./ui";
 
 const CANVAS_W = 560;
-const CANVAS_H = 420;          // 4:3
+const CANVAS_H = 420;          // ← 4:3
 const OUT_W = 1280;
-const OUT_H = 960;             // 4:3
+const OUT_H = 960;             // ← 4:3
 const ASPECT = 4 / 3;
+
+// Initial crop rect as fraction of canvas
 const INIT_FRAC = 0.82;
 
 export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCancel }) {
@@ -21,11 +23,11 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
 
   const [imgLoaded, setImgLoaded] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });           // ← NEW: free panning
   const [processing, setProcessing] = useState(false);
   const [naturalSize, setNaturalSize] = useState({ w: 1, h: 1 });
   const [layout, setLayout] = useState({ drawX: 0, drawY: 0, drawW: 0, drawH: 0, baseScale: 1 });
 
+  // Crop rect in canvas coords { x, y, w, h }
   const [crop, setCrop] = useState({
     x: CANVAS_W * (1 - INIT_FRAC) / 2,
     y: CANVAS_H * (1 - INIT_FRAC) / 2,
@@ -42,8 +44,8 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
       const drawH = img.naturalHeight * baseScale;
       setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
       setLayout({ drawX: (CANVAS_W - drawW) / 2, drawY: (CANVAS_H - drawH) / 2, drawW, drawH, baseScale });
-      setPan({ x: 0, y: 0 });
 
+      // Init crop centered, 82% of canvas width, 4:3
       const cw = Math.min(drawW * 0.92, CANVAS_W * INIT_FRAC);
       const ch = cw / ASPECT;
       setCrop({
@@ -57,27 +59,25 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     img.src = imageSrc;
   }, [imageSrc]);
 
-  // ── Zoomed & panned image position ─────────────────────────────
+  // ── Computed zoomed image dimensions ───────────────────────────
   const currentScale = layout.baseScale * zoom;
   const currentW = naturalSize.w * currentScale;
   const currentH = naturalSize.h * currentScale;
-  const currentX = (CANVAS_W - currentW) / 2 + pan.x;
-  const currentY = (CANVAS_H - currentH) / 2 + pan.y;
+  const currentX = (CANVAS_W - currentW) / 2;
+  const currentY = (CANVAS_H - currentH) / 2;
 
-  // ── Clamp crop + auto-pan when dragging beyond bounds ──────────
+  // ── Clamp crop rect within image bounds, enforce 4:3 ───────────
   const clampCrop = useCallback((x, y, w) => {
     const minW = 80;
     const maxW = currentW;
-    let safeW = Math.min(Math.max(w, minW), maxW);
+    const safeW = Math.min(Math.max(w, minW), maxW);
     const safeH = safeW / ASPECT;
-
-    let safeX = Math.max(currentX, Math.min(currentX + currentW - safeW, x));
-    let safeY = Math.max(currentY, Math.min(currentY + currentH - safeH, y));
-
+    const safeX = Math.max(currentX, Math.min(currentX + currentW - safeW, x));
+    const safeY = Math.max(currentY, Math.min(currentY + currentH - safeH, y));
     return { x: safeX, y: safeY, w: safeW, h: safeH };
   }, [currentW, currentH, currentX, currentY]);
 
-  // ── Handles & hit test ─────────────────────────────────────────
+  // ── Corner handle positions ─────────────────────────────────────
   const handles = (c) => [
     { id: "tl", x: c.x, y: c.y },
     { id: "tr", x: c.x + c.w, y: c.y },
@@ -85,10 +85,7 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     { id: "br", x: c.x + c.w, y: c.y + c.h },
   ];
 
-  const hitHandle = (px, py, c) => handles(c).find(h => Math.hypot(px - h.x, py - h.y) < 14)?.id || null;
-  const hitInside = (px, py, c) => px >= c.x && px <= c.x + c.w && py >= c.y && py <= c.y + c.h;
-
-  // ── Wheel & pinch zoom ─────────────────────────────────────────
+  // ── Mouse wheel zoom ───────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -101,7 +98,7 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     return () => canvas.removeEventListener("wheel", handleWheel);
   }, []);
 
-  // Re-clamp on zoom
+  // Re-clamp crop when zoom changes
   useEffect(() => {
     setCrop(c => clampCrop(c.x, c.y, c.w));
   }, [zoom, clampCrop]);
@@ -109,10 +106,13 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
   // ── Reset ──────────────────────────────────────────────────────
   const handleReset = () => {
     setZoom(1);
-    setPan({ x: 0, y: 0 });
     const cw = Math.min(layout.drawW * 0.92, CANVAS_W * INIT_FRAC);
     const ch = cw / ASPECT;
-    setCrop({ x: (CANVAS_W - cw) / 2, y: (CANVAS_H - ch) / 2, w: cw, h: ch });
+    setCrop({
+      x: (CANVAS_W - cw) / 2,
+      y: (CANVAS_H - ch) / 2,
+      w: cw, h: ch,
+    });
   };
 
   // ── Draw ───────────────────────────────────────────────────────
@@ -123,19 +123,21 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     const c = crop;
 
     ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Dark background
     ctx.fillStyle = "#111827";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     // Dimmed full image
     ctx.globalAlpha = 0.3;
     ctx.drawImage(imgRef.current, currentX, currentY, currentW, currentH);
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = 1.0;
 
     // Dark overlay outside crop
     ctx.fillStyle = "rgba(10,37,64,0.55)";
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-    // Bright cropped image
+    // Bright image inside crop rect
     ctx.save();
     ctx.beginPath();
     ctx.rect(c.x, c.y, c.w, c.h);
@@ -143,14 +145,16 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     ctx.drawImage(imgRef.current, currentX, currentY, currentW, currentH);
     ctx.restore();
 
-    // Border + grid
+    // Crop border
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1.5;
     ctx.strokeRect(c.x, c.y, c.w, c.h);
 
+    // Rule-of-thirds grid lines
     ctx.save();
     ctx.setLineDash([3, 3]);
     ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.lineWidth = 1;
     for (let i = 1; i <= 2; i++) {
       ctx.beginPath();
       ctx.moveTo(c.x + (c.w / 3) * i, c.y);
@@ -165,13 +169,13 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     }
     ctx.restore();
 
-    // Bigger, easier handles
+    // Corner handles
     handles(c).forEach(h => {
       ctx.beginPath();
-      ctx.arc(h.x, h.y, 9, 0, Math.PI * 2);
+      ctx.arc(h.x, h.y, 7, 0, Math.PI * 2);
       ctx.fillStyle = C.green;
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2;
       ctx.fill();
       ctx.stroke();
     });
@@ -179,7 +183,14 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
 
   useEffect(() => { draw(); }, [draw]);
 
-  // ── Pointer events with FREE PANNING ───────────────────────────
+  // ── Hit test helpers ───────────────────────────────────────────
+  const hitHandle = (px, py, c) => {
+    return handles(c).find(h => Math.hypot(px - h.x, py - h.y) < 14)?.id || null;
+  };
+  const hitInside = (px, py, c) =>
+    px >= c.x && px <= c.x + c.w && py >= c.y && py <= c.y + c.h;
+
+  // ── Pointer events ─────────────────────────────────────────────
   const getPos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const scaleX = CANVAS_W / rect.width;
@@ -193,7 +204,10 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
 
   const handlePointerDown = (e) => {
     if (e.touches?.length === 2) {
-      lastPinchDist.current = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      lastPinchDist.current = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
       return;
     }
     const { x, y } = getPos(e);
@@ -209,7 +223,10 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
 
   const handlePointerMove = (e) => {
     if (e.touches?.length === 2 && lastPinchDist.current !== null) {
-      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
       const delta = (dist - lastPinchDist.current) / 200;
       setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 3));
       lastPinchDist.current = dist;
@@ -220,32 +237,24 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     const { x, y } = getPos(e);
     const dx = x - dragStart.current.x;
     const dy = y - dragStart.current.y;
-    const { rx, ry, rw } = dragStart.current;
+    const { rx, ry, rw, rh } = dragStart.current;
 
     if (dragging.current) {
-      let newX = rx + dx;
-      let newY = ry + dy;
-      const clamped = clampCrop(newX, newY, rw);
-
-      // FREE PANNING: if crop would go outside image → pan the photo instead
-      const excessX = newX - clamped.x;
-      const excessY = newY - clamped.y;
-      if (excessX !== 0 || excessY !== 0) {
-        setPan(p => ({ x: p.x - excessX, y: p.y - excessY }));
-      }
-      setCrop(clamped);
+      setCrop(clampCrop(rx + dx, ry + dy, rw));
     } else {
-      // Resize (keep 4:3)
+      // Resize from corner — maintain 4:3 by driving width
       const h = resizing.current;
       let newW = rw;
-      if (h === "br" || h === "tr") newW = rw + dx;
-      if (h === "bl" || h === "tl") newW = rw - dx;
+      if (h === "br") newW = rw + dx;
+      if (h === "bl") newW = rw - dx;
+      if (h === "tr") newW = rw + dx;
+      if (h === "tl") newW = rw - dx;
       newW = Math.max(80, newW);
       const newH = newW / ASPECT;
       let newX = rx;
       let newY = ry;
       if (h === "bl" || h === "tl") newX = rx + rw - newW;
-      if (h === "tr" || h === "tl") newY = ry + rw / ASPECT - newH;
+      if (h === "tr" || h === "tl") newY = ry + rh - newH;
       setCrop(clampCrop(newX, newY, newW));
     }
   };
@@ -256,10 +265,11 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
     lastPinchDist.current = null;
   };
 
-  // ── Confirm ────────────────────────────────────────────────────
+  // ── Confirm — extract crop to 1280×960 ────────────────────────
   const handleConfirm = () => {
     setProcessing(true);
     const c = crop;
+
     const srcX = (c.x - currentX) / currentScale;
     const srcY = (c.y - currentY) / currentScale;
     const srcW = c.w / currentScale;
@@ -274,7 +284,11 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(10,37,64,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(3px)" }}>
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(10,37,64,0.75)",
+      zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
+      backdropFilter: "blur(3px)",
+    }}>
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -282,20 +296,26 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
         .img-zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: ${C.green}; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
       `}</style>
 
-      <div style={{ background: C.white, borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.45)", animation: "fadeIn 0.22s ease", width: CANVAS_W }}>
+      <div style={{
+        background: C.white, borderRadius: 18, overflow: "hidden",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.45)", animation: "fadeIn 0.22s ease",
+        width: CANVAS_W,
+      }}>
         {/* Header */}
         <div style={{ background: "linear-gradient(135deg, #0c2548 0%, #0B1F3A 60%, #080f1e 100%)", padding: "16px 22px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ color: C.white, fontWeight: 800, fontSize: 15 }}>Crop Slide {slideIndex} Image</div>
+            <div style={{ color: C.white, fontWeight: 800, fontSize: 15 }}>
+              Crop Slide {slideIndex} Image
+            </div>
             <div style={{ color: C.gold, fontSize: 11, marginTop: 2, fontWeight: 500 }}>
-              Drag to reposition · Corner handles to resize · Scroll/pinch to zoom · Output: 1280×960
+              Drag to reposition · Corner handles to resize · Scroll to zoom · Output: 1280×960
             </div>
           </div>
-          <button onClick={onCancel} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: C.white, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 13 }}>✕</button>
+          <button onClick={onCancel} style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", color: C.white, width: 30, height: 30, borderRadius: "50%", cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
 
         {/* Canvas */}
-        <div style={{ background: "#111827", lineHeight: 0 }}>
+        <div style={{ background: "#111827", lineHeight: 0, position: "relative" }}>
           {imgLoaded ? (
             <canvas
               ref={canvasRef}
@@ -318,23 +338,36 @@ export default function ImageCropModal({ imageSrc, slideIndex, onConfirm, onCanc
 
         {/* Footer */}
         <div style={{ padding: "14px 22px", borderTop: `1px solid ${C.gray100}` }}>
+          {/* Zoom slider */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em" }}>🔍 Zoom</span>
-            <input type="range" min="0.5" max="3" step="0.01" value={zoom} className="img-zoom-slider" onChange={e => setZoom(parseFloat(e.target.value))} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.gray400, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+              🔍 Zoom
+            </span>
+            <input
+              type="range" min="0.5" max="3" step="0.01"
+              value={zoom} className="img-zoom-slider"
+              onChange={e => setZoom(parseFloat(e.target.value))}
+            />
             <span style={{ fontSize: 11, color: C.gray400, minWidth: 32 }}>{Math.round(zoom * 100)}%</span>
-            <button onClick={handleReset} style={{ background: "none", border: "none", color: C.green, fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>Reset</button>
+            <button onClick={handleReset} style={{ background: "none", border: "none", color: C.green, fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline", padding: 0, whiteSpace: "nowrap", fontFamily: "inherit" }}>Reset</button>
           </div>
 
+          {/* Buttons */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 11, color: C.gray400 }}>4:3 · JPEG 1280×960</span>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={onCancel} style={{ padding: "9px 18px", borderRadius: 9, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+              <button onClick={onCancel} style={{ padding: "9px 18px", borderRadius: 9, border: `1.5px solid ${C.gray200}`, background: C.white, color: C.gray400, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "#ef4444"; e.currentTarget.style.color = "#ef4444"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = C.gray200; e.currentTarget.style.color = C.gray400; }}>
                 Cancel
               </button>
-              <button onClick={handleConfirm} disabled={!imgLoaded || processing} style={{ padding: "9px 22px", borderRadius: 9, border: "none", background: !imgLoaded || processing ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 13, cursor: !imgLoaded || processing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-                {processing ? <>Processing...</> : "✓ Use This Image"}
+              <button onClick={handleConfirm} disabled={!imgLoaded || processing} style={{ padding: "9px 22px", borderRadius: 9, border: "none", background: !imgLoaded || processing ? C.gray200 : C.green, color: C.white, fontWeight: 700, fontSize: 13, cursor: !imgLoaded || processing ? "not-allowed" : "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8, boxShadow: !imgLoaded || processing ? "none" : `0 4px 12px ${C.green}44` }}>
+                {processing ? (
+                  <>
+                    <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                    Processing...
+                  </>
+                ) : "✓ Use This Image"}
               </button>
             </div>
           </div>
