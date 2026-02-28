@@ -14,7 +14,6 @@ export default function LoginPage({ onLogin, loginSettings }) {
   // Use settings from DB, fall back to defaults
   const ADVERTS  = (loginSettings?.slides  || DEFAULT_SLIDES).map((s, i) => ({ ...s, id: i + 1 }));
   const INTERVAL = loginSettings?.interval || 5000;
-  // FIX 3: read animated flag (default true = animated)
   const ANIMATED = loginSettings?.animated ?? true;
 
   const [view, setView]         = useState("login");
@@ -102,16 +101,15 @@ export default function LoginPage({ onLogin, loginSettings }) {
         overflow: "hidden",
       }}>
 
-        {/* ── LEFT: Photo slider — FIX 2: aspectRatio 16/9 matches settings preview */}
+        {/* ── LEFT: Photo slider — preserves 16:9 aspect ratio, fills container with no margin */}
         <div style={{ position: "relative", background: ADVERTS[activeAd].color, transition: "background 1s ease", overflow: "hidden", aspectRatio: "16/9" }}>
-          {/* FIX 3: conditionally apply ad-bg class for ken burns */}
           {ADVERTS.map((ad, i) => (
             <div key={ad.id} className={ANIMATED ? "ad-bg" : ""} style={{ position: "absolute", inset: 0, opacity: i === activeAd ? 1 : 0, backgroundImage: `url(${ad.image})`, backgroundSize: "cover", backgroundPosition: "center", transition: "opacity 1.2s ease" }} />
           ))}
           {/* Dynamic color overlay */}
-          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${ADVERTS[activeAd]?.color || "#064e3b"}${Math.round(((ADVERTS[activeAd]?.overlay ?? 0.35)) * 255).toString(16).padStart(2,"0")} 0%, transparent 100%)`, transition: "background 1s ease", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${ADVERTS[activeAd]?.color}${Math.round(((ADVERTS[activeAd]?.overlay ?? 0.35)) * 255).toString(16).padStart(2,"0")} 0%, transparent 100%)`, transition: "background 1s ease", pointerEvents: "none" }} />
 
-          {/* FIX 1: label div removed — only title + subtitle, vertically centered */}
+          {/* Title + subtitle, vertically centered */}
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px", zIndex: 2 }}>
             {ADVERTS.map((ad, i) => (
               <div key={ad.id} style={{ display: i === activeAd ? "block" : "none", animation: "fadeIn 0.8s ease-out" }}>
@@ -121,7 +119,7 @@ export default function LoginPage({ onLogin, loginSettings }) {
             ))}
           </div>
 
-          {/* FIX 4: dots pinned to bottom of image */}
+          {/* Dots pinned to bottom */}
           <div style={{ position: "absolute", bottom: 20, left: 28, zIndex: 2, display: "flex", gap: 8 }}>
             {ADVERTS.map((_, i) => (
               <button key={i} onClick={() => setActiveAd(i)} onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}
@@ -130,8 +128,15 @@ export default function LoginPage({ onLogin, loginSettings }) {
           </div>
         </div>
 
-        {/* ── RIGHT: Form ── */}
-        <div style={{ background: "white", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
+        {/* ── RIGHT: Login form — stretches to full height of grid cell, content centered */}
+        <div style={{
+          background: "white",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          padding: "0 24px",
+          height: "100%", // ensures the container fills the entire grid cell height
+        }}>
           <div style={{ width: "100%" }}>
 
             {/* Header */}
