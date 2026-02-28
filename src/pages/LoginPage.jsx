@@ -102,15 +102,19 @@ export default function LoginPage({ onLogin, loginSettings }) {
         display: "grid",
         gridTemplateColumns: "1.68fr 0.85fr",
         overflow: "hidden",
+        position: "relative",
       }}>
-        {/* LEFT: Image slider — 4:3 aspect ratio reduced by ~2 mm in total card height */}
+        {/* LEFT: Image slider — 4:3 with subtle stylish separation */}
         <div style={{ 
           position: "relative", 
           background: ADVERTS[activeAd].color, 
           transition: "background 1s ease", 
           overflow: "hidden",
-          aspectRatio: "4/3.07",   // ← tiny reduction (≈2 mm shorter card on typical screens)
-          height: "auto" 
+          aspectRatio: "4/3.07",
+          height: "auto",
+          /* ── Stylish separation (soft, elegant, no vivid look) ── */
+          borderRight: "1px solid rgba(255,255,255,0.18)",
+          boxShadow: "4px 0 18px -6px rgba(0,0,0,0.35)"
         }}>
           {ADVERTS.map((ad, i) => (
             <div 
